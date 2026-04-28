@@ -16,9 +16,11 @@ struct VikunjaWidgetEntryView: View {
         return EdgeInsets(top: 20, leading: 8, bottom: 20, trailing: 8)
         #else
         if family == .systemMedium {
-            return EdgeInsets(top: 12, leading: 6, bottom: 12, trailing: 6)
+            return EdgeInsets(top: 14, leading: 6, bottom: 14, trailing: 6)
         }
-        return EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)
+        // Match macOS top/bottom so the first section header and last task
+        // aren't clipped by the widget's rounded-corner chrome on iOS.
+        return EdgeInsets(top: 20, leading: 12, bottom: 20, trailing: 12)
         #endif
     }
 

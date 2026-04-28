@@ -91,7 +91,9 @@ enum VikunjaAPI {
             }
         }
 
-        return task
+        // Re-fetch so the returned task includes the newly assigned labels.
+        // Vikunja's create/label responses don't embed the full label objects.
+        return try await fetchTask(id: task.id)
     }
 
     // MARK: - Labels
@@ -114,7 +116,7 @@ enum VikunjaAPI {
         let request = makeRequest("/tasks/\(taskId)/labels", method: "PUT", body: body)
         let (_, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus
+            throw APIError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
         }
     }
 
@@ -137,10 +139,17 @@ enum VikunjaAPI {
 
     static func updateTask(id: Int, update: TaskUpdate) async throws -> VikunjaTask {
         let body = try JSONSerialization.data(withJSONObject: update.jsonBody)
-        return try await post("/tasks/\(id)", body: body, as: VikunjaTask.self)
+        _ = try await post("/tasks/\(id)", body: body, as: VikunjaTask.self)
+        // Re-fetch so the returned task includes updated labels.
+        // Vikunja's POST /tasks/{id} response doesn't reliably embed label objects.
+        return try await fetchTask(id: id)
     }
 
     // MARK: - Private helpers
+
+    private static func fetchTask(id: Int) async throws -> VikunjaTask {
+        return try await get("/tasks/\(id)", as: VikunjaTask.self)
+    }
 
     private static func fetchTasks(projectId: Int, done: Bool, page: Int = 1) async throws -> [VikunjaTask] {
         let filter = done ? "done+%3D+true" : "done+%3D+false"
@@ -160,16 +169,18 @@ enum VikunjaAPI {
         let body = try JSONEncoder().encode(["done": done])
         let request = makeRequest("/tasks/\(id)", method: "POST", body: body)
         let (_, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus
+        let http = response as? HTTPURLResponse
+        guard let http, (200...299).contains(http.statusCode) else {
+            throw APIError.badStatus(http?.statusCode ?? -1)
         }
     }
 
     private static func get<T: Decodable>(_ path: String, as type: T.Type) async throws -> T {
         let request = makeRequest(path)
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus
+        let http = response as? HTTPURLResponse
+        guard let http, (200...299).contains(http.statusCode) else {
+            throw APIError.badStatus(http?.statusCode ?? -1)
         }
         return try JSONDecoder().decode(T.self, from: data)
     }
@@ -177,8 +188,9 @@ enum VikunjaAPI {
     private static func put<T: Decodable>(_ path: String, body: Data, as type: T.Type) async throws -> T {
         let request = makeRequest(path, method: "PUT", body: body)
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus
+        let http = response as? HTTPURLResponse
+        guard let http, (200...299).contains(http.statusCode) else {
+            throw APIError.badStatus(http?.statusCode ?? -1)
         }
         return try JSONDecoder().decode(T.self, from: data)
     }
@@ -186,8 +198,9 @@ enum VikunjaAPI {
     private static func post<T: Decodable>(_ path: String, body: Data, as type: T.Type) async throws -> T {
         let request = makeRequest(path, method: "POST", body: body)
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus
+        let http = response as? HTTPURLResponse
+        guard let http, (200...299).contains(http.statusCode) else {
+            throw APIError.badStatus(http?.statusCode ?? -1)
         }
         return try JSONDecoder().decode(T.self, from: data)
     }
@@ -204,6 +217,15 @@ enum VikunjaAPI {
     }
 
     enum APIError: Error {
-        case badStatus
+        case badStatus(Int)
+
+        var statusCode: Int {
+            if case .badStatus(let code) = self { return code }
+            return -1
+        }
+
+        var isClient4xx: Bool {
+            (400...499).contains(statusCode)
+        }
     }
 }

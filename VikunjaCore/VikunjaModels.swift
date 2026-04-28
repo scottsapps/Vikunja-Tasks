@@ -3,16 +3,16 @@ import Foundation
 // MARK: - API response shapes (shared between app and widget)
 
 struct VikunjaTask: Codable {
-    let id: Int
-    let title: String
-    let done: Bool
-    let dueDate: String?
-    let projectId: Int
-    let labels: [VikunjaLabel]?
-    let description: String?
-    let updated: String?
-    let priority: Int?
-    let reminders: [VikunjaReminder]?
+    var id: Int
+    var title: String
+    var done: Bool
+    var dueDate: String?
+    var projectId: Int
+    var labels: [VikunjaLabel]?
+    var description: String?
+    var updated: String?
+    var priority: Int?
+    var reminders: [VikunjaReminder]?
 
     enum CodingKeys: String, CodingKey {
         case id, title, done, labels, description, priority, reminders
@@ -52,7 +52,7 @@ struct VikunjaReminder: Codable {
 
 // MARK: - Task update payload
 
-struct TaskUpdate {
+struct TaskUpdate: Codable {
     var title: String?
     var description: String?
     var dueDate: Date?          // nil = no change; use clearDueDate to remove

@@ -8,9 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		06026FB1769E4DFB3D3207A1 /* CompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56EB3BD825210E0BC7DDD877 /* CompleteTaskIntent.swift */; };
+		088C68EEFC872A273BE81EF9 /* TaskMerger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */; };
+		09B9990AA282D81B80385485 /* Outbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52749DF5C84EB8B6350FE276 /* Outbox.swift */; };
 		0D11C0D3CF3FAEA401E14587 /* VikunjaAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */; };
 		0DE91F897CC393857D83DEFC /* CompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56EB3BD825210E0BC7DDD877 /* CompleteTaskIntent.swift */; };
 		0F2F790894D97DA6E0E52026 /* ProjectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BB9C870B4EF39EC432A03D /* ProjectView.swift */; };
+		13859958B79E16B366B865E8 /* Outbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52749DF5C84EB8B6350FE276 /* Outbox.swift */; };
 		162A0A2DA16149AD841EFFE7 /* VikunjaConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */; };
 		18B579380A542171D235A8C1 /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
 		18E754A4A0A728C787B384CA /* TaskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E24B7CA47255D8E039D92036 /* TaskStore.swift */; };
@@ -21,6 +24,7 @@
 		1F9113E75413F38F0F123ABA /* QuickAddParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 575C0A574F52F869DB4CA643 /* QuickAddParser.swift */; };
 		22EFFF073CD996D7953DDC2F /* TaskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E24B7CA47255D8E039D92036 /* TaskStore.swift */; };
 		27A58F28CAE31001E2C24D27 /* TaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E16AE11103FB52473BC36206 /* TaskListView.swift */; };
+		2889CDB285A07A4CDE62B914 /* TaskMerger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */; };
 		28BAB5903426413D3EF9FEA2 /* WidgetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29F335043FC5DF87CC85EE67 /* WidgetModels.swift */; };
 		2B933D2E7F7B42278201E1C4 /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A112CB4533D5AB9D9D4361D /* ReminderScheduler.swift */; };
 		2CEDDAD72EAF984837630F5A /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77E4BA4BD463D4E6942E3495 /* WidgetKit.framework */; };
@@ -36,10 +40,14 @@
 		4C46B31AAA24420FACD88ED2 /* QuickAddSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E801F43454C29A23CC09D2B3 /* QuickAddSheet.swift */; };
 		56FE7A9BF4B07565205949DF /* QuickAddPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A419351B8B970957D829770C /* QuickAddPanelController.swift */; };
 		6345DDA30EF587C5BF734506 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */; };
+		641CD4F1D55148493E046E6C /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
+		6430B665E4290AADDF65373D /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
 		66A65A39450D46B75FFAFDDD /* VikunjaTimelineProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5AA1613FD9623F81CF2764F /* VikunjaTimelineProvider.swift */; };
+		6848CC6B84948D92D155FE3A /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
 		6AE4426F1C4EA1A3091BDFCD /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E38CA1B0723B492B073EAE3 /* SharedState.swift */; };
 		6C0154B0D3C14BF642C6DEA6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3500B5442B30927185C99FA /* SwiftUI.framework */; };
 		6DB17204AFD0DBEC7C3FDA3D /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A112CB4533D5AB9D9D4361D /* ReminderScheduler.swift */; };
+		6DCD794156056ABC0B0ED673 /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
 		718E10F7317C56D4E583A48D /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E38CA1B0723B492B073EAE3 /* SharedState.swift */; };
 		72226A5E79207AE181B16849 /* VikunjaWidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */; };
 		73A46D89CE623AB28A39F2E9 /* Sidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32CFE246FC70A61041EF6E4C /* Sidebar.swift */; };
@@ -54,6 +62,7 @@
 		90B52EB586EE116D8BCD2FD2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */; };
 		944CF132112852C4C6EF42DB /* QuickAddSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E801F43454C29A23CC09D2B3 /* QuickAddSheet.swift */; };
 		9760739F1921EFE07139E83C /* UndoCompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E12C5D7A535480216299E3 /* UndoCompleteTaskIntent.swift */; };
+		97AAC28FA52B79FBC01E7E6B /* TaskMerger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */; };
 		99639FCF960339B2F9FA2670 /* ProjectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BB9C870B4EF39EC432A03D /* ProjectView.swift */; };
 		99CFEE8B3622055F11E00CD1 /* VikunjaWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5CFE29DC68AF948888033B9 /* VikunjaWidgetBundle.swift */; };
 		9A4E08C259621460C087C4DF /* QuickAddParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 575C0A574F52F869DB4CA643 /* QuickAddParser.swift */; };
@@ -66,6 +75,8 @@
 		A36F04EEDD4AF3186263B7A8 /* VikunjaWidgetApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B189E2189A5C4A68E826A0BC /* VikunjaWidgetApp.swift */; };
 		A63E777EDE70A2D04544AABA /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E8B866134A71528ACC14C76 /* TodayView.swift */; };
 		A81C8CEA6CA7E7396B8FB6F4 /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E38CA1B0723B492B073EAE3 /* SharedState.swift */; };
+		ABE10E84629633EDBEDCE5AF /* Outbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52749DF5C84EB8B6350FE276 /* Outbox.swift */; };
+		ACD4CAD1F490956471E7D203 /* Outbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52749DF5C84EB8B6350FE276 /* Outbox.swift */; };
 		B73FB8EBDF00BB4796B8F614 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E8B866134A71528ACC14C76 /* TodayView.swift */; };
 		BA3189BE869A7CEDFDF990D0 /* InfoIOS.plist in Resources */ = {isa = PBXBuildFile; fileRef = 7E2A53ED8DB6BC3CCBC225B2 /* InfoIOS.plist */; };
 		BBB629FBE31DC715BE9BEEF5 /* InlineTaskEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB39CB6616D672184062F00A /* InlineTaskEditor.swift */; };
@@ -73,6 +84,7 @@
 		C26CA5E4DCCA235E2D67AB5E /* VikunjaConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */; };
 		CEF7A6817B639A02C19E842A /* TaskRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C26881923D0CBAD74E43300 /* TaskRow.swift */; };
 		CF9A0B3D456076A0A657DF26 /* VikunjaAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */; };
+		D1049B52368E223631ADEC46 /* TaskMerger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */; };
 		D2B56A3D292BDB28B9B7EACA /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3DA4F4CFBB26B3E8AB8F9F4 /* SettingsView.swift */; };
 		D3B5C46929A34AA8A6B2465A /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB82D40CDF612A9CCA6F58D9 /* InboxView.swift */; };
 		DB38C05911F489759F92739A /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB82D40CDF612A9CCA6F58D9 /* InboxView.swift */; };
@@ -133,19 +145,22 @@
 		29F335043FC5DF87CC85EE67 /* WidgetModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetModels.swift; sourceTree = "<group>"; };
 		2E8B866134A71528ACC14C76 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		30D8862B6CFF3E3E06B26ACA /* VikunjaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = VikunjaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		31047F6BFB8F2F00A7627426 /* VikunjaWidgetExtensionIOS.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = VikunjaWidgetExtensionIOS.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		31047F6BFB8F2F00A7627426 /* VikunjaWidgetExtensionIOS.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = VikunjaWidgetExtensionIOS.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		32CFE246FC70A61041EF6E4C /* Sidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sidebar.swift; sourceTree = "<group>"; };
 		4C26881923D0CBAD74E43300 /* TaskRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRow.swift; sourceTree = "<group>"; };
 		4C6FD0D4878C2A6DC159938F /* VikunjaWidgetApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VikunjaWidgetApp.entitlements; sourceTree = "<group>"; };
+		52749DF5C84EB8B6350FE276 /* Outbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Outbox.swift; sourceTree = "<group>"; };
 		56EB3BD825210E0BC7DDD877 /* CompleteTaskIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteTaskIntent.swift; sourceTree = "<group>"; };
 		575C0A574F52F869DB4CA643 /* QuickAddParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddParser.swift; sourceTree = "<group>"; };
 		5A112CB4533D5AB9D9D4361D /* ReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduler.swift; sourceTree = "<group>"; };
+		6310D2E398EF259266307AA4 /* Reachability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reachability.swift; sourceTree = "<group>"; };
 		68C6E7BB60EBB7C6C225DFAE /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetEntryView.swift; sourceTree = "<group>"; };
+		775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskMerger.swift; sourceTree = "<group>"; };
 		77E4BA4BD463D4E6942E3495 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		7E2A53ED8DB6BC3CCBC225B2 /* InfoIOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = InfoIOS.plist; sourceTree = "<group>"; };
 		7EAD0BC89662C3B29128BFEC /* InfoIOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = InfoIOS.plist; sourceTree = "<group>"; };
-		94A79F734B4FA3F1B7F71059 /* VikunjaWidget.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VikunjaWidget.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		94A79F734B4FA3F1B7F71059 /* VikunjaWidgetAppIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = VikunjaWidgetAppIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9E38CA1B0723B492B073EAE3 /* SharedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedState.swift; sourceTree = "<group>"; };
 		A3500B5442B30927185C99FA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		A419351B8B970957D829770C /* QuickAddPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddPanelController.swift; sourceTree = "<group>"; };
@@ -154,7 +169,7 @@
 		B189E2189A5C4A68E826A0BC /* VikunjaWidgetApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetApp.swift; sourceTree = "<group>"; };
 		B3BB9C870B4EF39EC432A03D /* ProjectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectView.swift; sourceTree = "<group>"; };
 		B3DA4F4CFBB26B3E8AB8F9F4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		BDB2CBC26BADD19ED549207B /* VikunjaWidget.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VikunjaWidget.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BDB2CBC26BADD19ED549207B /* VikunjaWidgetApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VikunjaWidgetApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C19BA8BB693A0D3B77D8FD25 /* AppRoot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoot.swift; sourceTree = "<group>"; };
 		C4E12C5D7A535480216299E3 /* UndoCompleteTaskIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoCompleteTaskIntent.swift; sourceTree = "<group>"; };
 		C5CFE29DC68AF948888033B9 /* VikunjaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetBundle.swift; sourceTree = "<group>"; };
@@ -249,8 +264,8 @@
 		43E0FD09DB5D1963EACC6D09 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				BDB2CBC26BADD19ED549207B /* VikunjaWidget.app */,
-				94A79F734B4FA3F1B7F71059 /* VikunjaWidget.app */,
+				BDB2CBC26BADD19ED549207B /* VikunjaWidgetApp.app */,
+				94A79F734B4FA3F1B7F71059 /* VikunjaWidgetAppIOS.app */,
 				30D8862B6CFF3E3E06B26ACA /* VikunjaWidgetExtension.appex */,
 				31047F6BFB8F2F00A7627426 /* VikunjaWidgetExtensionIOS.appex */,
 			);
@@ -278,8 +293,11 @@
 		BCCB1884FA56BEC5635FF7C7 /* VikunjaCore */ = {
 			isa = PBXGroup;
 			children = (
+				52749DF5C84EB8B6350FE276 /* Outbox.swift */,
 				575C0A574F52F869DB4CA643 /* QuickAddParser.swift */,
+				6310D2E398EF259266307AA4 /* Reachability.swift */,
 				9E38CA1B0723B492B073EAE3 /* SharedState.swift */,
+				775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */,
 				EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */,
 				27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */,
 				F8050180A5CB81868E0837EA /* VikunjaModels.swift */,
@@ -336,7 +354,7 @@
 			packageProductDependencies = (
 			);
 			productName = VikunjaWidgetApp;
-			productReference = BDB2CBC26BADD19ED549207B /* VikunjaWidget.app */;
+			productReference = BDB2CBC26BADD19ED549207B /* VikunjaWidgetApp.app */;
 			productType = "com.apple.product-type.application";
 		};
 		5089A31E80CF606C44D1424F /* VikunjaWidgetAppIOS */ = {
@@ -356,7 +374,7 @@
 			packageProductDependencies = (
 			);
 			productName = VikunjaWidgetAppIOS;
-			productReference = 94A79F734B4FA3F1B7F71059 /* VikunjaWidget.app */;
+			productReference = 94A79F734B4FA3F1B7F71059 /* VikunjaWidgetAppIOS.app */;
 			productType = "com.apple.product-type.application";
 		};
 		A0698B744356C9C9BF163D6D /* VikunjaWidgetExtensionIOS */ = {
@@ -471,15 +489,18 @@
 				DB38C05911F489759F92739A /* InboxView.swift in Sources */,
 				BBB629FBE31DC715BE9BEEF5 /* InlineTaskEditor.swift in Sources */,
 				EDD77C1F97806905078A8173 /* LogbookView.swift in Sources */,
+				ACD4CAD1F490956471E7D203 /* Outbox.swift in Sources */,
 				99639FCF960339B2F9FA2670 /* ProjectView.swift in Sources */,
 				56FE7A9BF4B07565205949DF /* QuickAddPanelController.swift in Sources */,
 				9A4E08C259621460C087C4DF /* QuickAddParser.swift in Sources */,
 				4C46B31AAA24420FACD88ED2 /* QuickAddSheet.swift in Sources */,
+				6DCD794156056ABC0B0ED673 /* Reachability.swift in Sources */,
 				2B933D2E7F7B42278201E1C4 /* ReminderScheduler.swift in Sources */,
 				33211BD2FE2B40D1ED2CD4B2 /* SettingsView.swift in Sources */,
 				A81C8CEA6CA7E7396B8FB6F4 /* SharedState.swift in Sources */,
 				73A46D89CE623AB28A39F2E9 /* Sidebar.swift in Sources */,
 				E14BBE3DEA30D6706DC1A4EC /* TaskListView.swift in Sources */,
+				2889CDB285A07A4CDE62B914 /* TaskMerger.swift in Sources */,
 				CEF7A6817B639A02C19E842A /* TaskRow.swift in Sources */,
 				22EFFF073CD996D7953DDC2F /* TaskStore.swift in Sources */,
 				A63E777EDE70A2D04544AABA /* TodayView.swift in Sources */,
@@ -495,8 +516,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				0DE91F897CC393857D83DEFC /* CompleteTaskIntent.swift in Sources */,
+				ABE10E84629633EDBEDCE5AF /* Outbox.swift in Sources */,
 				7A7C13B41F052C0A061CD460 /* QuickAddParser.swift in Sources */,
+				6848CC6B84948D92D155FE3A /* Reachability.swift in Sources */,
 				718E10F7317C56D4E583A48D /* SharedState.swift in Sources */,
+				97AAC28FA52B79FBC01E7E6B /* TaskMerger.swift in Sources */,
 				89EBCE16EFFEFDB7F95BEA06 /* TaskRowView.swift in Sources */,
 				9760739F1921EFE07139E83C /* UndoCompleteTaskIntent.swift in Sources */,
 				CF9A0B3D456076A0A657DF26 /* VikunjaAPI.swift in Sources */,
@@ -517,15 +541,18 @@
 				D3B5C46929A34AA8A6B2465A /* InboxView.swift in Sources */,
 				A11C5F4AD5A24673789AD261 /* InlineTaskEditor.swift in Sources */,
 				3B1C3BDF5AF9E198D17FB79B /* LogbookView.swift in Sources */,
+				09B9990AA282D81B80385485 /* Outbox.swift in Sources */,
 				0F2F790894D97DA6E0E52026 /* ProjectView.swift in Sources */,
 				9B4962CBEE8CCFACACDA25FB /* QuickAddPanelController.swift in Sources */,
 				1D2EBBE25833CA492EA4ED14 /* QuickAddParser.swift in Sources */,
 				944CF132112852C4C6EF42DB /* QuickAddSheet.swift in Sources */,
+				6430B665E4290AADDF65373D /* Reachability.swift in Sources */,
 				6DB17204AFD0DBEC7C3FDA3D /* ReminderScheduler.swift in Sources */,
 				D2B56A3D292BDB28B9B7EACA /* SettingsView.swift in Sources */,
 				1CF0C1FDEB04527CA786B784 /* SharedState.swift in Sources */,
 				814CA279B7E092879D42A777 /* Sidebar.swift in Sources */,
 				27A58F28CAE31001E2C24D27 /* TaskListView.swift in Sources */,
+				D1049B52368E223631ADEC46 /* TaskMerger.swift in Sources */,
 				308235EBA3ADB547172A1689 /* TaskRow.swift in Sources */,
 				18E754A4A0A728C787B384CA /* TaskStore.swift in Sources */,
 				B73FB8EBDF00BB4796B8F614 /* TodayView.swift in Sources */,
@@ -541,8 +568,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				06026FB1769E4DFB3D3207A1 /* CompleteTaskIntent.swift in Sources */,
+				13859958B79E16B366B865E8 /* Outbox.swift in Sources */,
 				1F9113E75413F38F0F123ABA /* QuickAddParser.swift in Sources */,
+				641CD4F1D55148493E046E6C /* Reachability.swift in Sources */,
 				6AE4426F1C4EA1A3091BDFCD /* SharedState.swift in Sources */,
+				088C68EEFC872A273BE81EF9 /* TaskMerger.swift in Sources */,
 				19869DC7FA0480C06F4BDC02 /* TaskRowView.swift in Sources */,
 				7C1C97B0D5E7933FDEE49667 /* UndoCompleteTaskIntent.swift in Sources */,
 				862CF3B1755C0FAA540F10F1 /* VikunjaAPI.swift in Sources */,
@@ -673,7 +703,6 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = VEB4GCTC3B;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -851,7 +880,6 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = VEB4GCTC3B;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;

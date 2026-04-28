@@ -21,7 +21,6 @@ struct InlineTaskEditor: View {
     // UI state
     @State private var isSaving = false
     @State private var errorMessage: String?
-    @State private var availableLabels: [VikunjaLabel] = []
     @State private var showDatePicker = false
     @State private var showReminderPicker = false
     @FocusState private var titleFocused: Bool
@@ -147,7 +146,6 @@ struct InlineTaskEditor: View {
         )
         .task {
             titleFocused = true
-            availableLabels = (try? await VikunjaAPI.fetchLabels()) ?? []
         }
         .animation(.easeInOut(duration: 0.18), value: showDatePicker)
         .animation(.easeInOut(duration: 0.18), value: showReminderPicker)
@@ -256,7 +254,7 @@ struct InlineTaskEditor: View {
 
     private var labelsMenu: some View {
         Menu {
-            ForEach(availableLabels) { label in
+            ForEach(store.labels) { label in
                 Button {
                     if selectedLabelIds.contains(label.id) {
                         selectedLabelIds.remove(label.id)
@@ -270,7 +268,7 @@ struct InlineTaskEditor: View {
                     )
                 }
             }
-            if availableLabels.isEmpty {
+            if store.labels.isEmpty {
                 Text("No labels yet")
                     .foregroundStyle(.secondary)
             }
@@ -351,8 +349,6 @@ struct InlineTaskEditor: View {
         guard !trimmedTitle.isEmpty else { return }
 
         isSaving = true
-        errorMessage = nil
-
         var update = TaskUpdate()
 
         if trimmedTitle != task.title { update.title = trimmedTitle }
@@ -396,14 +392,10 @@ struct InlineTaskEditor: View {
             || update.labelIds != nil || update.projectId != nil
             || update.reminders != nil
 
-        do {
-            if hasChanges {
-                try await store.update(taskId: task.id, with: update)
-            }
-            onDismiss()
-        } catch {
-            errorMessage = error.localizedDescription
+        if hasChanges {
+            await store.update(taskId: task.id, with: update)
         }
+        onDismiss()
 
         isSaving = false
     }

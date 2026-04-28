@@ -7,11 +7,10 @@ struct QuickAddSheet: View {
     @State private var inputText = ""
     @State private var isSubmitting = false
     @State private var errorMessage: String?
-    @State private var availableLabels: [VikunjaLabel] = []
     @FocusState private var fieldFocused: Bool
 
     private var parsed: QuickAddResult {
-        QuickAddParser.parse(inputText, knownProjects: store.projects, knownLabels: availableLabels)
+        QuickAddParser.parse(inputText, knownProjects: store.projects, knownLabels: store.labels)
     }
 
     var body: some View {
@@ -67,7 +66,6 @@ struct QuickAddSheet: View {
         }
         .padding(24)
         .onAppear { fieldFocused = true }
-        .task { availableLabels = (try? await VikunjaAPI.fetchLabels()) ?? [] }
     }
 
     // MARK: - Preview chips
@@ -118,58 +116,48 @@ struct QuickAddSheet: View {
         errorMessage = nil
 
         Task {
-            do {
-                // Resolve project
-                let targetProject: VikunjaProject?
-                if let name = p.projectName {
-                    targetProject = store.projects.first {
-                        $0.title.lowercased().hasPrefix(name.lowercased())
-                    } ?? store.inboxProject
-                } else {
-                    targetProject = store.inboxProject
-                }
-
-                guard let project = targetProject ?? store.projects.first else {
-                    errorMessage = "No project found to add task to."
-                    isSubmitting = false
-                    return
-                }
-
-                // Resolve labels: fetch existing or create
-                var labelIds: [Int] = []
-                if !p.labelTitles.isEmpty {
-                    let existingLabels = try await VikunjaAPI.fetchLabels()
-                    for title in p.labelTitles {
-                        if let existing = existingLabels.first(where: {
-                            $0.title.lowercased() == title.lowercased()
-                        }) {
-                            labelIds.append(existing.id)
-                        } else {
-                            let created = try await VikunjaAPI.createLabel(title: title)
-                            labelIds.append(created.id)
-                        }
-                    }
-                }
-
-                // Create task
-                let newTask = try await VikunjaAPI.createTask(
-                    projectId: project.id,
-                    title: p.cleanedTitle,
-                    dueDate: p.dueDate,
-                    priority: p.priority,
-                    labelIds: labelIds
-                )
-
-                // Optimistic insert
-                await MainActor.run {
-                    store.undoneTasks.append(newTask)
-                }
-
-                dismiss()
-            } catch {
-                errorMessage = error.localizedDescription
+            // Resolve project
+            let targetProject: VikunjaProject?
+            if let name = p.projectName {
+                targetProject = store.projects.first {
+                    $0.title.lowercased().hasPrefix(name.lowercased())
+                } ?? store.inboxProject
+            } else {
+                targetProject = store.inboxProject
             }
 
+            guard let project = targetProject ?? store.projects.first else {
+                errorMessage = "No project found to add task to."
+                isSubmitting = false
+                return
+            }
+
+            // Resolve labels from cache; attempt to create unknown ones online (skip if offline).
+            var resolvedLabels: [VikunjaLabel] = []
+            for title in p.labelTitles {
+                if let existing = store.labels.first(where: {
+                    $0.title.lowercased() == title.lowercased()
+                }) {
+                    resolvedLabels.append(existing)
+                } else if store.reachability.isOnline {
+                    if let created = try? await VikunjaAPI.createLabel(title: title) {
+                        resolvedLabels.append(created)
+                        await MainActor.run { store.labels.append(created) }
+                    }
+                }
+                // Unknown labels that can't be created offline are silently skipped.
+            }
+
+            // Enqueue via store (handles outbox + optimistic merge).
+            store.createTask(
+                projectId: project.id,
+                title: p.cleanedTitle,
+                dueDate: p.dueDate,
+                priority: p.priority,
+                labels: resolvedLabels
+            )
+
+            dismiss()
             isSubmitting = false
         }
     }

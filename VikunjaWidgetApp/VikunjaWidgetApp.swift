@@ -6,6 +6,7 @@ struct VikunjaWidgetAppEntry: App {
     #if os(macOS)
     @State private var panelController = QuickAddPanelController()
     #endif
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -19,5 +20,10 @@ struct VikunjaWidgetAppEntry: App {
         #if os(macOS)
         .defaultSize(width: 900, height: 600)
         #endif
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                Task { await store.drainOutbox() }
+            }
+        }
     }
 }

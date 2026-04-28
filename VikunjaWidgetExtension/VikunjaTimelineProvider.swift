@@ -113,11 +113,8 @@ struct VikunjaTimelineProvider: TimelineProvider {
     }
 
     private func maxTasks(family: WidgetFamily, sectionCount: Int = 0) -> Int {
-        if family == .systemMedium { return 4 }
-        #if os(macOS)
+        if family == .systemMedium { return sectionCount >= 2 ? 3 : 4 }
+        // Reduce by one when there are 3 section headers — they consume ~1 task-row each.
         return sectionCount >= 3 ? 7 : 8
-        #else
-        return 8
-        #endif
     }
 }

@@ -10,13 +10,23 @@ final class TaskStore {
     var undoneTasks: [VikunjaTask] = []
     var doneTasks: [VikunjaTask] = []
     var projects: [VikunjaProject] = []
+    var labels: [VikunjaLabel] = []
     var isLoading = false
     var error: String?
+
+    // MARK: - Offline infrastructure
+
+    let outbox = Outbox()
+    let reachability = Reachability.shared
+
+    /// Last server-fetched undone tasks before merger is applied.
+    private var lastServerUndone: [VikunjaTask] = []
 
     // MARK: - Init
 
     init() {
         loadCache()
+        observeReachability()
     }
 
     // MARK: - Derived helpers
@@ -38,7 +48,6 @@ final class TaskStore {
         return undoneTasks.filter { $0.projectId == inbox.id }
     }
 
-    /// All undone tasks that have a due date — used by the Today view.
     func upcomingTasks() -> [VikunjaTask] {
         undoneTasks.filter { $0.effectiveDueDate != nil }
     }
@@ -53,9 +62,13 @@ final class TaskStore {
             let fetchedProjects = try await VikunjaAPI.fetchAllProjects()
             let fetchedTasks = try await VikunjaAPI.fetchAllUndoneTasks(projects: fetchedProjects)
             projects = fetchedProjects
-            undoneTasks = fetchedTasks
+            lastServerUndone = fetchedTasks
+            if let fetchedLabels = try? await VikunjaAPI.fetchLabels() {
+                labels = fetchedLabels
+            }
+            rebuildMergedTasks()
             saveCache()
-            await ReminderScheduler.sync(tasks: fetchedTasks)
+            await ReminderScheduler.sync(tasks: undoneTasks)
         } catch {
             self.error = error.localizedDescription
         }
@@ -65,23 +78,85 @@ final class TaskStore {
     func refreshLogbook() async {
         guard VikunjaConfig.isConfigured else { return }
         do {
-            doneTasks = try await VikunjaAPI.fetchDoneTasks(page: 1)
+            let serverDone = try await VikunjaAPI.fetchDoneTasks(page: 1)
+            let labelDir = labelDirectory
+            let merged = TaskMerger.merge(serverTasks: serverDone, ops: outbox.ops, labelDirectory: labelDir)
+            doneTasks = merged.filter { $0.done }
+                .sorted { ($0.updatedDate ?? .distantPast) > ($1.updatedDate ?? .distantPast) }
         } catch {
             // silently fail — logbook is best-effort
         }
     }
 
+    // MARK: - Merged task rebuild
+
+    private func rebuildMergedTasks() {
+        let merged = TaskMerger.merge(
+            serverTasks: lastServerUndone,
+            ops: outbox.ops,
+            labelDirectory: labelDirectory
+        )
+        undoneTasks = merged.filter { !$0.done }
+    }
+
+    private var labelDirectory: [Int: VikunjaLabel] {
+        Dictionary(uniqueKeysWithValues: labels.map { ($0.id, $0) })
+    }
+
+    // MARK: - Create task (enqueues to outbox)
+
+    func createTask(
+        projectId: Int,
+        title: String,
+        dueDate: Date? = nil,
+        priority: Int? = nil,
+        labels: [VikunjaLabel] = [],
+        reminders: [Date] = []
+    ) {
+        let clientId = UUID()
+        let placeholderId = outbox.nextPlaceholderId()
+        let payload = CreatePayload(
+            title: title,
+            projectId: projectId,
+            dueDate: dueDate,
+            priority: priority,
+            labels: labels,
+            reminders: reminders
+        )
+        let op = PendingOp(
+            id: UUID(),
+            timestamp: Date(),
+            ref: .client(clientId),
+            kind: .create(payload: payload, placeholderId: placeholderId)
+        )
+        outbox.append(op)
+        rebuildMergedTasks()
+        Task { await drainOutbox() }
+    }
+
+    // MARK: - Update task (enqueues to outbox)
+
+    func update(taskId: Int, with update: TaskUpdate) async {
+        let ref = ref(for: taskId)
+        let op = PendingOp(
+            id: UUID(),
+            timestamp: Date(),
+            ref: ref,
+            kind: .update(update: update)
+        )
+        outbox.append(op)
+        rebuildMergedTasks()
+        await drainOutbox()
+    }
+
     // MARK: - Completion with undo
 
-    /// Tasks completed in-app but within the undo window.
     private(set) var pendingUndo: [Int: VikunjaTask] = [:]
     private var undoTimers: [Int: Task<Void, Never>] = [:]
     let undoWindow: TimeInterval = 4
 
     func complete(task: VikunjaTask) async {
-        // Optimistic: hide the task from the list immediately
         undoneTasks.removeAll { $0.id == task.id }
-        // Stage for undo
         pendingUndo[task.id] = task
         scheduleUndoExpiry(for: task)
     }
@@ -106,30 +181,87 @@ final class TaskStore {
     private func commitCompletion(task: VikunjaTask) async {
         pendingUndo.removeValue(forKey: task.id)
         undoTimers.removeValue(forKey: task.id)
-        do {
-            try await VikunjaAPI.completeTask(id: task.id)
-            WidgetCenter.shared.reloadAllTimelines()
-        } catch {
-            // Restore on API failure
-            undoneTasks.append(task)
-        }
-    }
-
-    func update(taskId: Int, with update: TaskUpdate) async throws {
-        let updated = try await VikunjaAPI.updateTask(id: taskId, update: update)
-        if let idx = undoneTasks.firstIndex(where: { $0.id == taskId }) {
-            undoneTasks[idx] = updated
-        }
+        let taskRef = ref(for: task.id)
+        let op = PendingOp(
+            id: UUID(),
+            timestamp: Date(),
+            ref: taskRef,
+            kind: .complete
+        )
+        outbox.append(op)
         WidgetCenter.shared.reloadAllTimelines()
+        await drainOutbox()
     }
 
     func reopen(task: VikunjaTask) async {
         doneTasks.removeAll { $0.id == task.id }
-        do {
-            try await VikunjaAPI.reopenTask(id: task.id)
-            WidgetCenter.shared.reloadAllTimelines()
-        } catch {
-            doneTasks.append(task)
+        let taskRef = ref(for: task.id)
+        let op = PendingOp(
+            id: UUID(),
+            timestamp: Date(),
+            ref: taskRef,
+            kind: .reopen
+        )
+        outbox.append(op)
+        WidgetCenter.shared.reloadAllTimelines()
+        await drainOutbox()
+    }
+
+    // MARK: - Drain outbox
+
+    func drainOutbox() async {
+        guard reachability.isOnline, !outbox.ops.isEmpty else { return }
+        let snapshot = outbox.ops
+        for op in snapshot {
+            do {
+                switch op.kind {
+                case .create(let payload, _):
+                    let created = try await VikunjaAPI.createTask(
+                        projectId: payload.projectId,
+                        title: payload.title,
+                        dueDate: payload.dueDate,
+                        priority: payload.priority,
+                        labelIds: payload.labels.map(\.id),
+                        reminders: payload.reminders
+                    )
+                    if case .client(let uuid) = op.ref {
+                        outbox.remap(client: uuid, toServer: created.id)
+                    }
+                case .update(let update):
+                    guard let serverId = serverId(for: op.ref) else { continue }
+                    _ = try await VikunjaAPI.updateTask(id: serverId, update: update)
+                case .complete:
+                    guard let serverId = serverId(for: op.ref) else { continue }
+                    try await VikunjaAPI.completeTask(id: serverId)
+                case .reopen:
+                    guard let serverId = serverId(for: op.ref) else { continue }
+                    try await VikunjaAPI.reopenTask(id: serverId)
+                }
+                outbox.remove(id: op.id)
+            } catch let error as VikunjaAPI.APIError where error.isClient4xx {
+                // Task likely deleted server-side — drop op silently
+                outbox.remove(id: op.id)
+            } catch {
+                // Network/server error — stop draining, retry next time
+                break
+            }
+        }
+        await refresh()
+    }
+
+    // MARK: - Reachability observation
+
+    private func observeReachability() {
+        withObservationTracking {
+            _ = reachability.isOnline
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if self.reachability.isOnline {
+                    await self.drainOutbox()
+                }
+                self.observeReachability()
+            }
         }
     }
 
@@ -143,7 +275,7 @@ final class TaskStore {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(60))
                 guard !Task.isCancelled else { break }
-                await self?.refresh()
+                await self?.drainOutbox()
             }
         }
     }
@@ -153,10 +285,29 @@ final class TaskStore {
         pollTask = nil
     }
 
+    // MARK: - Private helpers
+
+    /// Returns the TaskRef for a given task id (negative = offline placeholder).
+    private func ref(for taskId: Int) -> TaskRef {
+        if taskId < 0, let uuid = outbox.clientId(forPlaceholder: taskId) {
+            return .client(uuid)
+        }
+        return .server(taskId)
+    }
+
+    /// Returns a server Int id only (nil for still-pending client tasks).
+    private func serverId(for ref: TaskRef) -> Int? {
+        switch ref {
+        case .server(let id): return id
+        case .client: return nil
+        }
+    }
+
     // MARK: - Cache (UserDefaults — app process only)
 
     private let tasksCacheKey = "app.cache.undoneTasks"
     private let projectsCacheKey = "app.cache.projects"
+    private let labelsCacheKey = "app.cache.labels"
 
     private func loadCache() {
         if let data = UserDefaults.standard.data(forKey: tasksCacheKey),
@@ -167,10 +318,15 @@ final class TaskStore {
            let projs = try? JSONDecoder().decode([VikunjaProject].self, from: data) {
             projects = projs
         }
+        if let data = UserDefaults.standard.data(forKey: labelsCacheKey),
+           let lbls = try? JSONDecoder().decode([VikunjaLabel].self, from: data) {
+            labels = lbls
+        }
     }
 
     private func saveCache() {
         UserDefaults.standard.set(try? JSONEncoder().encode(undoneTasks), forKey: tasksCacheKey)
         UserDefaults.standard.set(try? JSONEncoder().encode(projects), forKey: projectsCacheKey)
+        UserDefaults.standard.set(try? JSONEncoder().encode(labels), forKey: labelsCacheKey)
     }
 }

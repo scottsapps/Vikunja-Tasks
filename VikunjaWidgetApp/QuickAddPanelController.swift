@@ -3,6 +3,15 @@ import AppKit
 import SwiftUI
 import Carbon
 
+// MARK: - Custom panel
+
+// NSWindow.canBecomeKey returns false for borderless windows by default,
+// which prevents text fields from receiving keyboard input.
+private final class QuickAddPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+}
+
 // MARK: - Panel controller
 
 final class QuickAddPanelController: NSObject {
@@ -24,7 +33,7 @@ final class QuickAddPanelController: NSObject {
     // MARK: - Panel construction
 
     private func buildPanel() {
-        let p = NSPanel(
+        let p = QuickAddPanel(
             contentRect: NSRect(x: 0, y: 0, width: 500, height: 220),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -62,8 +71,10 @@ final class QuickAddPanelController: NSObject {
         panel.contentViewController = ctrl
         panel.setContentSize(NSSize(width: 500, height: 220))
         panel.center()
-        panel.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        // orderFrontRegardless shows the panel without activating the app (no main-window foreground).
+        // makeKey() is safe because QuickAddPanel overrides canBecomeKey to return true.
+        panel.orderFrontRegardless()
+        panel.makeKey()
     }
 
     // MARK: - Global hotkey (Ctrl+Space)

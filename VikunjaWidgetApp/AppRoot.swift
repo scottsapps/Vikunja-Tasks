@@ -1,5 +1,30 @@
 import SwiftUI
 
+// MARK: - Offline indicator
+
+private struct OfflinePill: View {
+    let isOnline: Bool
+    let pendingCount: Int
+
+    var body: some View {
+        let offline = !isOnline
+        let hasPending = pendingCount > 0
+        if offline || hasPending {
+            HStack(spacing: 4) {
+                Image(systemName: offline ? "wifi.slash" : "arrow.up.circle")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(offline ? "Offline" : "\(pendingCount) pending")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(offline ? Color.secondary.opacity(0.18) : Color.orange.opacity(0.18))
+            .foregroundStyle(offline ? Color.secondary : Color.orange)
+            .clipShape(Capsule())
+        }
+    }
+}
+
 // MARK: - Sidebar selection
 
 enum SidebarItem: Hashable {
@@ -111,6 +136,9 @@ struct AppRoot: View {
                         Image(systemName: "gear")
                     }
                 }
+                ToolbarItem(placement: .status) {
+                    OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count)
+                }
             }
             .overlay {
                 if store.isLoading && store.undoneTasks.isEmpty {
@@ -150,6 +178,9 @@ struct AppRoot: View {
                 }
                 .keyboardShortcut("n", modifiers: .command)
                 .help("New Task (⌘N)")
+            }
+            ToolbarItem(placement: .status) {
+                OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count)
             }
         }
         #endif

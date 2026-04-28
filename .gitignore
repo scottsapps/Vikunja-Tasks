@@ -1,0 +1,13 @@
+# Signing — fill in your Team ID and keep off git
+Signing.xcconfig
+
+# Xcode
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# macOS
+.DS_Store

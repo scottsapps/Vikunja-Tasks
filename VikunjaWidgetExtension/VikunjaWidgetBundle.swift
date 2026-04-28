@@ -1,0 +1,30 @@
+import WidgetKit
+import SwiftUI
+
+struct VikunjaWidget: Widget {
+    let kind = "VikunjaWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: VikunjaTimelineProvider()) { entry in
+            VikunjaWidgetEntryView(entry: entry)
+        }
+        .configurationDisplayName("Vikunja Tasks")
+        .description("Upcoming tasks from your Vikunja instance.")
+        .supportedFamilies(supportedFamilies)
+    }
+
+    private var supportedFamilies: [WidgetFamily] {
+        #if os(iOS)
+        return [.systemMedium, .systemLarge]
+        #else
+        return [.systemLarge]
+        #endif
+    }
+}
+
+@main
+struct VikunjaWidgetBundle: WidgetBundle {
+    var body: some Widget {
+        VikunjaWidget()
+    }
+}

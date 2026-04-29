@@ -41,6 +41,7 @@ struct AppRoot: View {
     @State private var selection: SidebarItem? = .today
     @State private var showSettings = false
     @State private var showQuickAdd = false
+    @State private var showBulkImport = false
     @State private var searchText = ""
 
     // Drives iPhone NavigationStack
@@ -71,6 +72,9 @@ struct AppRoot: View {
         }
         .sheet(isPresented: $showQuickAdd) {
             QuickAddSheet(store: store)
+        }
+        .sheet(isPresented: $showBulkImport) {
+            BulkImportSheet(store: store)
         }
         .environment(store)
     }
@@ -131,6 +135,11 @@ struct AppRoot: View {
                         Image(systemName: "square.and.pencil")
                     }
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button { showBulkImport = true } label: {
+                        Image(systemName: "arrow.down.doc")
+                    }
+                }
                 ToolbarItem(placement: .navigation) {
                     Button { showSettings = true } label: {
                         Image(systemName: "gear")
@@ -178,6 +187,12 @@ struct AppRoot: View {
                 }
                 .keyboardShortcut("n", modifiers: .command)
                 .help("New Task (⌘N)")
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button { showBulkImport = true } label: {
+                    Label("Bulk Import", systemImage: "arrow.down.doc")
+                }
+                .help("Bulk Import Tasks")
             }
             ToolbarItem(placement: .status) {
                 OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count)

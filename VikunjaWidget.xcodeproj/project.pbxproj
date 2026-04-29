@@ -13,6 +13,7 @@
 		0D11C0D3CF3FAEA401E14587 /* VikunjaAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */; };
 		0DE91F897CC393857D83DEFC /* CompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56EB3BD825210E0BC7DDD877 /* CompleteTaskIntent.swift */; };
 		0F2F790894D97DA6E0E52026 /* ProjectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BB9C870B4EF39EC432A03D /* ProjectView.swift */; };
+		13432CFDA3F3F4FEAC708519 /* BulkImportParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4CA3A47F03EBF7AE5424D07 /* BulkImportParser.swift */; };
 		13859958B79E16B366B865E8 /* Outbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52749DF5C84EB8B6350FE276 /* Outbox.swift */; };
 		162A0A2DA16149AD841EFFE7 /* VikunjaConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */; };
 		18B579380A542171D235A8C1 /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
@@ -35,9 +36,12 @@
 		36D8F12A34013B52B603819F /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 68C6E7BB60EBB7C6C225DFAE /* AppIntents.framework */; };
 		39D7FDFFA081DFF31787DBB8 /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
 		3B1C3BDF5AF9E198D17FB79B /* LogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD6802321CF98C91D0FC1142 /* LogbookView.swift */; };
+		426140361E8189D111CEC188 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
 		484BCB3C1775B98410DFC6DE /* WidgetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29F335043FC5DF87CC85EE67 /* WidgetModels.swift */; };
 		4955A225D165910AD724F5A8 /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
 		4C46B31AAA24420FACD88ED2 /* QuickAddSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E801F43454C29A23CC09D2B3 /* QuickAddSheet.swift */; };
+		557C43CFE255EBCE5CCB0D5B /* BulkImportParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4CA3A47F03EBF7AE5424D07 /* BulkImportParser.swift */; };
+		5697B9BF68F3C53AD38D84D1 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
 		56FE7A9BF4B07565205949DF /* QuickAddPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A419351B8B970957D829770C /* QuickAddPanelController.swift */; };
 		6345DDA30EF587C5BF734506 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */; };
 		641CD4F1D55148493E046E6C /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
@@ -46,6 +50,7 @@
 		6848CC6B84948D92D155FE3A /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
 		6AE4426F1C4EA1A3091BDFCD /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E38CA1B0723B492B073EAE3 /* SharedState.swift */; };
 		6C0154B0D3C14BF642C6DEA6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3500B5442B30927185C99FA /* SwiftUI.framework */; };
+		6C460691B5F9E205B40CD447 /* BulkImportParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4CA3A47F03EBF7AE5424D07 /* BulkImportParser.swift */; };
 		6DB17204AFD0DBEC7C3FDA3D /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A112CB4533D5AB9D9D4361D /* ReminderScheduler.swift */; };
 		6DCD794156056ABC0B0ED673 /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
 		718E10F7317C56D4E583A48D /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E38CA1B0723B492B073EAE3 /* SharedState.swift */; };
@@ -78,8 +83,10 @@
 		ABE10E84629633EDBEDCE5AF /* Outbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52749DF5C84EB8B6350FE276 /* Outbox.swift */; };
 		ACD4CAD1F490956471E7D203 /* Outbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52749DF5C84EB8B6350FE276 /* Outbox.swift */; };
 		B73FB8EBDF00BB4796B8F614 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E8B866134A71528ACC14C76 /* TodayView.swift */; };
+		B7795AF50F39B7470D4507FC /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
 		BA3189BE869A7CEDFDF990D0 /* InfoIOS.plist in Resources */ = {isa = PBXBuildFile; fileRef = 7E2A53ED8DB6BC3CCBC225B2 /* InfoIOS.plist */; };
 		BBB629FBE31DC715BE9BEEF5 /* InlineTaskEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB39CB6616D672184062F00A /* InlineTaskEditor.swift */; };
+		BBDAED74A2CE38A0D6CB6B3D /* BulkImportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB4EF59CB974358A163128A /* BulkImportSheet.swift */; };
 		BE9D7675A68505B3AF04B593 /* VikunjaWidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */; };
 		C26CA5E4DCCA235E2D67AB5E /* VikunjaConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */; };
 		CEF7A6817B639A02C19E842A /* TaskRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C26881923D0CBAD74E43300 /* TaskRow.swift */; };
@@ -87,13 +94,16 @@
 		D1049B52368E223631ADEC46 /* TaskMerger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */; };
 		D2B56A3D292BDB28B9B7EACA /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3DA4F4CFBB26B3E8AB8F9F4 /* SettingsView.swift */; };
 		D3B5C46929A34AA8A6B2465A /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB82D40CDF612A9CCA6F58D9 /* InboxView.swift */; };
+		D8E1118DB723757837DD84BC /* BulkImportParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4CA3A47F03EBF7AE5424D07 /* BulkImportParser.swift */; };
 		DB38C05911F489759F92739A /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB82D40CDF612A9CCA6F58D9 /* InboxView.swift */; };
 		DB4E68283C15B3EA5F1DAB07 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77E4BA4BD463D4E6942E3495 /* WidgetKit.framework */; };
 		E14BBE3DEA30D6706DC1A4EC /* TaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E16AE11103FB52473BC36206 /* TaskListView.swift */; };
+		E564F6DAB482EF7BE88FD653 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
 		EA0C3FA4E09C85F0CAA34189 /* VikunjaWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5CFE29DC68AF948888033B9 /* VikunjaWidgetBundle.swift */; };
 		EDD77C1F97806905078A8173 /* LogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD6802321CF98C91D0FC1142 /* LogbookView.swift */; };
 		F03E5ADA41907993185101CF /* VikunjaWidgetExtensionIOS.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 31047F6BFB8F2F00A7627426 /* VikunjaWidgetExtensionIOS.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F3DF47A1A039E3D66410D7D3 /* VikunjaConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */; };
+		F7A9AEBEDFC251D941B03C72 /* BulkImportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB4EF59CB974358A163128A /* BulkImportSheet.swift */; };
 		FF7D63331B3B3E32C0796C08 /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
 /* End PBXBuildFile section */
 
@@ -161,9 +171,11 @@
 		7E2A53ED8DB6BC3CCBC225B2 /* InfoIOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = InfoIOS.plist; sourceTree = "<group>"; };
 		7EAD0BC89662C3B29128BFEC /* InfoIOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = InfoIOS.plist; sourceTree = "<group>"; };
 		94A79F734B4FA3F1B7F71059 /* VikunjaWidgetAppIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = VikunjaWidgetAppIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9646D37E52F94B16B7960FD4 /* WidgetCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCache.swift; sourceTree = "<group>"; };
 		9E38CA1B0723B492B073EAE3 /* SharedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedState.swift; sourceTree = "<group>"; };
 		A3500B5442B30927185C99FA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		A419351B8B970957D829770C /* QuickAddPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddPanelController.swift; sourceTree = "<group>"; };
+		A4CA3A47F03EBF7AE5424D07 /* BulkImportParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkImportParser.swift; sourceTree = "<group>"; };
 		A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AC0EC5DA80C84EAC14606DF3 /* TaskRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRowView.swift; sourceTree = "<group>"; };
 		B189E2189A5C4A68E826A0BC /* VikunjaWidgetApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetApp.swift; sourceTree = "<group>"; };
@@ -174,6 +186,7 @@
 		C4E12C5D7A535480216299E3 /* UndoCompleteTaskIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoCompleteTaskIntent.swift; sourceTree = "<group>"; };
 		C5CFE29DC68AF948888033B9 /* VikunjaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetBundle.swift; sourceTree = "<group>"; };
 		CCE3223995408A025025C185 /* VikunjaWidgetAppIOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VikunjaWidgetAppIOS.entitlements; sourceTree = "<group>"; };
+		CDB4EF59CB974358A163128A /* BulkImportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkImportSheet.swift; sourceTree = "<group>"; };
 		CF8B4FEA6398C4A45FDC332F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		DB39CB6616D672184062F00A /* InlineTaskEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlineTaskEditor.swift; sourceTree = "<group>"; };
 		E16AE11103FB52473BC36206 /* TaskListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListView.swift; sourceTree = "<group>"; };
@@ -239,6 +252,7 @@
 			children = (
 				C19BA8BB693A0D3B77D8FD25 /* AppRoot.swift */,
 				A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */,
+				CDB4EF59CB974358A163128A /* BulkImportSheet.swift */,
 				FB82D40CDF612A9CCA6F58D9 /* InboxView.swift */,
 				166859B301206500B9AE0420 /* Info.plist */,
 				7EAD0BC89662C3B29128BFEC /* InfoIOS.plist */,
@@ -293,6 +307,7 @@
 		BCCB1884FA56BEC5635FF7C7 /* VikunjaCore */ = {
 			isa = PBXGroup;
 			children = (
+				A4CA3A47F03EBF7AE5424D07 /* BulkImportParser.swift */,
 				52749DF5C84EB8B6350FE276 /* Outbox.swift */,
 				575C0A574F52F869DB4CA643 /* QuickAddParser.swift */,
 				6310D2E398EF259266307AA4 /* Reachability.swift */,
@@ -301,6 +316,7 @@
 				EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */,
 				27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */,
 				F8050180A5CB81868E0837EA /* VikunjaModels.swift */,
+				9646D37E52F94B16B7960FD4 /* WidgetCache.swift */,
 			);
 			path = VikunjaCore;
 			sourceTree = "<group>";
@@ -486,6 +502,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1A77E9F6D003D8266DDF5B1 /* AppRoot.swift in Sources */,
+				13432CFDA3F3F4FEAC708519 /* BulkImportParser.swift in Sources */,
+				BBDAED74A2CE38A0D6CB6B3D /* BulkImportSheet.swift in Sources */,
 				DB38C05911F489759F92739A /* InboxView.swift in Sources */,
 				BBB629FBE31DC715BE9BEEF5 /* InlineTaskEditor.swift in Sources */,
 				EDD77C1F97806905078A8173 /* LogbookView.swift in Sources */,
@@ -508,6 +526,7 @@
 				9B95835E2ED20F48D7BFF275 /* VikunjaConfig.swift in Sources */,
 				4955A225D165910AD724F5A8 /* VikunjaModels.swift in Sources */,
 				7D23D0A203B4397E740C4534 /* VikunjaWidgetApp.swift in Sources */,
+				426140361E8189D111CEC188 /* WidgetCache.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -515,6 +534,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6C460691B5F9E205B40CD447 /* BulkImportParser.swift in Sources */,
 				0DE91F897CC393857D83DEFC /* CompleteTaskIntent.swift in Sources */,
 				ABE10E84629633EDBEDCE5AF /* Outbox.swift in Sources */,
 				7A7C13B41F052C0A061CD460 /* QuickAddParser.swift in Sources */,
@@ -529,6 +549,7 @@
 				66A65A39450D46B75FFAFDDD /* VikunjaTimelineProvider.swift in Sources */,
 				EA0C3FA4E09C85F0CAA34189 /* VikunjaWidgetBundle.swift in Sources */,
 				BE9D7675A68505B3AF04B593 /* VikunjaWidgetEntryView.swift in Sources */,
+				E564F6DAB482EF7BE88FD653 /* WidgetCache.swift in Sources */,
 				28BAB5903426413D3EF9FEA2 /* WidgetModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -538,6 +559,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				A01292FCA9718460BA3186F7 /* AppRoot.swift in Sources */,
+				557C43CFE255EBCE5CCB0D5B /* BulkImportParser.swift in Sources */,
+				F7A9AEBEDFC251D941B03C72 /* BulkImportSheet.swift in Sources */,
 				D3B5C46929A34AA8A6B2465A /* InboxView.swift in Sources */,
 				A11C5F4AD5A24673789AD261 /* InlineTaskEditor.swift in Sources */,
 				3B1C3BDF5AF9E198D17FB79B /* LogbookView.swift in Sources */,
@@ -560,6 +583,7 @@
 				F3DF47A1A039E3D66410D7D3 /* VikunjaConfig.swift in Sources */,
 				18B579380A542171D235A8C1 /* VikunjaModels.swift in Sources */,
 				A36F04EEDD4AF3186263B7A8 /* VikunjaWidgetApp.swift in Sources */,
+				B7795AF50F39B7470D4507FC /* WidgetCache.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -567,6 +591,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D8E1118DB723757837DD84BC /* BulkImportParser.swift in Sources */,
 				06026FB1769E4DFB3D3207A1 /* CompleteTaskIntent.swift in Sources */,
 				13859958B79E16B366B865E8 /* Outbox.swift in Sources */,
 				1F9113E75413F38F0F123ABA /* QuickAddParser.swift in Sources */,
@@ -581,6 +606,7 @@
 				18E90D65263C3AAEDD4A89C1 /* VikunjaTimelineProvider.swift in Sources */,
 				99CFEE8B3622055F11E00CD1 /* VikunjaWidgetBundle.swift in Sources */,
 				72226A5E79207AE181B16849 /* VikunjaWidgetEntryView.swift in Sources */,
+				5697B9BF68F3C53AD38D84D1 /* WidgetCache.swift in Sources */,
 				484BCB3C1775B98410DFC6DE /* WidgetModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

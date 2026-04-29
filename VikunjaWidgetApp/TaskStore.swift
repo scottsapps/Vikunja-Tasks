@@ -313,6 +313,9 @@ final class TaskStore {
         if let data = UserDefaults.standard.data(forKey: tasksCacheKey),
            let tasks = try? JSONDecoder().decode([VikunjaTask].self, from: data) {
             undoneTasks = tasks
+            // Seed lastServerUndone so rebuildMergedTasks() has the right baseline
+            // when the user creates/edits tasks before the first successful network fetch.
+            lastServerUndone = tasks
         }
         if let data = UserDefaults.standard.data(forKey: projectsCacheKey),
            let projs = try? JSONDecoder().decode([VikunjaProject].self, from: data) {
@@ -328,5 +331,6 @@ final class TaskStore {
         UserDefaults.standard.set(try? JSONEncoder().encode(undoneTasks), forKey: tasksCacheKey)
         UserDefaults.standard.set(try? JSONEncoder().encode(projects), forKey: projectsCacheKey)
         UserDefaults.standard.set(try? JSONEncoder().encode(labels), forKey: labelsCacheKey)
+        WidgetCache.save(tasks: undoneTasks, projects: projects)
     }
 }

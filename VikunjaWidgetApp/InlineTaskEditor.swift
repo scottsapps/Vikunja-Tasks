@@ -9,7 +9,8 @@ struct InlineTaskEditor: View {
 
     // Editable field state — initialised from task
     @State private var title: String
-    @State private var notes: String
+    @State private var notesAttrStr: NSAttributedString
+    @State private var richContext = RichTextContext()
     @State private var dueDate: Date?
     @State private var hasDueDate: Bool
     @State private var priority: Int          // 0 = none
@@ -29,7 +30,7 @@ struct InlineTaskEditor: View {
         self.task = task
         self.onDismiss = onDismiss
         _title = State(initialValue: task.title)
-        _notes = State(initialValue: task.description ?? "")
+        _notesAttrStr = State(initialValue: NSAttributedString())
         let due = task.effectiveDueDate
         _dueDate = State(initialValue: due)
         _hasDueDate = State(initialValue: due != nil)
@@ -54,12 +55,12 @@ struct InlineTaskEditor: View {
             Divider().padding(.top, 6)
 
             // Notes
-            TextField("Notes", text: $notes, axis: .vertical)
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-                .lineLimit(1...5)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+            RichTextToolbar(richContext: richContext)
+            Divider()
+            RichTextEditor(attributedText: $notesAttrStr, richContext: richContext)
+                .frame(minHeight: 60, idealHeight: 80, maxHeight: 140)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
 
             Divider()
 
@@ -145,6 +146,10 @@ struct InlineTaskEditor: View {
                 .stroke(Color.accentColor.opacity(0.3), lineWidth: 1.5)
         )
         .task {
+            // HTML parsing via WebKit must not run during a SwiftUI render pass —
+            // doing so spins a nested CFRunLoop that lets state mutations fire mid-render,
+            // triggering an AttributeGraph precondition failure (SIGABRT).
+            notesAttrStr = RichTextUtils.attributedString(from: task.description ?? "")
             titleFocused = true
         }
         .animation(.easeInOut(duration: 0.18), value: showDatePicker)
@@ -353,8 +358,8 @@ struct InlineTaskEditor: View {
 
         if trimmedTitle != task.title { update.title = trimmedTitle }
 
-        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmedNotes != (task.description ?? "") { update.description = trimmedNotes }
+        let currentHTML = RichTextUtils.html(from: notesAttrStr)
+        if currentHTML != (task.description ?? "") { update.description = currentHTML }
 
         let originalDue = task.effectiveDueDate
         if !hasDueDate && originalDue != nil {

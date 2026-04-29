@@ -1,5 +1,8 @@
 import SwiftUI
 import UniformTypeIdentifiers
+#if os(macOS)
+import AppKit
+#endif
 
 struct BulkImportSheet: View {
     var store: TaskStore
@@ -7,8 +10,11 @@ struct BulkImportSheet: View {
 
     @State private var spec: BulkImportSpec?
     @State private var parseError: String?
-    @State private var showFilePicker = false
     @State private var phase: Phase = .idle
+    @State private var isDragTargeted = false
+
+    // fileImporter is only used on iOS; macOS uses NSOpenPanel directly.
+    @State private var showFilePicker = false
 
     enum Phase: Equatable {
         case idle
@@ -30,19 +36,33 @@ struct BulkImportSheet: View {
             if let spec {
                 previewContent(spec)
             } else if parseError == nil {
-                instructionsView
+                dropZone
             }
 
             Spacer(minLength: 0)
             bottomBar
         }
         .padding(24)
-        .frame(minWidth: 420, minHeight: 480)
+        // Fill the sheet window fully so the entire area is a valid drop target,
+        // including the Spacer region (which has no renderable surface on its own).
+        .frame(minWidth: 420, maxWidth: .infinity, minHeight: 480, maxHeight: .infinity,
+               alignment: .topLeading)
+        .contentShape(Rectangle())  // makes empty space hit-testable for drops
+        .onDrop(of: [UTType.fileURL, UTType.plainText], isTargeted: $isDragTargeted) { providers in
+            handleDrop(providers)
+        }
+        #if os(iOS)
         .fileImporter(
             isPresented: $showFilePicker,
             allowedContentTypes: [.plainText, .text],
-            onCompletion: handleFile
+            onCompletion: { result in
+                switch result {
+                case .success(let url): loadFile(from: url)
+                case .failure(let err): parseError = err.localizedDescription
+                }
+            }
         )
+        #endif
     }
 
     // MARK: - Sub-views
@@ -54,7 +74,7 @@ struct BulkImportSheet: View {
                 .fontWeight(.semibold)
             Spacer()
             Button {
-                showFilePicker = true
+                pickFile()
             } label: {
                 Label(spec == nil ? "Choose File" : "Choose Different File",
                       systemImage: "doc.badge.plus")
@@ -65,7 +85,8 @@ struct BulkImportSheet: View {
         }
     }
 
-    private var instructionsView: some View {
+    /// Instruction area that doubles as a visible drop-zone highlight target.
+    private var dropZone: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Expected file format:")
                 .font(.subheadline)
@@ -84,12 +105,29 @@ struct BulkImportSheet: View {
             Text("Line 1: project name  ·  Line 2: comma-separated labels (leave blank if none)  ·  Remaining lines: yyyy-mm-dd followed by task title")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+            HStack {
+                Spacer()
+                Label("or drag & drop a file anywhere in this window", systemImage: "arrow.up.to.line")
+                    .font(.caption)
+                    .foregroundStyle(isDragTargeted ? Color.accentColor : .secondary)
+                Spacer()
+            }
+            .padding(.top, 4)
         }
+        .padding(isDragTargeted ? 12 : 0)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(
+                    isDragTargeted ? Color.accentColor : Color.clear,
+                    style: StrokeStyle(lineWidth: 2, dash: [6])
+                )
+        )
+        .animation(.easeInOut(duration: 0.15), value: isDragTargeted)
     }
 
     @ViewBuilder
     private func previewContent(_ spec: BulkImportSpec) -> some View {
-        // Project + labels summary
         VStack(alignment: .leading, spacing: 8) {
             LabeledContent("Project") {
                 HStack(spacing: 4) {
@@ -116,7 +154,6 @@ struct BulkImportSheet: View {
 
         Divider()
 
-        // Task list preview
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 6) {
                 ForEach(spec.tasks) { task in
@@ -189,28 +226,91 @@ struct BulkImportSheet: View {
         }
     }
 
-    // MARK: - File handling
+    // MARK: - File picking
 
-    private func handleFile(_ result: Result<URL, Error>) {
+    private func pickFile() {
+#if os(macOS)
+        // NSOpenPanel must be created and presented on the main thread.
+        // Task { @MainActor in } guarantees that even if the call site escapes
+        // the View's implicit actor context. beginSheetModal attaches the panel
+        // to the existing sheet window rather than floating it separately.
+        Task { @MainActor in
+            let panel = NSOpenPanel()
+            panel.allowedContentTypes = [.plainText, .text]
+            panel.allowsMultipleSelection = false
+            panel.canChooseDirectories = false
+            panel.canChooseFiles = true
+            panel.message = "Choose a task import file"
+            if let window = NSApp.keyWindow {
+                panel.beginSheetModal(for: window) { response in
+                    guard response == .OK, let url = panel.url else { return }
+                    loadFile(from: url)
+                }
+            } else {
+                panel.begin { response in
+                    guard response == .OK, let url = panel.url else { return }
+                    loadFile(from: url)
+                }
+            }
+        }
+#else
+        showFilePicker = true
+#endif
+    }
+
+    // MARK: - Drag & drop
+
+    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+        guard let provider = providers.first else { return false }
+
+        // File dragged from Finder: provider carries a file URL.
+        // loadDataRepresentation is more reliable than loadObject(ofClass: URL.self)
+        // for cross-process Finder drags.
+        if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+            provider.loadDataRepresentation(forTypeIdentifier: UTType.fileURL.identifier) { data, _ in
+                guard let data, let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+                DispatchQueue.main.async { loadFile(from: url) }
+            }
+            return true
+        }
+
+        // Plain text dragged directly (e.g. from a text editor selection).
+        if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
+            provider.loadDataRepresentation(forTypeIdentifier: UTType.plainText.identifier) { data, _ in
+                guard let data, let text = String(data: data, encoding: .utf8) else { return }
+                DispatchQueue.main.async { parseText(text) }
+            }
+            return true
+        }
+
+        return false
+    }
+
+    // MARK: - Loading & parsing
+
+    private func loadFile(from url: URL) {
         spec = nil
         parseError = nil
         phase = .idle
 
-        switch result {
-        case .success(let url):
-            let accessed = url.startAccessingSecurityScopedResource()
-            defer { if accessed { url.stopAccessingSecurityScopedResource() } }
-            do {
-                let text = try String(contentsOf: url, encoding: .utf8)
-                switch BulkImportParser.parse(text) {
-                case .success(let s): spec = s
-                case .failure(let err): parseError = err.localizedDescription
-                }
-            } catch {
-                parseError = "Could not read file: \(error.localizedDescription)"
-            }
-        case .failure(let error):
-            parseError = error.localizedDescription
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let text = try String(contentsOf: url, encoding: .utf8)
+            parseText(text)
+        } catch {
+            parseError = "Could not read file: \(error.localizedDescription)"
+        }
+    }
+
+    private func parseText(_ text: String) {
+        switch BulkImportParser.parse(text) {
+        case .success(let s):
+            spec = s
+            parseError = nil
+        case .failure(let err):
+            spec = nil
+            parseError = err.localizedDescription
         }
     }
 
@@ -225,7 +325,6 @@ struct BulkImportSheet: View {
         guard let project = resolvedProject(for: spec) else { return }
         phase = .importing
 
-        // Resolve labels — create unknown ones online; skip if offline.
         var resolvedLabels: [VikunjaLabel] = []
         for title in spec.labelTitles {
             if let existing = store.labels.first(where: { $0.title.lowercased() == title.lowercased() }) {
@@ -238,7 +337,6 @@ struct BulkImportSheet: View {
             }
         }
 
-        // Enqueue all tasks. createTask is synchronous (outbox); the outbox drains asynchronously.
         for task in spec.tasks {
             store.createTask(
                 projectId: project.id,
@@ -251,4 +349,3 @@ struct BulkImportSheet: View {
         phase = .done(count: spec.tasks.count)
     }
 }
-

@@ -22,6 +22,7 @@ struct TaskRow: View {
         #if os(macOS)
         .onHover { isHovered = $0 }
         #endif
+        .onAppear { isCompleting = false }
     }
 
     // MARK: - Checkbox
@@ -45,6 +46,8 @@ struct TaskRow: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .frame(width: 24, height: 24)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .frame(width: 24, height: 24)

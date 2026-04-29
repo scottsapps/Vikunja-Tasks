@@ -55,11 +55,28 @@ enum VikunjaAPI {
     // MARK: - Mutations
 
     static func completeTask(id: Int) async throws {
-        try await updateTask(id: id, done: true)
+        try await setDone(id: id, done: true)
     }
 
     static func reopenTask(id: Int) async throws {
-        try await updateTask(id: id, done: false)
+        try await setDone(id: id, done: false)
+    }
+
+    /// Toggle done state while preserving every other field. Vikunja's Go server
+    /// treats fields omitted from the JSON body as zero-valued (e.g. `due_date`
+    /// becomes `0001-01-01`), which silently wipes the due date. The web client
+    /// avoids this by sending the full task object — we mirror that here by
+    /// fetching the current task and re-posting it with `done` overridden.
+    private static func setDone(id: Int, done: Bool) async throws {
+        var task = try await fetchTask(id: id)
+        task.done = done
+        let body = try JSONEncoder().encode(task)
+        let request = makeRequest("/tasks/\(id)", method: "POST", body: body)
+        let (_, response) = try await URLSession.shared.data(for: request)
+        let http = response as? HTTPURLResponse
+        guard let http, (200...299).contains(http.statusCode) else {
+            throw APIError.badStatus(http?.statusCode ?? -1)
+        }
     }
 
     static func createTask(
@@ -165,17 +182,7 @@ enum VikunjaAPI {
         return all
     }
 
-    private static func updateTask(id: Int, done: Bool) async throws {
-        let body = try JSONEncoder().encode(["done": done])
-        let request = makeRequest("/tasks/\(id)", method: "POST", body: body)
-        let (_, response) = try await URLSession.shared.data(for: request)
-        let http = response as? HTTPURLResponse
-        guard let http, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus(http?.statusCode ?? -1)
-        }
-    }
-
-    private static func get<T: Decodable>(_ path: String, as type: T.Type) async throws -> T {
+private static func get<T: Decodable>(_ path: String, as type: T.Type) async throws -> T {
         let request = makeRequest(path)
         let (data, response) = try await URLSession.shared.data(for: request)
         let http = response as? HTTPURLResponse

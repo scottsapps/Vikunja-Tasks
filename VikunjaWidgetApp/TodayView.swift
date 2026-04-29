@@ -3,6 +3,9 @@ import SwiftUI
 struct TodayView: View {
     var store: TaskStore
     @State private var isRefreshing = false
+    #if os(iOS)
+    @State private var showQuickAdd = false
+    #endif
 
     var body: some View {
         TaskListView(
@@ -14,10 +17,22 @@ struct TodayView: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
+            #if os(iOS)
+            ToolbarItem(placement: .primaryAction) {
+                Button { showQuickAdd = true } label: {
+                    Image(systemName: "square.and.pencil")
+                }
+            }
+            #endif
             ToolbarItem(placement: .primaryAction) {
                 refreshButton
             }
         }
+        #if os(iOS)
+        .sheet(isPresented: $showQuickAdd) {
+            QuickAddSheet(store: store)
+        }
+        #endif
         .refreshable {
             await store.refresh()
         }

@@ -4,22 +4,33 @@ import UIKit
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
-                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        if let item = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem {
-            route(item)
-            return false
+                     configurationForConnecting connectingSceneSession: UISceneSession,
+                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        let config = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+        config.delegateClass = SceneDelegate.self
+        return config
+    }
+}
+
+class SceneDelegate: NSObject, UIWindowSceneDelegate {
+    func scene(_ scene: UIScene,
+               willConnectTo session: UISceneSession,
+               options connectionOptions: UIScene.ConnectionOptions) {
+        if let item = connectionOptions.shortcutItem {
+            ShortcutRouting.route(item)
         }
-        return true
     }
 
-    func application(_ application: UIApplication,
+    func windowScene(_ windowScene: UIWindowScene,
                      performActionFor shortcutItem: UIApplicationShortcutItem,
                      completionHandler: @escaping (Bool) -> Void) {
-        route(shortcutItem)
+        ShortcutRouting.route(shortcutItem)
         completionHandler(true)
     }
+}
 
-    private func route(_ item: UIApplicationShortcutItem) {
+enum ShortcutRouting {
+    static func route(_ item: UIApplicationShortcutItem) {
         let action: ShortcutRouter.ShortcutAction
         switch item.type {
         case "net.angstreich.VikunjaWidgetApp.NewTask": action = .newTask

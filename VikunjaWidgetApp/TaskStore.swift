@@ -141,6 +141,7 @@ final class TaskStore {
             let project = try await VikunjaAPI.createProject(title: title)
             projects.append(project)
             projects.sort { $0.title.localizedCompare($1.title) == .orderedAscending }
+            await refresh()
         } catch {
             self.error = error.localizedDescription
         }
@@ -152,6 +153,7 @@ final class TaskStore {
             projects.removeAll { $0.id == id }
             lastServerUndone.removeAll { $0.projectId == id }
             rebuildMergedTasks()
+            await refresh()
         } catch {
             self.error = error.localizedDescription
         }

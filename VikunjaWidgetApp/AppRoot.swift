@@ -95,6 +95,14 @@ struct AppRoot: View {
                 navPath = Array(navPath.dropLast())
             }
         }
+        .alert("Error", isPresented: Binding(
+            get: { store.error != nil },
+            set: { if !$0 { store.error = nil } }
+        )) {
+            Button("OK", role: .cancel) { store.error = nil }
+        } message: {
+            Text(store.error ?? "")
+        }
         .sheet(isPresented: $showSettings) {
             SettingsView(onSave: { Task { await store.refresh() } })
         }
@@ -210,12 +218,12 @@ struct AppRoot: View {
                 isPresented: Binding(get: { projectToDelete != nil }, set: { if !$0 { projectToDelete = nil } }),
                 titleVisibility: .visible
             ) {
-                Button("Delete Project and All Tasks", role: .destructive) {
-                    guard let project = projectToDelete else { return }
-                    Task { await store.deleteProject(id: project.id) }
-                    projectToDelete = nil
+                if let project = projectToDelete {
+                    Button("Delete Project and All Tasks", role: .destructive) {
+                        Task { await store.deleteProject(id: project.id) }
+                    }
                 }
-                Button("Cancel", role: .cancel) { projectToDelete = nil }
+                Button("Cancel", role: .cancel) {}
             } message: {
                 Text("All tasks in this project will be permanently deleted.")
             }

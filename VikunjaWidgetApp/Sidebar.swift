@@ -69,13 +69,13 @@ struct Sidebar: View {
             isPresented: Binding(get: { projectToDelete != nil }, set: { if !$0 { projectToDelete = nil } }),
             titleVisibility: .visible
         ) {
-            Button("Delete Project and All Tasks", role: .destructive) {
-                guard let project = projectToDelete else { return }
-                if selection == .project(project.id) { selection = .inbox }
-                Task { await store.deleteProject(id: project.id) }
-                projectToDelete = nil
+            if let project = projectToDelete {
+                Button("Delete Project and All Tasks", role: .destructive) {
+                    if selection == .project(project.id) { selection = .inbox }
+                    Task { await store.deleteProject(id: project.id) }
+                }
             }
-            Button("Cancel", role: .cancel) { projectToDelete = nil }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("All tasks in this project will be permanently deleted.")
         }

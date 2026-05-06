@@ -237,7 +237,7 @@ private static func get<T: Decodable>(_ path: String, as type: T.Type) async thr
         return request
     }
 
-    enum APIError: Error {
+    enum APIError: Error, LocalizedError {
         case badStatus(Int)
 
         var statusCode: Int {
@@ -247,6 +247,10 @@ private static func get<T: Decodable>(_ path: String, as type: T.Type) async thr
 
         var isClient4xx: Bool {
             (400...499).contains(statusCode)
+        }
+
+        var errorDescription: String? {
+            "Server returned HTTP \(statusCode)"
         }
     }
 }

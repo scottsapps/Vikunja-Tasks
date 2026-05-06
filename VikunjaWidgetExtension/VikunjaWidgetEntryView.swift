@@ -6,9 +6,16 @@ struct VikunjaWidgetEntryView: View {
     @Environment(\.widgetFamily) private var family
 
     var body: some View {
-        content
-            .padding(contentPadding)
-            .containerBackground(.background, for: .widget)
+        GeometryReader { geo in
+            let inset = contentPadding
+            let innerWidth = max(0, geo.size.width - inset.leading - inset.trailing)
+            let innerHeight = max(0, geo.size.height - inset.top - inset.bottom)
+            content
+                .frame(width: innerWidth, height: innerHeight, alignment: .topLeading)
+                .clipped()
+                .padding(inset)
+        }
+        .containerBackground(.background, for: .widget)
     }
 
     private var contentPadding: EdgeInsets {
@@ -47,8 +54,7 @@ struct VikunjaWidgetEntryView: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .clipped()
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     private func sectionHeader(_ label: String, isFirst: Bool) -> some View {

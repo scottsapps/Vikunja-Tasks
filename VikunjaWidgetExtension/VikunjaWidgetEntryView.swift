@@ -7,7 +7,7 @@ struct VikunjaWidgetEntryView: View {
 
     var body: some View {
         content
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(contentPadding)
             .containerBackground(.background, for: .widget)
     }
 
@@ -47,7 +47,8 @@ struct VikunjaWidgetEntryView: View {
                 }
             }
         }
-        .padding(contentPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .clipped()
     }
 
     private func sectionHeader(_ label: String, isFirst: Bool) -> some View {

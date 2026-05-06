@@ -30,7 +30,7 @@ struct VikunjaTimelineProvider: TimelineProvider {
                 entries.append(VikunjaEntry(date: cleanAt, taskGroups: entry.taskGroups, error: nil))
                 policy = .after(cleanAt)
             } else {
-                let refreshAt = Calendar.current.date(byAdding: .minute, value: 15, to: Date())!
+                let refreshAt = Calendar.current.date(byAdding: .minute, value: 5, to: Date())!
                 policy = .after(refreshAt)
             }
 

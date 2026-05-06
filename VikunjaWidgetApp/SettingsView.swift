@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var host = ""
     @State private var token = ""
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("vikunja_font_size_offset") private var fontSizeOffset: Int = 0
 
     private var defaults: UserDefaults? { UserDefaults(suiteName: VikunjaConfig.appGroupSuite) }
 
@@ -50,6 +51,19 @@ struct SettingsView: View {
                 Text("Vikunja → Profile → Settings → API Tokens")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            // Font Size
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Task Font Size")
+                    .font(.headline)
+                Picker("Font Size", selection: $fontSizeOffset) {
+                    Text("Small").tag(-1)
+                    Text("Medium").tag(0)
+                    Text("Large").tag(2)
+                    Text("Extra Large").tag(4)
+                }
+                .pickerStyle(.segmented)
             }
 
             Spacer()

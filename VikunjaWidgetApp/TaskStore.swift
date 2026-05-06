@@ -134,6 +134,29 @@ final class TaskStore {
         Task { await drainOutbox() }
     }
 
+    // MARK: - Project management
+
+    func createProject(title: String) async {
+        do {
+            let project = try await VikunjaAPI.createProject(title: title)
+            projects.append(project)
+            projects.sort { $0.title.localizedCompare($1.title) == .orderedAscending }
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func deleteProject(id: Int) async {
+        do {
+            try await VikunjaAPI.deleteProject(id: id)
+            projects.removeAll { $0.id == id }
+            lastServerUndone.removeAll { $0.projectId == id }
+            rebuildMergedTasks()
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
     // MARK: - Update task (enqueues to outbox)
 
     func update(taskId: Int, with update: TaskUpdate) async {
@@ -209,7 +232,12 @@ final class TaskStore {
 
     // MARK: - Drain outbox
 
+    private var isDraining = false
+
     func drainOutbox() async {
+        guard !isDraining else { return }
+        isDraining = true
+        defer { isDraining = false }
         guard reachability.isOnline, !outbox.ops.isEmpty else { return }
         let snapshot = outbox.ops
         for op in snapshot {

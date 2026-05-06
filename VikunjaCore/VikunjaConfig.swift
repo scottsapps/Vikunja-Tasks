@@ -22,4 +22,8 @@ enum VikunjaConfig {
     static var isConfigured: Bool {
         !apiToken.isEmpty && !host.isEmpty
     }
+
+    static var fontSizeOffset: Int {
+        UserDefaults.standard.integer(forKey: "vikunja_font_size_offset")
+    }
 }

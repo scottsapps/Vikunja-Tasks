@@ -6,6 +6,7 @@ struct TaskRow: View {
     var onTap: (() -> Void)? = nil
     let onComplete: () -> Void
 
+    @Environment(\.fontSizeOffset) private var fs
     @State private var isCompleting = false
     @State private var isHovered = false
 
@@ -59,7 +60,7 @@ struct TaskRow: View {
     private var taskDetails: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(task.title)
-                .font(.system(size: 13))
+                .font(.system(size: CGFloat(13 + fs)))
                 .foregroundStyle(isCompleting ? .secondary : .primary)
                 .strikethrough(isCompleting, color: .secondary)
                 .lineLimit(2)
@@ -67,12 +68,18 @@ struct TaskRow: View {
 
             HStack(spacing: 6) {
                 Text(projectName)
-                    .font(.system(size: 11))
+                    .font(.system(size: CGFloat(11 + fs)))
                     .foregroundStyle(.secondary)
+
+                if let desc = task.description, !desc.isEmpty {
+                    Image(systemName: "note.text")
+                        .font(.system(size: CGFloat(10 + max(fs, 0))))
+                        .foregroundStyle(.secondary)
+                }
 
                 ForEach(task.labels ?? [], id: \.id) { label in
                     Text(label.title)
-                        .font(.system(size: 10))
+                        .font(.system(size: CGFloat(10 + max(fs, 0))))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
                         .background(Color.accentColor.opacity(0.12))
@@ -106,7 +113,7 @@ struct TaskRow: View {
         }
 
         return Text(label)
-            .font(.system(size: 10))
+            .font(.system(size: CGFloat(10 + max(fs, 0))))
             .foregroundStyle(isOverdue ? .red : .secondary)
     }
 
@@ -133,6 +140,8 @@ struct LogbookRow: View {
     let projectName: String
     let onReopen: () -> Void
 
+    @Environment(\.fontSizeOffset) private var fs
+
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
@@ -142,19 +151,19 @@ struct LogbookRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(task.title)
-                    .font(.system(size: 13))
+                    .font(.system(size: CGFloat(13 + fs)))
                     .foregroundStyle(.secondary)
                     .strikethrough(true, color: .secondary)
                     .lineLimit(2)
 
                 HStack(spacing: 6) {
                     Text(projectName)
-                        .font(.system(size: 11))
+                        .font(.system(size: CGFloat(11 + fs)))
                         .foregroundStyle(.tertiary)
 
                     if let updated = task.updatedDate {
                         Text(updated, style: .relative)
-                            .font(.system(size: 11))
+                            .font(.system(size: CGFloat(11 + fs)))
                             .foregroundStyle(.tertiary)
                     }
                 }

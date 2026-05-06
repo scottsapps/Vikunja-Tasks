@@ -4,6 +4,10 @@ struct Sidebar: View {
     @Binding var selection: SidebarItem?
     var store: TaskStore
 
+    @State private var showNewProject = false
+    @State private var newProjectTitle = ""
+    @State private var projectToDelete: VikunjaProject?
+
     var body: some View {
         List(selection: $selection) {
             Section {
@@ -20,13 +24,28 @@ struct Sidebar: View {
                     .tag(SidebarItem.logbook)
             }
 
-            if !visibleProjects.isEmpty {
-                Section("Projects") {
-                    ForEach(visibleProjects) { project in
-                        Label(project.title, systemImage: "circle.dashed")
-                            .badge(projectCount(project))
-                            .tag(SidebarItem.project(project.id))
+            Section {
+                ForEach(visibleProjects) { project in
+                    Label(project.title, systemImage: "folder.fill")
+                        .badge(projectCount(project))
+                        .tag(SidebarItem.project(project.id))
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                projectToDelete = project
+                            } label: {
+                                Label("Delete Project…", systemImage: "trash")
+                            }
+                        }
+                }
+            } header: {
+                HStack {
+                    Text("Projects")
+                    Spacer()
+                    Button { showNewProject = true } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 11, weight: .semibold))
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -36,6 +55,30 @@ struct Sidebar: View {
         .listStyle(.insetGrouped)
         #endif
         .navigationTitle("Vikunja")
+        .alert("New Project", isPresented: $showNewProject) {
+            TextField("Project name", text: $newProjectTitle)
+            Button("Create") {
+                let title = newProjectTitle.trimmingCharacters(in: .whitespaces)
+                if !title.isEmpty { Task { await store.createProject(title: title) } }
+                newProjectTitle = ""
+            }
+            Button("Cancel", role: .cancel) { newProjectTitle = "" }
+        }
+        .confirmationDialog(
+            "Delete \"\(projectToDelete?.title ?? "")\"?",
+            isPresented: Binding(get: { projectToDelete != nil }, set: { if !$0 { projectToDelete = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Delete Project and All Tasks", role: .destructive) {
+                guard let project = projectToDelete else { return }
+                if selection == .project(project.id) { selection = .inbox }
+                Task { await store.deleteProject(id: project.id) }
+                projectToDelete = nil
+            }
+            Button("Cancel", role: .cancel) { projectToDelete = nil }
+        } message: {
+            Text("All tasks in this project will be permanently deleted.")
+        }
     }
 
     // MARK: - Helpers

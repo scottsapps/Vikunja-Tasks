@@ -43,10 +43,14 @@ struct AppRoot: View {
     @State private var showQuickAdd = false
     @State private var showBulkImport = false
     @State private var searchText = ""
+    @State private var showNewProject = false
+    @State private var newProjectTitle = ""
+    @State private var projectToDelete: VikunjaProject?
 
     // Drives iPhone NavigationStack
     @State private var navPath: [SidebarItem] = []
 
+    @AppStorage("vikunja_font_size_offset") private var fontSizeOffset: Int = 0
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
@@ -59,6 +63,21 @@ struct AppRoot: View {
                 regularLayout   // iPad / Mac: NavigationSplitView
             }
         }
+        .environment(\.fontSizeOffset, fontSizeOffset)
+        #if os(iOS)
+        .onAppear {
+            if let action = ShortcutRouter.shared.pendingAction {
+                ShortcutRouter.shared.pendingAction = nil
+                consumeShortcut(action)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .vikunjaShortcutFired)) { _ in
+            if let action = ShortcutRouter.shared.pendingAction {
+                ShortcutRouter.shared.pendingAction = nil
+                consumeShortcut(action)
+            }
+        }
+        #endif
         .task {
             _ = await ReminderScheduler.requestPermission()
             guard VikunjaConfig.isConfigured else { return }
@@ -67,6 +86,15 @@ struct AppRoot: View {
         }
         .onDisappear { store.stopPolling() }
         .onOpenURL { handleDeepLink($0) }
+        .onChange(of: store.projects) { _, projects in
+            if case .project(let id) = selection, !projects.contains(where: { $0.id == id }) {
+                selection = .inbox
+            }
+            if let last = navPath.last, case .project(let id) = last,
+               !projects.contains(where: { $0.id == id }) {
+                navPath = Array(navPath.dropLast())
+            }
+        }
         .sheet(isPresented: $showSettings) {
             SettingsView(onSave: { Task { await store.refresh() } })
         }
@@ -100,13 +128,27 @@ struct AppRoot: View {
                     }
                 }
 
-                if !visibleProjects.isEmpty {
-                    Section("Projects") {
-                        ForEach(visibleProjects) { project in
-                            NavigationLink(value: SidebarItem.project(project.id)) {
-                                Label(project.title, systemImage: "circle.dashed")
+                Section {
+                    ForEach(visibleProjects) { project in
+                        NavigationLink(value: SidebarItem.project(project.id)) {
+                            Label(project.title, systemImage: "folder.fill")
+                        }
+                        .badge(store.tasks(for: project).count)
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                projectToDelete = project
+                            } label: {
+                                Label("Delete", systemImage: "trash")
                             }
-                            .badge(store.tasks(for: project).count)
+                        }
+                    }
+                } header: {
+                    HStack {
+                        Text("Projects")
+                        Spacer()
+                        Button { showNewProject = true } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 12, weight: .semibold))
                         }
                     }
                 }
@@ -153,6 +195,29 @@ struct AppRoot: View {
                 if store.isLoading && store.undoneTasks.isEmpty {
                     ProgressView()
                 }
+            }
+            .alert("New Project", isPresented: $showNewProject) {
+                TextField("Project name", text: $newProjectTitle)
+                Button("Create") {
+                    let title = newProjectTitle.trimmingCharacters(in: .whitespaces)
+                    if !title.isEmpty { Task { await store.createProject(title: title) } }
+                    newProjectTitle = ""
+                }
+                Button("Cancel", role: .cancel) { newProjectTitle = "" }
+            }
+            .confirmationDialog(
+                "Delete \"\(projectToDelete?.title ?? "")\"?",
+                isPresented: Binding(get: { projectToDelete != nil }, set: { if !$0 { projectToDelete = nil } }),
+                titleVisibility: .visible
+            ) {
+                Button("Delete Project and All Tasks", role: .destructive) {
+                    guard let project = projectToDelete else { return }
+                    Task { await store.deleteProject(id: project.id) }
+                    projectToDelete = nil
+                }
+                Button("Cancel", role: .cancel) { projectToDelete = nil }
+            } message: {
+                Text("All tasks in this project will be permanently deleted.")
             }
         }
     }
@@ -248,6 +313,18 @@ struct AppRoot: View {
             ($0.labels ?? []).contains { $0.title.lowercased().contains(q) }
         }
     }
+
+    #if os(iOS)
+    private func consumeShortcut(_ action: ShortcutRouter.ShortcutAction) {
+        switch action {
+        case .newTask:
+            showQuickAdd = true
+        case .today:
+            if sizeClass == .compact { navPath = [.today] }
+            else { selection = .today }
+        }
+    }
+    #endif
 
     private func handleDeepLink(_ url: URL) {
         guard url.scheme == "vikunja",

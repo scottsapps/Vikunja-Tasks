@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		06026FB1769E4DFB3D3207A1 /* CompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56EB3BD825210E0BC7DDD877 /* CompleteTaskIntent.swift */; };
+		06EC0B89C05871F841685153 /* FontSizeEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D2233282108571CCBCFADE2 /* FontSizeEnvironment.swift */; };
 		080972CD0F9BCBCF4AEC18EF /* RichTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CA81C31B42689E6607E4330 /* RichTextEditor.swift */; };
 		088C68EEFC872A273BE81EF9 /* TaskMerger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */; };
 		096DAC80C49C5D35B8469747 /* RichTextToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE1E2473B28773FB31C83C53 /* RichTextToolbar.swift */; };
@@ -41,6 +42,7 @@
 		3B1C3BDF5AF9E198D17FB79B /* LogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD6802321CF98C91D0FC1142 /* LogbookView.swift */; };
 		3E1490212891E0F234F840AF /* RichTextUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E14A86ED969A63033CECCD3 /* RichTextUtils.swift */; };
 		426140361E8189D111CEC188 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
+		43132B240033ACD09D9D4A45 /* ShortcutRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6413699055632BF2AF310ADC /* ShortcutRouter.swift */; };
 		484BCB3C1775B98410DFC6DE /* WidgetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29F335043FC5DF87CC85EE67 /* WidgetModels.swift */; };
 		4955A225D165910AD724F5A8 /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
 		4C3CE8686E8B7F5ACEBF5C5E /* RichTextUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E14A86ED969A63033CECCD3 /* RichTextUtils.swift */; };
@@ -93,6 +95,7 @@
 		BA3189BE869A7CEDFDF990D0 /* InfoIOS.plist in Resources */ = {isa = PBXBuildFile; fileRef = 7E2A53ED8DB6BC3CCBC225B2 /* InfoIOS.plist */; };
 		BBB629FBE31DC715BE9BEEF5 /* InlineTaskEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB39CB6616D672184062F00A /* InlineTaskEditor.swift */; };
 		BBDAED74A2CE38A0D6CB6B3D /* BulkImportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB4EF59CB974358A163128A /* BulkImportSheet.swift */; };
+		BD3AF313630DB83383D30C77 /* FontSizeEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D2233282108571CCBCFADE2 /* FontSizeEnvironment.swift */; };
 		BE9D7675A68505B3AF04B593 /* VikunjaWidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */; };
 		C26CA5E4DCCA235E2D67AB5E /* VikunjaConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */; };
 		C7F3CF11A3B0EA2ABA694A2E /* RichTextContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C19966D06DD9CB26072478 /* RichTextContext.swift */; };
@@ -106,6 +109,7 @@
 		DB4E68283C15B3EA5F1DAB07 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77E4BA4BD463D4E6942E3495 /* WidgetKit.framework */; };
 		E14BBE3DEA30D6706DC1A4EC /* TaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E16AE11103FB52473BC36206 /* TaskListView.swift */; };
 		E564F6DAB482EF7BE88FD653 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
+		E83930CD5B9016B8B53C5946 /* ShortcutRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6413699055632BF2AF310ADC /* ShortcutRouter.swift */; };
 		EA0C3FA4E09C85F0CAA34189 /* VikunjaWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5CFE29DC68AF948888033B9 /* VikunjaWidgetBundle.swift */; };
 		EDD77C1F97806905078A8173 /* LogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD6802321CF98C91D0FC1142 /* LogbookView.swift */; };
 		F03E5ADA41907993185101CF /* VikunjaWidgetExtensionIOS.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 31047F6BFB8F2F00A7627426 /* VikunjaWidgetExtensionIOS.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -169,6 +173,7 @@
 		31047F6BFB8F2F00A7627426 /* VikunjaWidgetExtensionIOS.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = VikunjaWidgetExtensionIOS.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		32C19966D06DD9CB26072478 /* RichTextContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextContext.swift; sourceTree = "<group>"; };
 		32CFE246FC70A61041EF6E4C /* Sidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sidebar.swift; sourceTree = "<group>"; };
+		3D2233282108571CCBCFADE2 /* FontSizeEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontSizeEnvironment.swift; sourceTree = "<group>"; };
 		4C26881923D0CBAD74E43300 /* TaskRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRow.swift; sourceTree = "<group>"; };
 		4C6FD0D4878C2A6DC159938F /* VikunjaWidgetApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VikunjaWidgetApp.entitlements; sourceTree = "<group>"; };
 		52749DF5C84EB8B6350FE276 /* Outbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Outbox.swift; sourceTree = "<group>"; };
@@ -176,6 +181,7 @@
 		575C0A574F52F869DB4CA643 /* QuickAddParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddParser.swift; sourceTree = "<group>"; };
 		5A112CB4533D5AB9D9D4361D /* ReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduler.swift; sourceTree = "<group>"; };
 		6310D2E398EF259266307AA4 /* Reachability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reachability.swift; sourceTree = "<group>"; };
+		6413699055632BF2AF310ADC /* ShortcutRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRouter.swift; sourceTree = "<group>"; };
 		68C6E7BB60EBB7C6C225DFAE /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetEntryView.swift; sourceTree = "<group>"; };
 		775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskMerger.swift; sourceTree = "<group>"; };
@@ -267,6 +273,7 @@
 				C19BA8BB693A0D3B77D8FD25 /* AppRoot.swift */,
 				A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */,
 				CDB4EF59CB974358A163128A /* BulkImportSheet.swift */,
+				3D2233282108571CCBCFADE2 /* FontSizeEnvironment.swift */,
 				FB82D40CDF612A9CCA6F58D9 /* InboxView.swift */,
 				166859B301206500B9AE0420 /* Info.plist */,
 				7EAD0BC89662C3B29128BFEC /* InfoIOS.plist */,
@@ -280,6 +287,7 @@
 				9CA81C31B42689E6607E4330 /* RichTextEditor.swift */,
 				AE1E2473B28773FB31C83C53 /* RichTextToolbar.swift */,
 				B3DA4F4CFBB26B3E8AB8F9F4 /* SettingsView.swift */,
+				6413699055632BF2AF310ADC /* ShortcutRouter.swift */,
 				32CFE246FC70A61041EF6E4C /* Sidebar.swift */,
 				E16AE11103FB52473BC36206 /* TaskListView.swift */,
 				4C26881923D0CBAD74E43300 /* TaskRow.swift */,
@@ -522,6 +530,7 @@
 				A1A77E9F6D003D8266DDF5B1 /* AppRoot.swift in Sources */,
 				13432CFDA3F3F4FEAC708519 /* BulkImportParser.swift in Sources */,
 				BBDAED74A2CE38A0D6CB6B3D /* BulkImportSheet.swift in Sources */,
+				BD3AF313630DB83383D30C77 /* FontSizeEnvironment.swift in Sources */,
 				DB38C05911F489759F92739A /* InboxView.swift in Sources */,
 				BBB629FBE31DC715BE9BEEF5 /* InlineTaskEditor.swift in Sources */,
 				EDD77C1F97806905078A8173 /* LogbookView.swift in Sources */,
@@ -538,6 +547,7 @@
 				3E1490212891E0F234F840AF /* RichTextUtils.swift in Sources */,
 				33211BD2FE2B40D1ED2CD4B2 /* SettingsView.swift in Sources */,
 				A81C8CEA6CA7E7396B8FB6F4 /* SharedState.swift in Sources */,
+				43132B240033ACD09D9D4A45 /* ShortcutRouter.swift in Sources */,
 				73A46D89CE623AB28A39F2E9 /* Sidebar.swift in Sources */,
 				E14BBE3DEA30D6706DC1A4EC /* TaskListView.swift in Sources */,
 				2889CDB285A07A4CDE62B914 /* TaskMerger.swift in Sources */,
@@ -584,6 +594,7 @@
 				A01292FCA9718460BA3186F7 /* AppRoot.swift in Sources */,
 				557C43CFE255EBCE5CCB0D5B /* BulkImportParser.swift in Sources */,
 				F7A9AEBEDFC251D941B03C72 /* BulkImportSheet.swift in Sources */,
+				06EC0B89C05871F841685153 /* FontSizeEnvironment.swift in Sources */,
 				D3B5C46929A34AA8A6B2465A /* InboxView.swift in Sources */,
 				A11C5F4AD5A24673789AD261 /* InlineTaskEditor.swift in Sources */,
 				3B1C3BDF5AF9E198D17FB79B /* LogbookView.swift in Sources */,
@@ -600,6 +611,7 @@
 				4C3CE8686E8B7F5ACEBF5C5E /* RichTextUtils.swift in Sources */,
 				D2B56A3D292BDB28B9B7EACA /* SettingsView.swift in Sources */,
 				1CF0C1FDEB04527CA786B784 /* SharedState.swift in Sources */,
+				E83930CD5B9016B8B53C5946 /* ShortcutRouter.swift in Sources */,
 				814CA279B7E092879D42A777 /* Sidebar.swift in Sources */,
 				27A58F28CAE31001E2C24D27 /* TaskListView.swift in Sources */,
 				D1049B52368E223631ADEC46 /* TaskMerger.swift in Sources */,

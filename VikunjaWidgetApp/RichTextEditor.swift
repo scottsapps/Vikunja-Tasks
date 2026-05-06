@@ -30,6 +30,7 @@ struct RichTextEditor: NSViewRepresentable {
         textView.isHorizontallyResizable = false
         textView.autoresizingMask = .width
         textView.textContainer?.widthTracksTextView = true
+        textView.isAutomaticLinkDetectionEnabled = true
         textView.delegate = context.coordinator
         context.coordinator.textView = textView
 
@@ -46,12 +47,17 @@ struct RichTextEditor: NSViewRepresentable {
               let textView = scrollView.documentView as? NSTextView,
               !textView.attributedString().isEqual(to: attributedText) else { return }
         textView.textStorage?.setAttributedString(attributedText)
+        if textView.isAutomaticLinkDetectionEnabled {
+            textView.checkTextInDocument(nil)
+        }
     }
 
     final class Coordinator: NSObject, NSTextViewDelegate {
         var binding: Binding<NSAttributedString>
         weak var textView: NSTextView?
         var isEditing = false
+        /// Last selection captured before focus may have left the text view.
+        var lastKnownSelection: NSRange = NSRange(location: NSNotFound, length: 0)
 
         init(binding: Binding<NSAttributedString>) {
             self.binding = binding
@@ -64,15 +70,61 @@ struct RichTextEditor: NSViewRepresentable {
             isEditing = false
         }
 
+        func textViewDidChangeSelection(_ notification: Notification) {
+            guard let tv = notification.object as? NSTextView else { return }
+            let sel = tv.selectedRange()
+            if sel.location != NSNotFound { lastKnownSelection = sel }
+        }
+
+        func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
+            if let url = link as? URL {
+                NSWorkspace.shared.open(url)
+                return true
+            }
+            if let str = link as? String, let url = URL(string: str) {
+                NSWorkspace.shared.open(url)
+                return true
+            }
+            return false
+        }
+
         func perform(_ action: RichTextContext.Action) {
             guard let tv = textView else { return }
             tv.window?.makeFirstResponder(tv)
             switch action {
-            case .bold:       toggleFontTrait(.boldFontMask, in: tv)
-            case .italic:     toggleFontTrait(.italicFontMask, in: tv)
-            case .underline:  toggleUnderlineAttr(in: tv)
-            case .bulletList: toggleBulletList(in: tv)
+            case .bold:              toggleFontTrait(.boldFontMask, in: tv)
+            case .italic:            toggleFontTrait(.italicFontMask, in: tv)
+            case .underline:         toggleUnderlineAttr(in: tv)
+            case .bulletList:        toggleBulletList(in: tv)
+            case .addLink(let url):  addLink(url, in: tv)
             }
+        }
+
+        private func addLink(_ url: URL, in tv: NSTextView) {
+            guard let storage = tv.textStorage else { return }
+            // Use saved selection; fall back to current range
+            let range = (lastKnownSelection.location != NSNotFound && lastKnownSelection.length > 0)
+                ? lastKnownSelection
+                : tv.selectedRange()
+            storage.beginEditing()
+            if range.length > 0 && NSMaxRange(range) <= storage.length {
+                // Wrap selected text in a link
+                storage.addAttribute(.link, value: url, range: range)
+            } else {
+                // No selection — insert the URL as linked text at the cursor
+                let insertAt = min(range.location == NSNotFound ? 0 : range.location, storage.length)
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .link: url,
+                    .font: NSFont.systemFont(ofSize: 13)
+                ]
+                let linked = NSMutableAttributedString(string: url.absoluteString, attributes: attrs)
+                storage.insert(linked, at: insertAt)
+            }
+            storage.endEditing()
+            tv.didChangeText()
+            isEditing = true
+            binding.wrappedValue = tv.attributedString()
+            isEditing = false
         }
 
         private func toggleFontTrait(_ trait: NSFontTraitMask, in tv: NSTextView) {
@@ -199,6 +251,8 @@ struct RichTextEditor: UIViewRepresentable {
         var binding: Binding<NSAttributedString>
         weak var textView: UITextView?
         var isEditing = false
+        /// Last selection captured before focus may have left the text view.
+        var lastKnownSelection: NSRange = NSRange(location: NSNotFound, length: 0)
 
         init(binding: Binding<NSAttributedString>) {
             self.binding = binding
@@ -210,14 +264,52 @@ struct RichTextEditor: UIViewRepresentable {
             isEditing = false
         }
 
+        func textViewDidChangeSelection(_ textView: UITextView) {
+            let sel = textView.selectedRange
+            if sel.location != NSNotFound { lastKnownSelection = sel }
+        }
+
+        @available(iOS 17, *)
+        func textView(_ textView: UITextView, primaryActionFor textItem: UITextItem,
+                      defaultAction: UIAction) -> UIAction? {
+            if case .link(let url) = textItem.content {
+                return UIAction { _ in UIApplication.shared.open(url) }
+            }
+            return defaultAction
+        }
+
         func perform(_ action: RichTextContext.Action) {
             guard let tv = textView else { return }
             switch action {
-            case .bold:       toggleTrait(.traitBold, in: tv)
-            case .italic:     toggleTrait(.traitItalic, in: tv)
-            case .underline:  toggleUnderlineAttr(in: tv)
-            case .bulletList: toggleBulletList(in: tv)
+            case .bold:              toggleTrait(.traitBold, in: tv)
+            case .italic:            toggleTrait(.traitItalic, in: tv)
+            case .underline:         toggleUnderlineAttr(in: tv)
+            case .bulletList:        toggleBulletList(in: tv)
+            case .addLink(let url):  addLink(url, in: tv)
             }
+        }
+
+        private func addLink(_ url: URL, in tv: UITextView) {
+            let storage = tv.textStorage
+            let range = (lastKnownSelection.location != NSNotFound && lastKnownSelection.length > 0)
+                ? lastKnownSelection
+                : tv.selectedRange
+            storage.beginEditing()
+            if range.length > 0 && NSMaxRange(range) <= storage.length {
+                storage.addAttribute(.link, value: url, range: range)
+            } else {
+                let insertAt = min(range.location == NSNotFound ? 0 : range.location, storage.length)
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .link: url,
+                    .font: UIFont.systemFont(ofSize: 13)
+                ]
+                let linked = NSMutableAttributedString(string: url.absoluteString, attributes: attrs)
+                storage.insert(linked, at: insertAt)
+            }
+            storage.endEditing()
+            isEditing = true
+            binding.wrappedValue = tv.attributedText ?? NSAttributedString()
+            isEditing = false
         }
 
         private func toggleTrait(_ trait: UIFontDescriptor.SymbolicTraits, in tv: UITextView) {

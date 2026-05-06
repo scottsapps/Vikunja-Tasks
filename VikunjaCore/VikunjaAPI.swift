@@ -6,6 +6,20 @@ enum VikunjaAPI {
 
     // MARK: - Projects
 
+    static func createProject(title: String) async throws -> VikunjaProject {
+        let body = try JSONSerialization.data(withJSONObject: ["title": title])
+        return try await put("/projects", body: body, as: VikunjaProject.self)
+    }
+
+    static func deleteProject(id: Int) async throws {
+        let request = makeRequest("/projects/\(id)", method: "DELETE")
+        let (_, response) = try await URLSession.shared.data(for: request)
+        let http = response as? HTTPURLResponse
+        guard let http, (200...299).contains(http.statusCode) else {
+            throw APIError.badStatus(http?.statusCode ?? -1)
+        }
+    }
+
     static func fetchAllProjects() async throws -> [VikunjaProject] {
         var all: [VikunjaProject] = []
         var page = 1

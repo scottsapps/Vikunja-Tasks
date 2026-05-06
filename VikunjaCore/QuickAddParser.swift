@@ -146,11 +146,13 @@ enum QuickAddParser {
     }
 
     private static func extractMonthDay(_ text: inout String, cal: Calendar, todayStart: Date) -> Date? {
-        // Matches "Apr 30", "April 30", "30 Apr", "30 April" (case-insensitive)
-        let monthNames = "jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?"
-        let patterns = [
-            (#"(\b(?:"# + monthNames + #")\s+(\d{1,2})\b)"#, true),
-            (#"(\b(\d{1,2})\s+(?:"# + monthNames + #")\b)"#, false)
+        // Matches "Apr 30", "April 30", "30 Apr", "30 April" — with optional year:
+        // "Apr 30 2027", "Apr 30, 2027", "30 Apr 2027" (case-insensitive)
+        let mn = "jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?"
+        // Capture groups: (1) month-or-day, (2) day-or-month, (3) optional 4-digit year
+        let patterns: [(String, Bool)] = [
+            (#"\b("# + mn + #")\s+(\d{1,2})(?:[,\s]+(\d{4}))?\b"#, true),
+            (#"\b(\d{1,2})\s+("# + mn + #")(?:[,\s]+(\d{4}))?\b"#, false)
         ]
 
         let monthNumbers = ["jan":1,"feb":2,"mar":3,"apr":4,"may":5,"jun":6,
@@ -161,29 +163,30 @@ enum QuickAddParser {
                   let m = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text))
             else { continue }
 
-            // Extract month and day from the full match
             let fullRange = Range(m.range, in: text)!
-            let full = String(text[fullRange])
+            let g1 = Range(m.range(at: 1), in: text).map { String(text[$0]) }
+            let g2 = Range(m.range(at: 2), in: text).map { String(text[$0]) }
+            let g3 = m.numberOfRanges > 3 ? Range(m.range(at: 3), in: text).map { String(text[$0]) } : nil
+
             text.removeSubrange(fullRange)
             text = text.trimmingCharacters(in: .whitespaces)
 
-            // Parse month and day
-            let parts = full.components(separatedBy: .whitespaces)
-            guard parts.count == 2 else { continue }
-            let (monthStr, dayStr) = monthFirst
-                ? (parts[0], parts[1])
-                : (parts[1], parts[0])
-
-            guard let day = Int(dayStr) else { continue }
-            let monthKey = String(monthStr.prefix(3).lowercased())
+            let monthStr = monthFirst ? g1 : g2
+            let dayStr   = monthFirst ? g2 : g1
+            guard let ms = monthStr, let ds = dayStr, let day = Int(ds) else { continue }
+            let monthKey = String(ms.prefix(3).lowercased())
             guard let month = monthNumbers[monthKey] else { continue }
 
             var comps = DateComponents()
             comps.month = month
             comps.day = day
-            comps.year = cal.component(.year, from: todayStart)
-            if let date = cal.date(from: comps), date < todayStart {
-                comps.year! += 1
+            if let yearStr = g3, let year = Int(yearStr) {
+                comps.year = year
+            } else {
+                comps.year = cal.component(.year, from: todayStart)
+                if let date = cal.date(from: comps), date < todayStart {
+                    comps.year! += 1
+                }
             }
             return cal.date(from: comps)
         }

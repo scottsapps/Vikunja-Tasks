@@ -37,7 +37,7 @@ struct VikunjaLabel: Codable, Identifiable {
     let title: String
 }
 
-struct VikunjaProject: Codable, Identifiable {
+struct VikunjaProject: Codable, Identifiable, Equatable {
     let id: Int
     let title: String
 }

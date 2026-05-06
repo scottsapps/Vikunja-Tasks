@@ -238,13 +238,13 @@ struct InlineTaskEditor: View {
                 } label: {
                     Label(
                         project.title,
-                        systemImage: selectedProjectId == project.id ? "checkmark.circle.fill" : "circle.dashed"
+                        systemImage: selectedProjectId == project.id ? "checkmark" : "folder"
                     )
                 }
             }
         } label: {
             HStack(spacing: 4) {
-                Image(systemName: "circle.dashed")
+                Image(systemName: "folder")
                     .font(.system(size: 12))
                 Text(store.projectMap[selectedProjectId] ?? "Project")
                     .font(.system(size: 12))
@@ -259,7 +259,7 @@ struct InlineTaskEditor: View {
 
     private var labelsMenu: some View {
         Menu {
-            ForEach(store.labels) { label in
+            ForEach(store.labels.sorted { $0.title.localizedCompare($1.title) == .orderedAscending }) { label in
                 Button {
                     if selectedLabelIds.contains(label.id) {
                         selectedLabelIds.remove(label.id)

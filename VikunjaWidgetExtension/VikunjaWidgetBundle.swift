@@ -8,8 +8,8 @@ struct VikunjaWidget: Widget {
         StaticConfiguration(kind: kind, provider: VikunjaTimelineProvider()) { entry in
             VikunjaWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("Vikunja Tasks")
-        .description("Upcoming tasks from your Vikunja instance.")
+        .configurationDisplayName("Veyrn Tasks")
+        .description("Upcoming tasks from your Veyrn instance.")
         .supportedFamilies(supportedFamilies)
     }
 

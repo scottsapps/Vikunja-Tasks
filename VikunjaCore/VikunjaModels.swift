@@ -13,12 +13,16 @@ struct VikunjaTask: Codable {
     var updated: String?
     var priority: Int?
     var reminders: [VikunjaReminder]?
+    var repeatAfter: Int?
+    var repeatMode: Int?
 
     enum CodingKeys: String, CodingKey {
         case id, title, done, labels, description, priority, reminders
         case dueDate = "due_date"
         case projectId = "project_id"
         case updated
+        case repeatAfter = "repeat_after"
+        case repeatMode = "repeat_mode"
     }
 
     var effectiveDueDate: Date? {
@@ -62,6 +66,9 @@ struct TaskUpdate: Codable {
     var labelIds: [Int]?
     var projectId: Int?
     var reminders: [Date]?      // nil = no change; [] = clear all reminders
+    var repeatAfter: Int?       // nil = no change
+    var clearRepeat: Bool = false
+    var repeatMode: Int?
 
     var jsonBody: [String: Any] {
         var body: [String: Any] = [:]
@@ -83,6 +90,12 @@ struct TaskUpdate: Codable {
         if let projectId { body["project_id"] = projectId }
         if let reminders {
             body["reminders"] = reminders.map { ["reminder": ISO8601DateFormatter().string(from: $0)] }
+        }
+        if clearRepeat {
+            body["repeat_after"] = 0
+        } else if let repeatAfter {
+            body["repeat_after"] = repeatAfter
+            body["repeat_mode"] = repeatMode ?? 0
         }
         return body
     }

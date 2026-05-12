@@ -3,6 +3,7 @@ import SwiftUI
 struct Sidebar: View {
     @Binding var selection: SidebarItem?
     var store: TaskStore
+    var onSettings: (() -> Void)? = nil
 
     @State private var showNewProject = false
     @State private var newProjectTitle = ""
@@ -15,7 +16,7 @@ struct Sidebar: View {
                     .badge(inboxCount)
                     .tag(SidebarItem.inbox)
 
-                Label("Today", systemImage: "star.fill")
+                Label("Scheduled", systemImage: "star.fill")
                     .tint(.yellow)
                     .badge(todayCount)
                     .tag(SidebarItem.today)
@@ -54,7 +55,18 @@ struct Sidebar: View {
         #else
         .listStyle(.insetGrouped)
         #endif
-        .navigationTitle("Vikunja")
+        .navigationTitle("Veyrn")
+        #if os(iOS)
+        .toolbar {
+            if let onSettings {
+                ToolbarItem(placement: .navigation) {
+                    Button { onSettings() } label: {
+                        Image(systemName: "gear")
+                    }
+                }
+            }
+        }
+        #endif
         .alert("New Project", isPresented: $showNewProject) {
             TextField("Project name", text: $newProjectTitle)
             Button("Create") {

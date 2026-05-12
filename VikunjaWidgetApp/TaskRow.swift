@@ -5,6 +5,7 @@ struct TaskRow: View {
     let projectName: String
     var onTap: (() -> Void)? = nil
     let onComplete: () -> Void
+    var suppressUpcomingDueDate: Bool = false
 
     @Environment(\.fontSizeOffset) private var fs
     @State private var isCompleting = false
@@ -88,7 +89,10 @@ struct TaskRow: View {
                 }
 
                 if let due = task.effectiveDueDate {
-                    dueDateLabel(due)
+                    let isOverdue = Calendar.current.startOfDay(for: due) < Calendar.current.startOfDay(for: Date())
+                    if !suppressUpcomingDueDate || isOverdue {
+                        dueDateLabel(due)
+                    }
                 }
             }
         }

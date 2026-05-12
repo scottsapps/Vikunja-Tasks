@@ -10,9 +10,10 @@ struct TodayView: View {
     var body: some View {
         TaskListView(
             tasks: store.upcomingTasks(),
-            mode: .byDate
+            mode: .byDate,
+            suppressUpcomingDueDate: true
         )
-        .navigationTitle("Today")
+        .navigationTitle("Scheduled")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

@@ -31,6 +31,8 @@ struct CreatePayload: Codable {
     let priority: Int?
     let labels: [VikunjaLabel]
     let reminders: [Date]
+    let repeatAfter: Int?
+    let repeatMode: Int?
 }
 
 // MARK: - Outbox

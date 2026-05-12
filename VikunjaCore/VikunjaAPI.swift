@@ -99,7 +99,9 @@ enum VikunjaAPI {
         dueDate: Date? = nil,
         priority: Int? = nil,
         labelIds: [Int] = [],
-        reminders: [Date] = []
+        reminders: [Date] = [],
+        repeatAfter: Int? = nil,
+        repeatMode: Int? = nil
     ) async throws -> VikunjaTask {
         var body: [String: Any] = ["title": title]
         if let dueDate {
@@ -108,6 +110,10 @@ enum VikunjaAPI {
         if let priority { body["priority"] = priority }
         if !reminders.isEmpty {
             body["reminders"] = reminders.map { ["reminder": ISO8601DateFormatter().string(from: $0)] }
+        }
+        if let repeatAfter, repeatAfter > 0 {
+            body["repeat_after"] = repeatAfter
+            body["repeat_mode"] = repeatMode ?? 0
         }
         let data = try JSONSerialization.data(withJSONObject: body)
         let task = try await put("/projects/\(projectId)/tasks", body: data, as: VikunjaTask.self)

@@ -18,6 +18,8 @@ struct InlineTaskEditor: View {
     @State private var selectedProjectId: Int
     @State private var reminderDate: Date
     @State private var hasReminder: Bool
+    @State private var repeatAfter: Int?    // seconds; nil = no repeat
+    @State private var repeatMode: Int?
 
     // UI state
     @State private var isSaving = false
@@ -40,6 +42,8 @@ struct InlineTaskEditor: View {
         let firstReminder = task.reminders?.compactMap(\.date).first
         _hasReminder = State(initialValue: firstReminder != nil)
         _reminderDate = State(initialValue: firstReminder ?? Date())
+        _repeatAfter = State(initialValue: task.repeatAfter.flatMap { $0 > 0 ? $0 : nil })
+        _repeatMode = State(initialValue: task.repeatMode)
     }
 
     var body: some View {
@@ -69,13 +73,13 @@ struct InlineTaskEditor: View {
                 HStack(spacing: 0) {
                     dueDateButton
                     Divider().frame(height: 24)
-                    priorityMenu
-                    Divider().frame(height: 24)
                     projectMenu
                     Divider().frame(height: 24)
                     labelsMenu
                     Divider().frame(height: 24)
                     reminderButton
+                    Divider().frame(height: 24)
+                    repeatMenu
                 }
             }
             .frame(height: 38)
@@ -282,8 +286,14 @@ struct InlineTaskEditor: View {
                 Image(systemName: selectedLabelIds.isEmpty ? "tag" : "tag.fill")
                     .font(.system(size: 12))
                 if !selectedLabelIds.isEmpty {
-                    Text("\(selectedLabelIds.count)")
+                    let names = store.labels
+                        .filter { selectedLabelIds.contains($0.id) }
+                        .sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
+                        .map(\.title)
+                        .joined(separator: ", ")
+                    Text(names)
                         .font(.system(size: 12))
+                        .lineLimit(1)
                 }
             }
             .padding(.horizontal, 10)
@@ -347,6 +357,54 @@ struct InlineTaskEditor: View {
         }
     }
 
+    // MARK: - Repeat
+
+    private var repeatMenu: some View {
+        Menu {
+            Button("None") {
+                repeatAfter = nil
+                repeatMode = nil
+            }
+            Divider()
+            Button("Daily") { repeatAfter = 86_400; repeatMode = 0 }
+            Button("Weekly") { repeatAfter = 7 * 86_400; repeatMode = 0 }
+            Button("Monthly") { repeatAfter = 30 * 86_400; repeatMode = 1 }
+            Button("Yearly") { repeatAfter = 365 * 86_400; repeatMode = 0 }
+            Button("Weekdays") { repeatAfter = 86_400; repeatMode = 2 }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: repeatAfter != nil ? "repeat.circle.fill" : "repeat")
+                    .font(.system(size: 12))
+                if let ra = repeatAfter {
+                    Text(repeatLabel(ra))
+                        .font(.system(size: 12))
+                } else {
+                    Text("Repeat")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 10)
+            .foregroundStyle(repeatAfter != nil ? Color.accentColor : .secondary)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func repeatLabel(_ seconds: Int) -> String {
+        switch seconds {
+        case 86_400:
+            return repeatMode == 2 ? "Weekdays" : "Daily"
+        case 7 * 86_400:
+            return "Weekly"
+        case 30 * 86_400:
+            return "Monthly"
+        case 365 * 86_400:
+            return "Yearly"
+        default:
+            return "Every \(seconds / 86_400)d"
+        }
+    }
+
     // MARK: - Save
 
     private func save() async {
@@ -390,12 +448,22 @@ struct InlineTaskEditor: View {
             update.reminders = hasReminder ? [reminderDate] : []
         }
 
+        let originalRepeat = task.repeatAfter.flatMap { $0 > 0 ? $0 : nil }
+        if (repeatAfter ?? 0) != (originalRepeat ?? 0) {
+            if let ra = repeatAfter, ra > 0 {
+                update.repeatAfter = ra
+                update.repeatMode = repeatMode ?? 0
+            } else {
+                update.clearRepeat = true
+            }
+        }
+
         // Only call API if something changed
         let hasChanges = update.title != nil || update.description != nil
             || update.dueDate != nil || update.clearDueDate
             || update.priority != nil || update.clearPriority
             || update.labelIds != nil || update.projectId != nil
-            || update.reminders != nil
+            || update.reminders != nil || update.repeatAfter != nil || update.clearRepeat
 
         if hasChanges {
             await store.update(taskId: task.id, with: update)

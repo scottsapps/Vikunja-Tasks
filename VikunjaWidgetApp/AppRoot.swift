@@ -127,7 +127,7 @@ struct AppRoot: View {
                     .badge(store.inboxTasks().count)
 
                     NavigationLink(value: SidebarItem.today) {
-                        Label("Today", systemImage: "star.fill")
+                        Label("Scheduled", systemImage: "star.fill")
                     }
                     .badge(todayCount)
 
@@ -164,7 +164,7 @@ struct AppRoot: View {
             #if os(iOS)
             .listStyle(.insetGrouped)
             #endif
-            .navigationTitle("Vikunja")
+            .navigationTitle("Veyrn")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -234,7 +234,7 @@ struct AppRoot: View {
 
     private var regularLayout: some View {
         NavigationSplitView {
-            Sidebar(selection: $selection, store: store)
+            Sidebar(selection: $selection, store: store, onSettings: { showSettings = true })
         } detail: {
             Group {
                 if !searchText.isEmpty {

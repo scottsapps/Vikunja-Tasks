@@ -154,7 +154,9 @@ struct QuickAddSheet: View {
                 title: p.cleanedTitle,
                 dueDate: p.dueDate,
                 priority: p.priority,
-                labels: resolvedLabels
+                labels: resolvedLabels,
+                repeatAfter: p.repeatAfter,
+                repeatMode: p.repeatMode
             )
 
             dismiss()

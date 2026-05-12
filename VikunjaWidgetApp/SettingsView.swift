@@ -15,10 +15,10 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 24) {
             // Header
             VStack(alignment: .leading, spacing: 4) {
-                Text(VikunjaConfig.isConfigured ? "Settings" : "Welcome to Vikunja")
+                Text(VikunjaConfig.isConfigured ? "Settings" : "Welcome to Veyrn")
                     .font(.title2)
                     .fontWeight(.semibold)
-                Text("Enter your Vikunja instance URL and an API token.")
+                Text("Enter your Veyrn instance URL and an API token.")
                     .foregroundStyle(.secondary)
             }
 
@@ -33,7 +33,7 @@ struct SettingsView: View {
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
                     #endif
-                Text("Your Vikunja server — without /api/v1")
+                Text("Your Veyrn server — without /api/v1")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

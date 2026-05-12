@@ -111,7 +111,9 @@ final class TaskStore {
         dueDate: Date? = nil,
         priority: Int? = nil,
         labels: [VikunjaLabel] = [],
-        reminders: [Date] = []
+        reminders: [Date] = [],
+        repeatAfter: Int? = nil,
+        repeatMode: Int? = nil
     ) {
         let clientId = UUID()
         let placeholderId = outbox.nextPlaceholderId()
@@ -121,7 +123,9 @@ final class TaskStore {
             dueDate: dueDate,
             priority: priority,
             labels: labels,
-            reminders: reminders
+            reminders: reminders,
+            repeatAfter: repeatAfter,
+            repeatMode: repeatMode
         )
         let op = PendingOp(
             id: UUID(),
@@ -252,7 +256,9 @@ final class TaskStore {
                         dueDate: payload.dueDate,
                         priority: payload.priority,
                         labelIds: payload.labels.map(\.id),
-                        reminders: payload.reminders
+                        reminders: payload.reminders,
+                        repeatAfter: payload.repeatAfter,
+                        repeatMode: payload.repeatMode
                     )
                     if case .client(let uuid) = op.ref {
                         outbox.remap(client: uuid, toServer: created.id)

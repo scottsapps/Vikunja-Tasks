@@ -17,6 +17,7 @@ struct TaskListView: View {
 
     // Tag filter (used by project view)
     var activeTagFilter: Set<String> = []
+    var suppressUpcomingDueDate: Bool = false
 
     // Inline editor state — which task is expanded
     @State private var expandedTaskId: Int? = nil
@@ -159,7 +160,8 @@ struct TaskListView: View {
                         expandedTaskId = task.id
                     }
                 },
-                onComplete: { Task { await store.complete(task: task) } }
+                onComplete: { Task { await store.complete(task: task) } },
+                suppressUpcomingDueDate: suppressUpcomingDueDate
             )
         }
     }

@@ -71,10 +71,15 @@ final class QuickAddPanelController: NSObject {
         panel.contentViewController = ctrl
         panel.setContentSize(NSSize(width: 500, height: 220))
         panel.center()
-        // orderFrontRegardless shows the panel without activating the app (no main-window foreground).
-        // makeKey() is safe because QuickAddPanel overrides canBecomeKey to return true.
         panel.orderFrontRegardless()
         panel.makeKey()
+        NSApp.activate(ignoringOtherApps: true)
+        // SwiftUI's @FocusState fires asynchronously on .onAppear; nudge AppKit
+        // directly on the next run loop pass to guarantee the cursor lands in the field.
+        DispatchQueue.main.async { [weak panel] in
+            guard let panel else { return }
+            panel.makeFirstResponder(panel.contentView?.nextValidKeyView)
+        }
     }
 
     // MARK: - Global hotkey (Ctrl+Space)

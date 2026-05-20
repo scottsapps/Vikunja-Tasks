@@ -29,6 +29,7 @@ struct TaskRowView: View {
             }
             .buttonStyle(.plain)
             .frame(width: 20, height: 20)
+            .contentShape(Rectangle())
         }
     }
 

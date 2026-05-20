@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "1F53CB9A95EE058BF7773B4B"
-               BuildableName = "VikunjaWidget.app"
+               BuildableName = "Veyrn.app"
                BlueprintName = "VikunjaWidgetApp"
                ReferencedContainer = "container:VikunjaWidget.xcodeproj">
             </BuildableReference>
@@ -45,7 +45,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "1F53CB9A95EE058BF7773B4B"
-            BuildableName = "VikunjaWidget.app"
+            BuildableName = "Veyrn.app"
             BlueprintName = "VikunjaWidgetApp"
             ReferencedContainer = "container:VikunjaWidget.xcodeproj">
          </BuildableReference>
@@ -68,7 +68,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "1F53CB9A95EE058BF7773B4B"
-            BuildableName = "VikunjaWidget.app"
+            BuildableName = "Veyrn.app"
             BlueprintName = "VikunjaWidgetApp"
             ReferencedContainer = "container:VikunjaWidget.xcodeproj">
          </BuildableReference>
@@ -85,7 +85,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "1F53CB9A95EE058BF7773B4B"
-            BuildableName = "VikunjaWidget.app"
+            BuildableName = "Veyrn.app"
             BlueprintName = "VikunjaWidgetApp"
             ReferencedContainer = "container:VikunjaWidget.xcodeproj">
          </BuildableReference>

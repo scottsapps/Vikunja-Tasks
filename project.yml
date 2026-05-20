@@ -69,7 +69,7 @@ targets:
       path: VikunjaWidgetApp/VikunjaWidgetApp.entitlements
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp
-      PRODUCT_NAME: VikunjaWidget
+      PRODUCT_NAME: Veyrn
       GENERATE_INFOPLIST_FILE: NO
       INFOPLIST_FILE: VikunjaWidgetApp/Info.plist
       MACOSX_DEPLOYMENT_TARGET: "14.0"
@@ -122,7 +122,7 @@ targets:
       path: VikunjaWidgetApp/VikunjaWidgetAppIOS.entitlements
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp
-      PRODUCT_NAME: VikunjaWidget
+      PRODUCT_NAME: Veyrn
       GENERATE_INFOPLIST_FILE: NO
       INFOPLIST_FILE: VikunjaWidgetApp/InfoIOS.plist
       IPHONEOS_DEPLOYMENT_TARGET: "17.0"

@@ -170,7 +170,7 @@
 		2E14A86ED969A63033CECCD3 /* RichTextUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextUtils.swift; sourceTree = "<group>"; };
 		2E8B866134A71528ACC14C76 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		30D8862B6CFF3E3E06B26ACA /* VikunjaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = VikunjaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		31047F6BFB8F2F00A7627426 /* VikunjaWidgetExtensionIOS.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = VikunjaWidgetExtensionIOS.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		31047F6BFB8F2F00A7627426 /* VikunjaWidgetExtensionIOS.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = VikunjaWidgetExtensionIOS.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		32C19966D06DD9CB26072478 /* RichTextContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextContext.swift; sourceTree = "<group>"; };
 		32CFE246FC70A61041EF6E4C /* Sidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sidebar.swift; sourceTree = "<group>"; };
 		3D2233282108571CCBCFADE2 /* FontSizeEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontSizeEnvironment.swift; sourceTree = "<group>"; };
@@ -188,7 +188,7 @@
 		77E4BA4BD463D4E6942E3495 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		7E2A53ED8DB6BC3CCBC225B2 /* InfoIOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = InfoIOS.plist; sourceTree = "<group>"; };
 		7EAD0BC89662C3B29128BFEC /* InfoIOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = InfoIOS.plist; sourceTree = "<group>"; };
-		94A79F734B4FA3F1B7F71059 /* VikunjaWidgetAppIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = VikunjaWidgetAppIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		94A79F734B4FA3F1B7F71059 /* Veyrn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Veyrn.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9646D37E52F94B16B7960FD4 /* WidgetCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCache.swift; sourceTree = "<group>"; };
 		9CA81C31B42689E6607E4330 /* RichTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextEditor.swift; sourceTree = "<group>"; };
 		9E38CA1B0723B492B073EAE3 /* SharedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedState.swift; sourceTree = "<group>"; };
@@ -201,7 +201,7 @@
 		B189E2189A5C4A68E826A0BC /* VikunjaWidgetApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetApp.swift; sourceTree = "<group>"; };
 		B3BB9C870B4EF39EC432A03D /* ProjectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectView.swift; sourceTree = "<group>"; };
 		B3DA4F4CFBB26B3E8AB8F9F4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		BDB2CBC26BADD19ED549207B /* VikunjaWidgetApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VikunjaWidgetApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BDB2CBC26BADD19ED549207B /* Veyrn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Veyrn.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C19BA8BB693A0D3B77D8FD25 /* AppRoot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoot.swift; sourceTree = "<group>"; };
 		C4E12C5D7A535480216299E3 /* UndoCompleteTaskIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoCompleteTaskIntent.swift; sourceTree = "<group>"; };
 		C5CFE29DC68AF948888033B9 /* VikunjaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetBundle.swift; sourceTree = "<group>"; };
@@ -303,8 +303,8 @@
 		43E0FD09DB5D1963EACC6D09 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				BDB2CBC26BADD19ED549207B /* VikunjaWidgetApp.app */,
-				94A79F734B4FA3F1B7F71059 /* VikunjaWidgetAppIOS.app */,
+				BDB2CBC26BADD19ED549207B /* Veyrn.app */,
+				94A79F734B4FA3F1B7F71059 /* Veyrn.app */,
 				30D8862B6CFF3E3E06B26ACA /* VikunjaWidgetExtension.appex */,
 				31047F6BFB8F2F00A7627426 /* VikunjaWidgetExtensionIOS.appex */,
 			);
@@ -396,7 +396,7 @@
 			packageProductDependencies = (
 			);
 			productName = VikunjaWidgetApp;
-			productReference = BDB2CBC26BADD19ED549207B /* VikunjaWidgetApp.app */;
+			productReference = BDB2CBC26BADD19ED549207B /* Veyrn.app */;
 			productType = "com.apple.product-type.application";
 		};
 		5089A31E80CF606C44D1424F /* VikunjaWidgetAppIOS */ = {
@@ -416,7 +416,7 @@
 			packageProductDependencies = (
 			);
 			productName = VikunjaWidgetAppIOS;
-			productReference = 94A79F734B4FA3F1B7F71059 /* VikunjaWidgetAppIOS.app */;
+			productReference = 94A79F734B4FA3F1B7F71059 /* Veyrn.app */;
 			productType = "com.apple.product-type.application";
 		};
 		A0698B744356C9C9BF163D6D /* VikunjaWidgetExtensionIOS */ = {
@@ -680,7 +680,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -702,7 +702,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -723,9 +723,9 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
-				PRODUCT_NAME = VikunjaWidget;
+				PRODUCT_NAME = Veyrn;
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -814,9 +814,9 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
-				PRODUCT_NAME = VikunjaWidget;
+				PRODUCT_NAME = Veyrn;
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -835,7 +835,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -856,9 +856,9 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
-				PRODUCT_NAME = VikunjaWidget;
+				PRODUCT_NAME = Veyrn;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -878,9 +878,9 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
-				PRODUCT_NAME = VikunjaWidget;
+				PRODUCT_NAME = Veyrn;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -899,7 +899,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;

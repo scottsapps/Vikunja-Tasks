@@ -74,7 +74,12 @@ struct QuickAddSheet: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 if let due = parsed.dueDate {
-                    previewChip(icon: "calendar", text: due.formatted(.dateTime.month(.abbreviated).day()))
+                    let currentYear = Calendar.current.component(.year, from: Date())
+                    let dueYear = Calendar.current.component(.year, from: due)
+                    let dueText = dueYear == currentYear
+                        ? due.formatted(.dateTime.month(.abbreviated).day())
+                        : due.formatted(.dateTime.month(.abbreviated).day().year())
+                    previewChip(icon: "calendar", text: dueText)
                 }
                 if let priority = parsed.priority {
                     previewChip(icon: "flag.fill", text: "Priority \(priority)")

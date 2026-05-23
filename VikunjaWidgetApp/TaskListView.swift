@@ -201,6 +201,9 @@ struct TaskListView: View {
 
         let fmt = DateFormatter()
         fmt.dateFormat = "EEE, MMM d"
+        let fmtWithYear = DateFormatter()
+        fmtWithYear.dateFormat = "EEE, MMM d, yyyy"
+        let currentYear = cal.component(.year, from: today)
 
         return buckets.keys.sorted().compactMap { day -> DateGroup? in
             let sorted = buckets[day]!.sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
@@ -208,7 +211,10 @@ struct TaskListView: View {
             if day == .distantFuture { label = "No Date" }
             else if day == today { label = "Today" }
             else if day == tomorrow { label = "Tomorrow" }
-            else { label = fmt.string(from: day) }
+            else {
+                let dayYear = cal.component(.year, from: day)
+                label = dayYear == currentYear ? fmt.string(from: day) : fmtWithYear.string(from: day)
+            }
             return DateGroup(label: label, sortKey: day, tasks: sorted)
         }
     }

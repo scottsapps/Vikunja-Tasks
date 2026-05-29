@@ -26,4 +26,23 @@ enum VikunjaConfig {
     static var fontSizeOffset: Int {
         UserDefaults.standard.integer(forKey: "vikunja_font_size_offset")
     }
+
+    #if os(macOS)
+    static func registerHotkeyDefaults() {
+        UserDefaults.standard.register(defaults: [
+            "vikunja_hotkey_keycode": 49,    // kVK_Space
+            "vikunja_hotkey_modifiers": 4096  // controlKey
+        ])
+    }
+
+    static var quickAddKeyCode: UInt32 {
+        get { UInt32(UserDefaults.standard.integer(forKey: "vikunja_hotkey_keycode")) }
+        set { UserDefaults.standard.set(Int(newValue), forKey: "vikunja_hotkey_keycode") }
+    }
+
+    static var quickAddModifiers: UInt32 {
+        get { UInt32(UserDefaults.standard.integer(forKey: "vikunja_hotkey_modifiers")) }
+        set { UserDefaults.standard.set(Int(newValue), forKey: "vikunja_hotkey_modifiers") }
+    }
+    #endif
 }

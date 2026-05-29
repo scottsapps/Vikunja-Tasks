@@ -2,6 +2,7 @@ import SwiftUI
 
 struct QuickAddSheet: View {
     var store: TaskStore
+    var onExpandToggle: ((Bool) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
 
     @State private var inputText = ""
@@ -9,16 +10,37 @@ struct QuickAddSheet: View {
     @State private var errorMessage: String?
     @FocusState private var fieldFocused: Bool
 
+    // Expanded section state
+    @State private var isExpanded = false
+    @State private var expandedHasDueDate = false
+    @State private var expandedDueDate: Date? = nil
+    @State private var expandedPriority: Int = 0
+    @State private var expandedProjectId: Int? = nil
+    @State private var expandedLabelIds: Set<Int> = []
+    @State private var expandedNotes = ""
+
     private var parsed: QuickAddResult {
         QuickAddParser.parse(inputText, knownProjects: store.projects, knownLabels: store.labels)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Title
-            Text("New Task")
-                .font(.title3)
-                .fontWeight(.semibold)
+            // Title row
+            HStack {
+                Text("New Task")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                Spacer()
+                Button {
+                    toggleExpand()
+                } label: {
+                    Image(systemName: isExpanded ? "chevron.up.circle" : "chevron.down.circle")
+                        .font(.system(size: 18))
+                        .foregroundStyle(isExpanded ? Color.accentColor : .secondary)
+                }
+                .buttonStyle(.plain)
+                .help(isExpanded ? "Collapse" : "More options")
+            }
 
             // Input field
             TextField("Buy milk *groceries +Home !2 tomorrow", text: $inputText)
@@ -31,9 +53,14 @@ struct QuickAddSheet: View {
                 #endif
                 .onSubmit { submit() }
 
-            // Live preview chips
-            if !inputText.isEmpty {
+            // Live preview chips (collapsed only, or always when parsing produces results)
+            if !inputText.isEmpty && !isExpanded {
                 previewRow
+            }
+
+            // Expanded section
+            if isExpanded {
+                expandedSection
             }
 
             if let err = errorMessage {
@@ -66,6 +93,217 @@ struct QuickAddSheet: View {
         }
         .padding(24)
         .onAppear { fieldFocused = true }
+        .animation(.easeInOut(duration: 0.18), value: isExpanded)
+    }
+
+    // MARK: - Expand toggle
+
+    private func toggleExpand() {
+        if !isExpanded {
+            let p = parsed
+            expandedHasDueDate = p.dueDate != nil
+            expandedDueDate = p.dueDate
+            expandedPriority = p.priority ?? 0
+            if let name = p.projectName {
+                expandedProjectId = store.projects.first {
+                    $0.title.lowercased().hasPrefix(name.lowercased())
+                }?.id ?? store.inboxProject?.id
+            } else {
+                expandedProjectId = store.inboxProject?.id
+            }
+            expandedLabelIds = Set(p.labelTitles.compactMap { title in
+                store.labels.first { $0.title.lowercased() == title.lowercased() }?.id
+            })
+        }
+        isExpanded.toggle()
+        onExpandToggle?(isExpanded)
+    }
+
+    // MARK: - Expanded section
+
+    private var expandedSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Divider()
+
+            // Metadata row
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    expandedDueDateButton
+                    Divider().frame(height: 24)
+                    expandedProjectMenu
+                    Divider().frame(height: 24)
+                    expandedLabelsMenu
+                    Divider().frame(height: 24)
+                    expandedPriorityMenu
+                }
+            }
+            .frame(height: 36)
+            .background(Color.primary.opacity(0.03))
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+
+            // Notes
+            TextField("Notes (optional)", text: $expandedNotes, axis: .vertical)
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 13))
+                .lineLimit(3...5)
+                #if os(iOS)
+                .autocorrectionDisabled()
+                #endif
+        }
+    }
+
+    // MARK: - Expanded due date
+
+    private var expandedDueDateButton: some View {
+        Group {
+            if expandedHasDueDate {
+                HStack(spacing: 0) {
+                    DatePicker(
+                        "",
+                        selection: Binding(
+                            get: { expandedDueDate ?? Date() },
+                            set: { expandedDueDate = $0; expandedHasDueDate = true }
+                        ),
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.compact)
+                    .labelsHidden()
+                    .padding(.horizontal, 8)
+
+                    Button {
+                        expandedHasDueDate = false
+                        expandedDueDate = nil
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, 8)
+                }
+            } else {
+                Button {
+                    expandedHasDueDate = true
+                    expandedDueDate = VikunjaAPI.applyDefaultTime(Date())
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 12))
+                        Text("Due date")
+                            .font(.system(size: 12))
+                    }
+                    .padding(.horizontal, 10)
+                    .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    // MARK: - Expanded project menu
+
+    private var expandedProjectMenu: some View {
+        Menu {
+            ForEach(store.projects) { project in
+                Button {
+                    expandedProjectId = project.id
+                } label: {
+                    Label(
+                        project.title,
+                        systemImage: expandedProjectId == project.id ? "checkmark" : "folder"
+                    )
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "folder")
+                    .font(.system(size: 12))
+                if let pid = expandedProjectId,
+                   let name = store.projects.first(where: { $0.id == pid })?.title {
+                    Text(name)
+                        .font(.system(size: 12))
+                        .lineLimit(1)
+                } else {
+                    Text("Project")
+                        .font(.system(size: 12))
+                }
+            }
+            .padding(.horizontal, 10)
+            .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Expanded labels menu
+
+    private var expandedLabelsMenu: some View {
+        Menu {
+            ForEach(store.labels.sorted { $0.title.localizedCompare($1.title) == .orderedAscending }) { label in
+                Button {
+                    if expandedLabelIds.contains(label.id) {
+                        expandedLabelIds.remove(label.id)
+                    } else {
+                        expandedLabelIds.insert(label.id)
+                    }
+                } label: {
+                    Label(label.title, systemImage: expandedLabelIds.contains(label.id) ? "checkmark" : "")
+                }
+            }
+            if store.labels.isEmpty {
+                Text("No labels yet").foregroundStyle(.secondary)
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: expandedLabelIds.isEmpty ? "tag" : "tag.fill")
+                    .font(.system(size: 12))
+                if !expandedLabelIds.isEmpty {
+                    let names = store.labels
+                        .filter { expandedLabelIds.contains($0.id) }
+                        .sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
+                        .map(\.title)
+                        .joined(separator: ", ")
+                    Text(names)
+                        .font(.system(size: 12))
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, 10)
+            .foregroundStyle(expandedLabelIds.isEmpty ? .secondary : Color.accentColor)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Expanded priority menu
+
+    private var expandedPriorityMenu: some View {
+        Menu {
+            Button("None") { expandedPriority = 0 }
+            Divider()
+            ForEach(1...5, id: \.self) { p in
+                Button {
+                    expandedPriority = p
+                } label: {
+                    Label(priorityLabel(p), systemImage: expandedPriority == p ? "checkmark" : "")
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: expandedPriority > 0 ? "flag.fill" : "flag")
+                    .font(.system(size: 12))
+                    .foregroundStyle(expandedPriority > 0 ? priorityColor(expandedPriority) : .secondary)
+                if expandedPriority > 0 {
+                    Text(priorityLabel(expandedPriority))
+                        .font(.system(size: 12))
+                        .foregroundStyle(priorityColor(expandedPriority))
+                } else {
+                    Text("Priority")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 10)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Preview chips
@@ -123,7 +361,9 @@ struct QuickAddSheet: View {
         Task {
             // Resolve project
             let targetProject: VikunjaProject?
-            if let name = p.projectName {
+            if isExpanded, let pid = expandedProjectId {
+                targetProject = store.projects.first { $0.id == pid } ?? store.inboxProject
+            } else if let name = p.projectName {
                 targetProject = store.projects.first {
                     $0.title.lowercased().hasPrefix(name.lowercased())
                 } ?? store.inboxProject
@@ -137,28 +377,35 @@ struct QuickAddSheet: View {
                 return
             }
 
-            // Resolve labels from cache; attempt to create unknown ones online (skip if offline).
+            // Resolve labels
             var resolvedLabels: [VikunjaLabel] = []
-            for title in p.labelTitles {
-                if let existing = store.labels.first(where: {
-                    $0.title.lowercased() == title.lowercased()
-                }) {
-                    resolvedLabels.append(existing)
-                } else if store.reachability.isOnline {
-                    if let created = try? await VikunjaAPI.createLabel(title: title) {
-                        resolvedLabels.append(created)
-                        await MainActor.run { store.labels.append(created) }
+            if isExpanded {
+                resolvedLabels = store.labels.filter { expandedLabelIds.contains($0.id) }
+            } else {
+                for title in p.labelTitles {
+                    if let existing = store.labels.first(where: {
+                        $0.title.lowercased() == title.lowercased()
+                    }) {
+                        resolvedLabels.append(existing)
+                    } else if store.reachability.isOnline {
+                        if let created = try? await VikunjaAPI.createLabel(title: title) {
+                            resolvedLabels.append(created)
+                            await MainActor.run { store.labels.append(created) }
+                        }
                     }
                 }
-                // Unknown labels that can't be created offline are silently skipped.
             }
 
-            // Enqueue via store (handles outbox + optimistic merge).
+            let effectiveDueDate = isExpanded ? (expandedHasDueDate ? expandedDueDate : nil) : p.dueDate
+            let effectivePriority = isExpanded ? (expandedPriority > 0 ? expandedPriority : nil) : p.priority
+            let notes: String? = isExpanded && !expandedNotes.isEmpty ? expandedNotes : nil
+
             store.createTask(
                 projectId: project.id,
                 title: p.cleanedTitle,
-                dueDate: p.dueDate,
-                priority: p.priority,
+                description: notes,
+                dueDate: effectiveDueDate,
+                priority: effectivePriority,
                 labels: resolvedLabels,
                 repeatAfter: p.repeatAfter,
                 repeatMode: p.repeatMode
@@ -166,6 +413,29 @@ struct QuickAddSheet: View {
 
             dismiss()
             isSubmitting = false
+        }
+    }
+
+    // MARK: - Priority helpers
+
+    private func priorityLabel(_ p: Int) -> String {
+        switch p {
+        case 1: return "Low"
+        case 2: return "Medium"
+        case 3: return "High"
+        case 4: return "Urgent"
+        case 5: return "Critical"
+        default: return "None"
+        }
+    }
+
+    private func priorityColor(_ p: Int) -> Color {
+        switch p {
+        case 1: return .secondary
+        case 2: return .blue
+        case 3: return .orange
+        case 4, 5: return .red
+        default: return .secondary
         }
     }
 }

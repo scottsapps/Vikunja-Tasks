@@ -96,6 +96,7 @@ enum VikunjaAPI {
     static func createTask(
         projectId: Int,
         title: String,
+        description: String? = nil,
         dueDate: Date? = nil,
         priority: Int? = nil,
         labelIds: [Int] = [],
@@ -104,6 +105,7 @@ enum VikunjaAPI {
         repeatMode: Int? = nil
     ) async throws -> VikunjaTask {
         var body: [String: Any] = ["title": title]
+        if let description, !description.isEmpty { body["description"] = description }
         if let dueDate {
             body["due_date"] = ISO8601DateFormatter().string(from: applyDefaultTime(dueDate))
         }

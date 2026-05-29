@@ -8,6 +8,10 @@ struct SettingsView: View {
     @State private var token = ""
     @Environment(\.dismiss) private var dismiss
     @AppStorage("vikunja_font_size_offset") private var fontSizeOffset: Int = 0
+    #if os(macOS)
+    @State private var hotkeyKeyCode: UInt32 = VikunjaConfig.quickAddKeyCode
+    @State private var hotkeyModifiers: UInt32 = VikunjaConfig.quickAddModifiers
+    #endif
 
     private var defaults: UserDefaults? { UserDefaults(suiteName: VikunjaConfig.appGroupSuite) }
 
@@ -66,6 +70,20 @@ struct SettingsView: View {
                 .pickerStyle(.segmented)
             }
 
+            #if os(macOS)
+            // Quick Add Shortcut
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Quick Add Shortcut")
+                    .font(.headline)
+                HotkeyRecorderView(keyCode: $hotkeyKeyCode, modifiers: $hotkeyModifiers)
+                    .onChange(of: hotkeyKeyCode) { _, _ in saveHotkey() }
+                    .onChange(of: hotkeyModifiers) { _, _ in saveHotkey() }
+                Text("Click to record a new global shortcut (default: ⌃Space)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            #endif
+
             Spacer()
 
             HStack {
@@ -89,6 +107,14 @@ struct SettingsView: View {
     }
 
     // MARK: - Persistence
+
+    #if os(macOS)
+    private func saveHotkey() {
+        VikunjaConfig.quickAddKeyCode = hotkeyKeyCode
+        VikunjaConfig.quickAddModifiers = hotkeyModifiers
+        NotificationCenter.default.post(name: .vikunjaHotkeyChanged, object: nil)
+    }
+    #endif
 
     private func loadSaved() {
         host = defaults?.string(forKey: "vikunja_host") ?? ""

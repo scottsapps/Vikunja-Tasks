@@ -73,6 +73,8 @@ struct InlineTaskEditor: View {
                 HStack(spacing: 0) {
                     dueDateButton
                     Divider().frame(height: 24)
+                    priorityMenu
+                    Divider().frame(height: 24)
                     projectMenu
                     Divider().frame(height: 24)
                     labelsMenu

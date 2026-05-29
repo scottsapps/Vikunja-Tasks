@@ -26,6 +26,7 @@
 		19869DC7FA0480C06F4BDC02 /* TaskRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0EC5DA80C84EAC14606DF3 /* TaskRowView.swift */; };
 		1CF0C1FDEB04527CA786B784 /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E38CA1B0723B492B073EAE3 /* SharedState.swift */; };
 		1D2EBBE25833CA492EA4ED14 /* QuickAddParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 575C0A574F52F869DB4CA643 /* QuickAddParser.swift */; };
+		1EDD136852120DECD2DA7518 /* HotkeyRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7656B4E05FA981BC6A515B75 /* HotkeyRecorderView.swift */; };
 		1F9113E75413F38F0F123ABA /* QuickAddParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 575C0A574F52F869DB4CA643 /* QuickAddParser.swift */; };
 		22EFFF073CD996D7953DDC2F /* TaskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E24B7CA47255D8E039D92036 /* TaskStore.swift */; };
 		27A58F28CAE31001E2C24D27 /* TaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E16AE11103FB52473BC36206 /* TaskListView.swift */; };
@@ -43,6 +44,7 @@
 		3E1490212891E0F234F840AF /* RichTextUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E14A86ED969A63033CECCD3 /* RichTextUtils.swift */; };
 		426140361E8189D111CEC188 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
 		43132B240033ACD09D9D4A45 /* ShortcutRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6413699055632BF2AF310ADC /* ShortcutRouter.swift */; };
+		47110862A580A698D5DCC51E /* HotkeyRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7656B4E05FA981BC6A515B75 /* HotkeyRecorderView.swift */; };
 		484BCB3C1775B98410DFC6DE /* WidgetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29F335043FC5DF87CC85EE67 /* WidgetModels.swift */; };
 		4955A225D165910AD724F5A8 /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
 		4C3CE8686E8B7F5ACEBF5C5E /* RichTextUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E14A86ED969A63033CECCD3 /* RichTextUtils.swift */; };
@@ -63,8 +65,10 @@
 		718E10F7317C56D4E583A48D /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E38CA1B0723B492B073EAE3 /* SharedState.swift */; };
 		72226A5E79207AE181B16849 /* VikunjaWidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */; };
 		73A46D89CE623AB28A39F2E9 /* Sidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32CFE246FC70A61041EF6E4C /* Sidebar.swift */; };
+		770E0ED2F26991B6FAAF99E5 /* NotificationResponseHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 097AE4727EE099A83DE65940 /* NotificationResponseHandler.swift */; };
 		7A7C13B41F052C0A061CD460 /* QuickAddParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 575C0A574F52F869DB4CA643 /* QuickAddParser.swift */; };
 		7C1C97B0D5E7933FDEE49667 /* UndoCompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E12C5D7A535480216299E3 /* UndoCompleteTaskIntent.swift */; };
+		7C4457BE79D282FB1EB9FB65 /* NotificationResponseHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 097AE4727EE099A83DE65940 /* NotificationResponseHandler.swift */; };
 		7C9417368EDFD8FD0923F955 /* InfoIOS.plist in Resources */ = {isa = PBXBuildFile; fileRef = 7E2A53ED8DB6BC3CCBC225B2 /* InfoIOS.plist */; };
 		7D23D0A203B4397E740C4534 /* VikunjaWidgetApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B189E2189A5C4A68E826A0BC /* VikunjaWidgetApp.swift */; };
 		814CA279B7E092879D42A777 /* Sidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32CFE246FC70A61041EF6E4C /* Sidebar.swift */; };
@@ -164,6 +168,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		097AE4727EE099A83DE65940 /* NotificationResponseHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationResponseHandler.swift; sourceTree = "<group>"; };
 		166859B301206500B9AE0420 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaConfig.swift; sourceTree = "<group>"; };
 		29F335043FC5DF87CC85EE67 /* WidgetModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetModels.swift; sourceTree = "<group>"; };
@@ -184,6 +189,7 @@
 		6413699055632BF2AF310ADC /* ShortcutRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRouter.swift; sourceTree = "<group>"; };
 		68C6E7BB60EBB7C6C225DFAE /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetEntryView.swift; sourceTree = "<group>"; };
+		7656B4E05FA981BC6A515B75 /* HotkeyRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyRecorderView.swift; sourceTree = "<group>"; };
 		775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskMerger.swift; sourceTree = "<group>"; };
 		77E4BA4BD463D4E6942E3495 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		7E2A53ED8DB6BC3CCBC225B2 /* InfoIOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = InfoIOS.plist; sourceTree = "<group>"; };
@@ -274,11 +280,13 @@
 				A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */,
 				CDB4EF59CB974358A163128A /* BulkImportSheet.swift */,
 				3D2233282108571CCBCFADE2 /* FontSizeEnvironment.swift */,
+				7656B4E05FA981BC6A515B75 /* HotkeyRecorderView.swift */,
 				FB82D40CDF612A9CCA6F58D9 /* InboxView.swift */,
 				166859B301206500B9AE0420 /* Info.plist */,
 				7EAD0BC89662C3B29128BFEC /* InfoIOS.plist */,
 				DB39CB6616D672184062F00A /* InlineTaskEditor.swift */,
 				FD6802321CF98C91D0FC1142 /* LogbookView.swift */,
+				097AE4727EE099A83DE65940 /* NotificationResponseHandler.swift */,
 				B3BB9C870B4EF39EC432A03D /* ProjectView.swift */,
 				A419351B8B970957D829770C /* QuickAddPanelController.swift */,
 				E801F43454C29A23CC09D2B3 /* QuickAddSheet.swift */,
@@ -531,9 +539,11 @@
 				13432CFDA3F3F4FEAC708519 /* BulkImportParser.swift in Sources */,
 				BBDAED74A2CE38A0D6CB6B3D /* BulkImportSheet.swift in Sources */,
 				BD3AF313630DB83383D30C77 /* FontSizeEnvironment.swift in Sources */,
+				47110862A580A698D5DCC51E /* HotkeyRecorderView.swift in Sources */,
 				DB38C05911F489759F92739A /* InboxView.swift in Sources */,
 				BBB629FBE31DC715BE9BEEF5 /* InlineTaskEditor.swift in Sources */,
 				EDD77C1F97806905078A8173 /* LogbookView.swift in Sources */,
+				7C4457BE79D282FB1EB9FB65 /* NotificationResponseHandler.swift in Sources */,
 				ACD4CAD1F490956471E7D203 /* Outbox.swift in Sources */,
 				99639FCF960339B2F9FA2670 /* ProjectView.swift in Sources */,
 				56FE7A9BF4B07565205949DF /* QuickAddPanelController.swift in Sources */,
@@ -595,9 +605,11 @@
 				557C43CFE255EBCE5CCB0D5B /* BulkImportParser.swift in Sources */,
 				F7A9AEBEDFC251D941B03C72 /* BulkImportSheet.swift in Sources */,
 				06EC0B89C05871F841685153 /* FontSizeEnvironment.swift in Sources */,
+				1EDD136852120DECD2DA7518 /* HotkeyRecorderView.swift in Sources */,
 				D3B5C46929A34AA8A6B2465A /* InboxView.swift in Sources */,
 				A11C5F4AD5A24673789AD261 /* InlineTaskEditor.swift in Sources */,
 				3B1C3BDF5AF9E198D17FB79B /* LogbookView.swift in Sources */,
+				770E0ED2F26991B6FAAF99E5 /* NotificationResponseHandler.swift in Sources */,
 				09B9990AA282D81B80385485 /* Outbox.swift in Sources */,
 				0F2F790894D97DA6E0E52026 /* ProjectView.swift in Sources */,
 				9B4962CBEE8CCFACACDA25FB /* QuickAddPanelController.swift in Sources */,
@@ -671,7 +683,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetExtension/VikunjaWidgetExtensionIOS.entitlements;
-				CURRENT_PROJECT_VERSION = 26;
+				CURRENT_PROJECT_VERSION = 30;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -680,7 +692,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0.2;
+				MARKETING_VERSION = 2.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -693,7 +705,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetExtension/VikunjaWidgetExtension.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 26;
+				CURRENT_PROJECT_VERSION = 30;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -702,7 +714,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.0.2;
+				MARKETING_VERSION = 2.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -715,7 +727,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetApp/VikunjaWidgetApp.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 26;
+				CURRENT_PROJECT_VERSION = 30;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -723,7 +735,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.0.2;
+				MARKETING_VERSION = 2.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = macosx;
@@ -806,7 +818,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetApp/VikunjaWidgetApp.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 26;
+				CURRENT_PROJECT_VERSION = 30;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -814,7 +826,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.0.2;
+				MARKETING_VERSION = 2.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = macosx;
@@ -826,7 +838,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetExtension/VikunjaWidgetExtension.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 26;
+				CURRENT_PROJECT_VERSION = 30;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -835,7 +847,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.0.2;
+				MARKETING_VERSION = 2.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -848,7 +860,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetApp/VikunjaWidgetAppIOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 26;
+				CURRENT_PROJECT_VERSION = 30;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetApp/InfoIOS.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -856,7 +868,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0.2;
+				MARKETING_VERSION = 2.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = iphoneos;
@@ -870,7 +882,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetApp/VikunjaWidgetAppIOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 26;
+				CURRENT_PROJECT_VERSION = 30;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetApp/InfoIOS.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -878,7 +890,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0.2;
+				MARKETING_VERSION = 2.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = iphoneos;
@@ -890,7 +902,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetExtension/VikunjaWidgetExtensionIOS.entitlements;
-				CURRENT_PROJECT_VERSION = 26;
+				CURRENT_PROJECT_VERSION = 30;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -899,7 +911,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0.2;
+				MARKETING_VERSION = 2.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;

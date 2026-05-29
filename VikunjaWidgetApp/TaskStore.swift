@@ -108,6 +108,7 @@ final class TaskStore {
     func createTask(
         projectId: Int,
         title: String,
+        description: String? = nil,
         dueDate: Date? = nil,
         priority: Int? = nil,
         labels: [VikunjaLabel] = [],
@@ -120,6 +121,7 @@ final class TaskStore {
         let payload = CreatePayload(
             title: title,
             projectId: projectId,
+            description: description,
             dueDate: dueDate,
             priority: priority,
             labels: labels,
@@ -253,6 +255,7 @@ final class TaskStore {
                     let created = try await VikunjaAPI.createTask(
                         projectId: payload.projectId,
                         title: payload.title,
+                        description: payload.description,
                         dueDate: payload.dueDate,
                         priority: payload.priority,
                         labelIds: payload.labels.map(\.id),

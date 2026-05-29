@@ -23,7 +23,6 @@ struct RichTextEditor: NSViewRepresentable {
         textView.usesRuler = false
         textView.usesInspectorBar = false
         textView.font = .systemFont(ofSize: 13)
-        textView.textColor = .labelColor
         textView.backgroundColor = .clear
         textView.drawsBackground = false
         textView.isVerticallyResizable = true
@@ -37,6 +36,8 @@ struct RichTextEditor: NSViewRepresentable {
         if attributedText.length > 0 {
             textView.textStorage?.setAttributedString(attributedText)
         }
+        // Apply after setting attributedText — setting it before gets overridden.
+        textView.textColor = .labelColor
         scrollView.drawsBackground = false
 
         return scrollView
@@ -47,6 +48,8 @@ struct RichTextEditor: NSViewRepresentable {
               let textView = scrollView.documentView as? NSTextView,
               !textView.attributedString().isEqual(to: attributedText) else { return }
         textView.textStorage?.setAttributedString(attributedText)
+        // Re-apply after every attributedText update so dark mode stays correct.
+        textView.textColor = .labelColor
         if textView.isAutomaticLinkDetectionEnabled {
             textView.checkTextInDocument(nil)
         }
@@ -238,6 +241,8 @@ struct RichTextEditor: UIViewRepresentable {
         if attributedText.length > 0 {
             tv.attributedText = attributedText
         }
+        // Apply after setting attributedText — setting it before gets overridden.
+        tv.textColor = .label
         return tv
     }
 
@@ -245,6 +250,8 @@ struct RichTextEditor: UIViewRepresentable {
         guard !context.coordinator.isEditing,
               !tv.attributedText.isEqual(to: attributedText) else { return }
         tv.attributedText = attributedText
+        // Re-apply after every attributedText update so dark mode stays correct.
+        tv.textColor = .label
     }
 
     final class Coordinator: NSObject, UITextViewDelegate {

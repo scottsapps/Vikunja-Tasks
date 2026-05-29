@@ -20,6 +20,10 @@ final class QuickAddPanelController: NSObject {
     private weak var store: TaskStore?
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
+    private var hotkeyObserver: NSObjectProtocol?
+
+    static let collapsedHeight: CGFloat = 220
+    static let expandedHeight: CGFloat = 460
 
     // MARK: - Setup
 
@@ -28,13 +32,20 @@ final class QuickAddPanelController: NSObject {
         self.store = store
         buildPanel()
         registerHotKey()
+        hotkeyObserver = NotificationCenter.default.addObserver(
+            forName: .vikunjaHotkeyChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.registerHotKey()
+        }
     }
 
     // MARK: - Panel construction
 
     private func buildPanel() {
         let p = QuickAddPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 220),
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: Self.collapsedHeight),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -65,11 +76,29 @@ final class QuickAddPanelController: NSObject {
     private func openPanel() {
         guard let panel, let store else { return }
         // Recreate content on each open so @State (inputText, etc.) resets
-        let ctrl = NSHostingController(rootView: QuickAddPanelContent(store: store))
+        let ctrl = NSHostingController(rootView: QuickAddPanelContent(
+            store: store,
+            onExpand: { [weak panel] expanded in
+                guard let panel else { return }
+                let targetHeight = expanded ? Self.expandedHeight : Self.collapsedHeight
+                let currentFrame = panel.frame
+                let newFrame = NSRect(
+                    x: currentFrame.minX,
+                    y: currentFrame.maxY - targetHeight,
+                    width: 500,
+                    height: targetHeight
+                )
+                NSAnimationContext.runAnimationGroup { ctx in
+                    ctx.duration = 0.2
+                    ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                    panel.animator().setFrame(newFrame, display: true)
+                }
+            }
+        ))
         ctrl.view.wantsLayer = true
         ctrl.view.layer?.backgroundColor = .clear
         panel.contentViewController = ctrl
-        panel.setContentSize(NSSize(width: 500, height: 220))
+        panel.setContentSize(NSSize(width: 500, height: Self.collapsedHeight))
         panel.center()
         panel.orderFrontRegardless()
         panel.makeKey()
@@ -82,13 +111,22 @@ final class QuickAddPanelController: NSObject {
         }
     }
 
-    // MARK: - Global hotkey (Ctrl+Space)
+    // MARK: - Global hotkey
 
     private func registerHotKey() {
+        // Unregister existing hotkey before registering a new one
+        if let ref = hotKeyRef {
+            UnregisterEventHotKey(ref)
+            hotKeyRef = nil
+        }
+
+        let keyCode = VikunjaConfig.quickAddKeyCode
+        let modifiers = VikunjaConfig.quickAddModifiers
+
         let hotKeyID = EventHotKeyID(signature: fourCharCode("VKQA"), id: 1)
         let status = RegisterEventHotKey(
-            UInt32(kVK_Space),
-            UInt32(controlKey),
+            keyCode,
+            modifiers,
             hotKeyID,
             GetApplicationEventTarget(),
             0,
@@ -96,6 +134,8 @@ final class QuickAddPanelController: NSObject {
         )
         guard status == noErr else { return }
 
+        // Only install the event handler once
+        guard eventHandlerRef == nil else { return }
         var spec = EventTypeSpec(
             eventClass: OSType(kEventClassKeyboard),
             eventKind: UInt32(kEventHotKeyPressed)
@@ -118,6 +158,7 @@ final class QuickAddPanelController: NSObject {
     deinit {
         if let ref = hotKeyRef { UnregisterEventHotKey(ref) }
         if let ref = eventHandlerRef { RemoveEventHandler(ref) }
+        if let obs = hotkeyObserver { NotificationCenter.default.removeObserver(obs) }
     }
 }
 
@@ -125,9 +166,10 @@ final class QuickAddPanelController: NSObject {
 
 private struct QuickAddPanelContent: View {
     var store: TaskStore
+    var onExpand: ((Bool) -> Void)?
 
     var body: some View {
-        QuickAddSheet(store: store)
+        QuickAddSheet(store: store, onExpandToggle: onExpand)
             .background(.regularMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 12))
     }

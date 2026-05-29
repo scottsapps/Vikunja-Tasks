@@ -5,12 +5,36 @@ import UserNotifications
 /// UNNotificationRequests, scheduling new ones and cancelling removed ones.
 enum ReminderScheduler {
 
+    static let categoryId = "VIKUNJA_REMINDER"
+    static let actionComplete = "COMPLETE_TASK"
+    static let actionSnooze = "SNOOZE_TASK"
+
     // Stable identifier: "vikunja.reminder.{taskId}.{reminderISO}"
     private static func identifier(taskId: Int, reminderISO: String) -> String {
         "vikunja.reminder.\(taskId).\(reminderISO)"
     }
 
     // MARK: - Public
+
+    static func registerCategory() {
+        let complete = UNNotificationAction(
+            identifier: actionComplete,
+            title: "Complete",
+            options: [.authenticationRequired]
+        )
+        let snooze = UNNotificationAction(
+            identifier: actionSnooze,
+            title: "Snooze 1 hr",
+            options: []
+        )
+        let category = UNNotificationCategory(
+            identifier: categoryId,
+            actions: [complete, snooze],
+            intentIdentifiers: [],
+            options: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([category])
+    }
 
     static func requestPermission() async -> Bool {
         let center = UNUserNotificationCenter.current()
@@ -60,6 +84,7 @@ enum ReminderScheduler {
             content.body = info.title
             content.sound = .default
             content.userInfo = ["taskId": info.taskId]
+            content.categoryIdentifier = categoryId
 
             let components = Calendar.current.dateComponents(
                 [.year, .month, .day, .hour, .minute, .second],

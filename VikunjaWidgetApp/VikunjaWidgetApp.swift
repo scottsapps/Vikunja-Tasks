@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 #if os(iOS)
 import UIKit
 
@@ -55,6 +56,14 @@ struct VikunjaWidgetAppEntry: App {
     #endif
 
     @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        #if os(macOS)
+        VikunjaConfig.registerHotkeyDefaults()
+        #endif
+        UNUserNotificationCenter.current().delegate = NotificationResponseHandler.shared
+        ReminderScheduler.registerCategory()
+    }
 
     var body: some Scene {
         WindowGroup {

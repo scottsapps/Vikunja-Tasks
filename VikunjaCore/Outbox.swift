@@ -27,6 +27,7 @@ struct PendingOp: Codable, Identifiable {
 struct CreatePayload: Codable {
     let title: String
     let projectId: Int
+    let description: String?
     let dueDate: Date?
     let priority: Int?
     let labels: [VikunjaLabel]

@@ -16,8 +16,14 @@ enum RichTextUtils {
             .documentType: NSAttributedString.DocumentType.html,
             .characterEncoding: String.Encoding.utf8.rawValue
         ]
-        return (try? NSAttributedString(data: data, options: opts, documentAttributes: nil))
-            ?? NSAttributedString(string: html)
+        guard let parsed = try? NSAttributedString(data: data, options: opts, documentAttributes: nil) else {
+            return NSAttributedString(string: html)
+        }
+        // Strip foreground color baked in by the HTML parser so the text view's
+        // adaptive label color applies correctly in dark mode.
+        let mutable = NSMutableAttributedString(attributedString: parsed)
+        mutable.removeAttribute(.foregroundColor, range: NSRange(location: 0, length: mutable.length))
+        return mutable
     }
 
     static func html(from attrStr: NSAttributedString) -> String {

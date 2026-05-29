@@ -67,7 +67,7 @@ enum TaskMerger {
             dueDate: dueString,
             projectId: payload.projectId,
             labels: payload.labels.isEmpty ? nil : payload.labels,
-            description: nil,
+            description: payload.description,
             updated: nil,
             priority: payload.priority,
             reminders: reminders.isEmpty ? nil : reminders

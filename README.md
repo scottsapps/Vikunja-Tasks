@@ -20,6 +20,7 @@ Available on the [App Store](https://apps.apple.com/us/app/veyrn/id6764057920).
 - **macOS global hotkey** — system-wide Quick Add panel
 - **iOS Home Screen Quick Actions** — jump straight to New Task or Scheduled
 - **Reminders** — synced to the system notification center
+- **Apple Watch app** — Scheduled (7-day window) and Inbox views, tap to complete, dictation/Scribble Quick Add with confirm-chips screen; credentials pushed from the phone over WatchConnectivity
 
 ## Requirements
 
@@ -46,7 +47,7 @@ Open `project.yml` and replace `net.angstreich` with your own reverse-domain pre
 bundleIdPrefix: com.yourname        # was net.angstreich
 ```
 
-You'll also need to update the two explicit `PRODUCT_BUNDLE_IDENTIFIER` lines in the same file for the widget extension targets, and the App Group identifier in `VikunjaCore/VikunjaConfig.swift` and `VikunjaCore/WidgetCache.swift`:
+You'll also need to update the explicit `PRODUCT_BUNDLE_IDENTIFIER` lines in the same file for the widget extension and Watch targets, and the App Group identifier in `VikunjaCore/VikunjaConfig.swift` and `VikunjaCore/WidgetCache.swift`:
 
 ```swift
 static let appGroupSuite = "group.com.yourname.VikunjaWidgetApp"
@@ -61,9 +62,10 @@ Create `Signing.xcconfig` at the repo root (it's git-ignored):
 ```
 DEVELOPMENT_TEAM = XXXXXXXXXX
 CODE_SIGN_STYLE = Automatic
+CURRENT_PROJECT_VERSION = 1
 ```
 
-Replace `XXXXXXXXXX` with your 10-character Apple Developer Team ID, found in Xcode → Settings → Accounts → click your team → Team ID column.
+Replace `XXXXXXXXXX` with your 10-character Apple Developer Team ID, found in Xcode → Settings → Accounts → click your team → Team ID column. Increment `CURRENT_PROJECT_VERSION` before each TestFlight/App Store upload — keeping it here means `make gen` never resets it.
 
 ### 4. Generate the Xcode project
 
@@ -71,7 +73,7 @@ Replace `XXXXXXXXXX` with your 10-character Apple Developer Team ID, found in Xc
 make gen
 ```
 
-Always use `make gen` rather than running xcodegen directly — the Makefile regenerates the four entitlements files after each xcodegen run (xcodegen writes them empty).
+Always use `make gen` rather than running xcodegen directly — the Makefile regenerates the five entitlements files after each xcodegen run (xcodegen writes them empty).
 
 ### 5. Open and build
 
@@ -79,7 +81,7 @@ Always use `make gen` rather than running xcodegen directly — the Makefile reg
 open VikunjaWidget.xcodeproj
 ```
 
-Select the `VikunjaWidgetApp` scheme for macOS or `VikunjaWidgetAppIOS` for iOS, then build and run.
+Select the `VikunjaWidgetApp` scheme for macOS, `VikunjaWidgetAppIOS` for iOS, or `VikunjaWidgetWatch` for the Watch app, then build and run.
 
 ### 6. Configure the app
 
@@ -93,6 +95,7 @@ On first launch, go to Settings and enter:
 VikunjaCore/            Shared code — models, API client, config, parser, offline outbox
 VikunjaWidgetApp/       App target sources (macOS + iOS, platform-conditional)
 VikunjaWidgetExtension/ Widget extension sources (shared by macOS and iOS widget targets)
+VikunjaWidgetWatch/     Apple Watch app (standalone; online-only)
 project.yml             XcodeGen project definition
 Makefile                Wraps xcodegen + regenerates entitlements
 ```
@@ -130,12 +133,18 @@ xcodebuild -project VikunjaWidget.xcodeproj -scheme VikunjaWidgetApp \
 xcodebuild -project VikunjaWidget.xcodeproj -scheme VikunjaWidgetAppIOS \
   -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build \
   CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+
+# watchOS Simulator
+xcodebuild -project VikunjaWidget.xcodeproj -scheme VikunjaWidgetWatch \
+  -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm)' build \
+  CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 ```
 
 ## Deployment Targets
 
 - macOS 14.0+
 - iOS 17.0+
+- watchOS 10.0+
 
 ## License
 

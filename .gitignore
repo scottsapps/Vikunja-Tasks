@@ -1,6 +1,9 @@
 # Signing — fill in your Team ID and keep off git
 Signing.xcconfig
 
+# AI build-plan files
+WATCH_APP_PLAN.md
+
 # Xcode
 *.xcuserstate
 xcuserdata/

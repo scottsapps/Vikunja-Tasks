@@ -11,6 +11,8 @@ settings:
   base:
     # Signing is in Signing.xcconfig (git-ignored) so make gen never clobbers it.
     CODE_SIGN_STYLE: Automatic
+    # Bump this before each TestFlight/App Store upload.
+    CURRENT_PROJECT_VERSION: 35
     # Xcode recommended settings
     DEAD_CODE_STRIPPING: YES
     ENABLE_USER_SCRIPT_SANDBOXING: YES

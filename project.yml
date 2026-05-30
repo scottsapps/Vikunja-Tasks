@@ -4,6 +4,7 @@ options:
   deploymentTarget:
     macOS: "14.0"
     iOS: "17.0"
+    watchOS: "10.0"
 
 settings:
   SWIFT_VERSION: "5"
@@ -54,6 +55,15 @@ schemes:
     archive:
       config: Release
 
+  VikunjaWidgetWatch:
+    build:
+      targets:
+        VikunjaWidgetWatch: all
+    run:
+      config: Debug
+    archive:
+      config: Release
+
 targets:
   # ── macOS ────────────────────────────────────────────────────────────────
 
@@ -73,8 +83,7 @@ targets:
       GENERATE_INFOPLIST_FILE: NO
       INFOPLIST_FILE: VikunjaWidgetApp/Info.plist
       MACOSX_DEPLOYMENT_TARGET: "14.0"
-      CURRENT_PROJECT_VERSION: 2
-      MARKETING_VERSION: "2.0"
+      MARKETING_VERSION: "2.0.6"
       ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - target: VikunjaWidgetExtension
@@ -101,8 +110,7 @@ targets:
       GENERATE_INFOPLIST_FILE: NO
       MACOSX_DEPLOYMENT_TARGET: "14.0"
       SKIP_INSTALL: YES
-      CURRENT_PROJECT_VERSION: 2
-      MARKETING_VERSION: "2.0"
+      MARKETING_VERSION: "2.0.6"
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
@@ -126,11 +134,12 @@ targets:
       GENERATE_INFOPLIST_FILE: NO
       INFOPLIST_FILE: VikunjaWidgetApp/InfoIOS.plist
       IPHONEOS_DEPLOYMENT_TARGET: "17.0"
-      CURRENT_PROJECT_VERSION: 2
-      MARKETING_VERSION: "2.0"
+      MARKETING_VERSION: "2.1"
       ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - target: VikunjaWidgetExtensionIOS
+        embed: true
+      - target: VikunjaWidgetWatch
         embed: true
 
   VikunjaWidgetExtensionIOS:
@@ -147,9 +156,31 @@ targets:
       INFOPLIST_FILE: VikunjaWidgetExtension/Info.plist
       IPHONEOS_DEPLOYMENT_TARGET: "17.0"
       SKIP_INSTALL: YES
-      CURRENT_PROJECT_VERSION: 2
-      MARKETING_VERSION: "2.0"
+      MARKETING_VERSION: "2.1"
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
       - sdk: AppIntents.framework
+
+  # ── watchOS ──────────────────────────────────────────────────────────────
+  VikunjaWidgetWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: VikunjaWidgetWatch
+      - path: VikunjaCore
+        includes:
+          - VikunjaModels.swift
+          - VikunjaAPI.swift
+          - VikunjaConfig.swift
+          - QuickAddParser.swift
+    entitlements:
+      path: VikunjaWidgetWatch/VikunjaWidgetWatch.entitlements
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp.watchkitapp
+      PRODUCT_NAME: Veyrn
+      GENERATE_INFOPLIST_FILE: NO
+      INFOPLIST_FILE: VikunjaWidgetWatch/Info.plist
+      WATCHOS_DEPLOYMENT_TARGET: "10.0"
+      MARKETING_VERSION: "2.1"
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

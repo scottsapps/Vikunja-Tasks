@@ -10,4 +10,6 @@ gen:
 		> VikunjaWidgetApp/VikunjaWidgetAppIOS.entitlements
 	@printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n\t<key>com.apple.security.application-groups</key>\n\t<array>\n\t\t<string>group.net.angstreich.VikunjaWidgetApp</string>\n\t</array>\n</dict>\n</plist>\n' \
 		> VikunjaWidgetExtension/VikunjaWidgetExtensionIOS.entitlements
+	@printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n\t<key>com.apple.security.application-groups</key>\n\t<array>\n\t\t<string>group.net.angstreich.VikunjaWidgetApp</string>\n\t</array>\n</dict>\n</plist>\n' \
+		> VikunjaWidgetWatch/VikunjaWidgetWatch.entitlements
 	@echo "✓ Entitlements restored"

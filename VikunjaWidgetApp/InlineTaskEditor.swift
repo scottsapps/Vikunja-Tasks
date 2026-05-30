@@ -22,6 +22,7 @@ struct InlineTaskEditor: View {
     @State private var repeatMode: Int?
 
     // UI state
+    @State private var showingRepeatSheet = false
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var showDatePicker = false
@@ -160,6 +161,9 @@ struct InlineTaskEditor: View {
         }
         .animation(.easeInOut(duration: 0.18), value: showDatePicker)
         .animation(.easeInOut(duration: 0.18), value: showReminderPicker)
+        .sheet(isPresented: $showingRepeatSheet) {
+            RepeatPickerSheet(repeatAfter: $repeatAfter, repeatMode: $repeatMode)
+        }
     }
 
     // MARK: - Due date
@@ -362,48 +366,33 @@ struct InlineTaskEditor: View {
     // MARK: - Repeat
 
     private var repeatMenu: some View {
-        Menu {
-            Button("None") {
-                repeatAfter = nil
-                repeatMode = nil
-            }
-            Divider()
-            Button("Daily") { repeatAfter = 86_400; repeatMode = 0 }
-            Button("Weekly") { repeatAfter = 7 * 86_400; repeatMode = 0 }
-            Button("Every 30 days") { repeatAfter = 30 * 86_400; repeatMode = 1 }
-            Button("Yearly") { repeatAfter = 365 * 86_400; repeatMode = 0 }
-            Button("Weekdays") { repeatAfter = 86_400; repeatMode = 2 }
+        Button {
+            showingRepeatSheet = true
         } label: {
             HStack(spacing: 4) {
-                Image(systemName: repeatAfter != nil ? "repeat.circle.fill" : "repeat")
+                Image(systemName: repeatAfter != nil || repeatMode == 1 ? "repeat.circle.fill" : "repeat")
                     .font(.system(size: 12))
-                if let ra = repeatAfter {
-                    Text(repeatLabel(ra))
-                        .font(.system(size: 12))
-                } else {
-                    Text("Repeat")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
+                Text(repeatLabel())
+                    .font(.system(size: 12))
+                    .foregroundStyle(repeatAfter != nil || repeatMode == 1 ? Color.accentColor : .secondary)
             }
             .padding(.horizontal, 10)
-            .foregroundStyle(repeatAfter != nil ? Color.accentColor : .secondary)
+            .foregroundStyle(repeatAfter != nil || repeatMode == 1 ? Color.accentColor : .secondary)
         }
         .buttonStyle(.plain)
     }
 
-    private func repeatLabel(_ seconds: Int) -> String {
-        switch seconds {
-        case 86_400:
-            return repeatMode == 2 ? "Weekdays" : "Daily"
-        case 7 * 86_400:
-            return "Weekly"
-        case 30 * 86_400:
-            return "Every 30 days"
-        case 365 * 86_400:
-            return "Yearly"
+    private func repeatLabel() -> String {
+        if repeatMode == 1 { return "Monthly" }
+        guard let ra = repeatAfter, ra > 0 else { return "Repeat" }
+        let days = ra / 86_400
+        switch days {
+        case 1:   return "Daily"
+        case 7:   return "Weekly"
+        case 365: return "Yearly"
         default:
-            return "Every \(seconds / 86_400)d"
+            if days % 7 == 0 { return "Every \(days / 7)w" }
+            return "Every \(days)d"
         }
     }
 
@@ -451,10 +440,15 @@ struct InlineTaskEditor: View {
         }
 
         let originalRepeat = task.repeatAfter.flatMap { $0 > 0 ? $0 : nil }
-        if (repeatAfter ?? 0) != (originalRepeat ?? 0) {
+        let originalMode = task.repeatMode ?? 0
+        let repeatChanged = (repeatAfter ?? 0) != (originalRepeat ?? 0) || (repeatMode ?? 0) != originalMode
+        if repeatChanged {
             if let ra = repeatAfter, ra > 0 {
                 update.repeatAfter = ra
                 update.repeatMode = repeatMode ?? 0
+            } else if repeatMode == 1 {
+                update.repeatAfter = 30 * 86_400
+                update.repeatMode = 1
             } else {
                 update.clearRepeat = true
             }
@@ -465,7 +459,7 @@ struct InlineTaskEditor: View {
             || update.dueDate != nil || update.clearDueDate
             || update.priority != nil || update.clearPriority
             || update.labelIds != nil || update.projectId != nil
-            || update.reminders != nil || update.repeatAfter != nil || update.clearRepeat
+            || update.reminders != nil || update.repeatAfter != nil || update.repeatMode != nil || update.clearRepeat
 
         if hasChanges {
             await store.update(taskId: task.id, with: update)
@@ -495,6 +489,126 @@ struct InlineTaskEditor: View {
         case 3: return .orange
         case 4, 5: return .red
         default: return .secondary
+        }
+    }
+}
+
+// MARK: - Repeat picker sheet
+
+private enum RepeatUnit: String, CaseIterable {
+    case days   = "Days"
+    case weeks  = "Weeks"
+    case months = "Months"
+    case years  = "Years"
+}
+
+struct RepeatPickerSheet: View {
+    @Binding var repeatAfter: Int?
+    @Binding var repeatMode: Int?
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var hasRepeat = false
+    @State private var count = 1
+    @State private var unit: RepeatUnit = .days
+    @State private var fromCompletion = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Toggle("Repeat", isOn: $hasRepeat.animation())
+                }
+                if hasRepeat {
+                    Section {
+                        Stepper(value: $count, in: 1...99) {
+                            HStack {
+                                Text("Every")
+                                Text("\(count)")
+                                    .fontWeight(.semibold)
+                                    .monospacedDigit()
+                                Text(unit == .months || unit == .years ? unit.rawValue.lowercased() : (count == 1 ? unit.rawValue.dropLast().lowercased() : unit.rawValue.lowercased()))
+                            }
+                        }
+                        .disabled(unit == .months)
+                        Picker("Unit", selection: $unit) {
+                            ForEach(RepeatUnit.allCases, id: \.self) {
+                                Text($0.rawValue).tag($0)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                    if unit != .months {
+                        Section {
+                            Toggle("From completion date", isOn: $fromCompletion)
+                        } footer: {
+                            Text(fromCompletion
+                                 ? "Next due date is calculated from when you complete the task."
+                                 : "Next due date is calculated from the original due date.")
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Repeat")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { apply(); dismiss() }
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+        .onAppear { loadFromBindings() }
+    }
+
+    private func loadFromBindings() {
+        if repeatMode == 1 {
+            hasRepeat = true
+            unit = .months
+            count = 1
+            fromCompletion = false
+            return
+        }
+        guard let ra = repeatAfter, ra > 0 else {
+            hasRepeat = false
+            return
+        }
+        hasRepeat = true
+        fromCompletion = (repeatMode == 2)
+        let days = ra / 86_400
+        if days % 365 == 0 {
+            unit = .years
+            count = days / 365
+        } else if days % 7 == 0 {
+            unit = .weeks
+            count = days / 7
+        } else {
+            unit = .days
+            count = days
+        }
+    }
+
+    private func apply() {
+        guard hasRepeat else {
+            repeatAfter = nil
+            repeatMode = nil
+            return
+        }
+        switch unit {
+        case .days:
+            repeatAfter = count * 86_400
+            repeatMode = fromCompletion ? 2 : 0
+        case .weeks:
+            repeatAfter = count * 7 * 86_400
+            repeatMode = fromCompletion ? 2 : 0
+        case .months:
+            repeatAfter = 30 * 86_400
+            repeatMode = 1
+        case .years:
+            repeatAfter = count * 365 * 86_400
+            repeatMode = fromCompletion ? 2 : 0
         }
     }
 }

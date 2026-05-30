@@ -134,6 +134,9 @@ struct SettingsView: View {
         token = trimmedToken
 
         WidgetCenter.shared.reloadAllTimelines()
+        #if os(iOS)
+        WatchSessionProvider.shared.syncConfig()
+        #endif
         onSave?()
         dismiss()
     }

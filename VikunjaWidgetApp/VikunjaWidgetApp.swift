@@ -61,6 +61,9 @@ struct VikunjaWidgetAppEntry: App {
         #if os(macOS)
         VikunjaConfig.registerHotkeyDefaults()
         #endif
+        #if os(iOS)
+        WatchSessionProvider.shared.activate()
+        #endif
         UNUserNotificationCenter.current().delegate = NotificationResponseHandler.shared
         ReminderScheduler.registerCategory()
     }

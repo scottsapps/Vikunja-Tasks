@@ -370,7 +370,7 @@ struct InlineTaskEditor: View {
             Divider()
             Button("Daily") { repeatAfter = 86_400; repeatMode = 0 }
             Button("Weekly") { repeatAfter = 7 * 86_400; repeatMode = 0 }
-            Button("Monthly") { repeatAfter = 30 * 86_400; repeatMode = 1 }
+            Button("Every 30 days") { repeatAfter = 30 * 86_400; repeatMode = 1 }
             Button("Yearly") { repeatAfter = 365 * 86_400; repeatMode = 0 }
             Button("Weekdays") { repeatAfter = 86_400; repeatMode = 2 }
         } label: {
@@ -399,7 +399,7 @@ struct InlineTaskEditor: View {
         case 7 * 86_400:
             return "Weekly"
         case 30 * 86_400:
-            return "Monthly"
+            return "Every 30 days"
         case 365 * 86_400:
             return "Yearly"
         default:

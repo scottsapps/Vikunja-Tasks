@@ -2,7 +2,6 @@ import SwiftUI
 
 struct LogbookView: View {
     var store: TaskStore
-    @State private var hasLoaded = false
 
     var body: some View {
         TaskListView(
@@ -14,17 +13,10 @@ struct LogbookView: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task {
-            guard !hasLoaded else { return }
-            hasLoaded = true
             await store.refreshLogbook()
         }
         .refreshable {
             await store.refreshLogbook()
-        }
-        .overlay {
-            if store.doneTasks.isEmpty && !hasLoaded {
-                ProgressView()
-            }
         }
     }
 }

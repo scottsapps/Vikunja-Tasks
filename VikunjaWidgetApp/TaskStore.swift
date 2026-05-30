@@ -83,8 +83,9 @@ final class TaskStore {
             let merged = TaskMerger.merge(serverTasks: serverDone, ops: outbox.ops, labelDirectory: labelDir)
             doneTasks = merged.filter { $0.done }
                 .sorted { ($0.updatedDate ?? .distantPast) > ($1.updatedDate ?? .distantPast) }
+            saveDoneCache()
         } catch {
-            // silently fail — logbook is best-effort
+            // silently fail — logbook is best-effort; keep cached data
         }
     }
 
@@ -212,6 +213,10 @@ final class TaskStore {
     private func commitCompletion(task: VikunjaTask) async {
         pendingUndo.removeValue(forKey: task.id)
         undoTimers.removeValue(forKey: task.id)
+        var completedTask = task
+        completedTask.done = true
+        doneTasks.insert(completedTask, at: 0)
+        saveDoneCache()
         let taskRef = ref(for: task.id)
         let op = PendingOp(
             id: UUID(),
@@ -226,6 +231,7 @@ final class TaskStore {
 
     func reopen(task: VikunjaTask) async {
         doneTasks.removeAll { $0.id == task.id }
+        saveDoneCache()
         let taskRef = ref(for: task.id)
         let op = PendingOp(
             id: UUID(),
@@ -347,6 +353,7 @@ final class TaskStore {
     private let tasksCacheKey = "app.cache.undoneTasks"
     private let projectsCacheKey = "app.cache.projects"
     private let labelsCacheKey = "app.cache.labels"
+    private let doneTasksCacheKey = "app.cache.doneTasks"
 
     private func loadCache() {
         if let data = UserDefaults.standard.data(forKey: tasksCacheKey),
@@ -364,6 +371,10 @@ final class TaskStore {
            let lbls = try? JSONDecoder().decode([VikunjaLabel].self, from: data) {
             labels = lbls
         }
+        if let data = UserDefaults.standard.data(forKey: doneTasksCacheKey),
+           let tasks = try? JSONDecoder().decode([VikunjaTask].self, from: data) {
+            doneTasks = tasks
+        }
     }
 
     private func saveCache() {
@@ -371,5 +382,9 @@ final class TaskStore {
         UserDefaults.standard.set(try? JSONEncoder().encode(projects), forKey: projectsCacheKey)
         UserDefaults.standard.set(try? JSONEncoder().encode(labels), forKey: labelsCacheKey)
         WidgetCache.save(tasks: undoneTasks, projects: projects)
+    }
+
+    private func saveDoneCache() {
+        UserDefaults.standard.set(try? JSONEncoder().encode(doneTasks), forKey: doneTasksCacheKey)
     }
 }

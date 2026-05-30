@@ -171,7 +171,7 @@ struct AppRoot: View {
             .navigationDestination(for: SidebarItem.self) { item in
                 Group {
                     if !searchText.isEmpty {
-                        TaskListView(tasks: searchResults, mode: .byDate)
+                        TaskListView(tasks: searchResults(for: item), mode: item == .logbook ? .byCompletionDate : .byDate)
                             .navigationTitle("Search Results")
                     } else {
                         destinationView(for: item)
@@ -238,7 +238,7 @@ struct AppRoot: View {
         } detail: {
             Group {
                 if !searchText.isEmpty {
-                    TaskListView(tasks: searchResults, mode: .byDate)
+                    TaskListView(tasks: searchResults(for: selection), mode: selection == .logbook ? .byCompletionDate : .byDate)
                         .navigationTitle("Search Results")
                 } else {
                     destinationView(for: selection)
@@ -313,9 +313,10 @@ struct AppRoot: View {
         }.count
     }
 
-    private var searchResults: [VikunjaTask] {
+    private func searchResults(for item: SidebarItem?) -> [VikunjaTask] {
         let q = searchText.lowercased()
-        return store.undoneTasks.filter {
+        let pool = item == .logbook ? store.doneTasks : store.undoneTasks
+        return pool.filter {
             $0.title.lowercased().contains(q) ||
             ($0.description ?? "").lowercased().contains(q) ||
             ($0.labels ?? []).contains { $0.title.lowercased().contains(q) }

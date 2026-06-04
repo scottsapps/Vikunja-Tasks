@@ -3,6 +3,13 @@ Signing.xcconfig
 
 # AI build-plan files
 WATCH_APP_PLAN.md
+CLAUDE.md
+
+# Project skill master (canonical copy; re-uploaded to Claude via the Mac app)
+Veyrn.md
+
+# Personal Claude Code tooling (skill drift check, hooks)
+.claude/
 
 # Xcode
 *.xcuserstate

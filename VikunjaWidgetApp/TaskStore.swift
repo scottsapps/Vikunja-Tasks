@@ -64,7 +64,9 @@ final class TaskStore {
             projects = fetchedProjects
             lastServerUndone = fetchedTasks
             if let fetchedLabels = try? await VikunjaAPI.fetchLabels() {
-                labels = fetchedLabels
+                let serverIds = Set(fetchedLabels.map(\.id))
+                let localOnly = labels.filter { !serverIds.contains($0.id) }
+                labels = fetchedLabels + localOnly
             }
             rebuildMergedTasks()
             saveCache()

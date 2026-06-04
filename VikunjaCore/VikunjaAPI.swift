@@ -139,10 +139,18 @@ enum VikunjaAPI {
 
     static func fetchLabels(search: String = "") async throws -> [VikunjaLabel] {
         let encoded = search.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? search
-        let path = search.isEmpty
-            ? "/labels?per_page=100"
-            : "/labels?s=\(encoded)&per_page=100"
-        return try await get(path, as: [VikunjaLabel].self)
+        var all: [VikunjaLabel] = []
+        var page = 1
+        while true {
+            let path = search.isEmpty
+                ? "/labels?per_page=50&page=\(page)"
+                : "/labels?s=\(encoded)&per_page=50&page=\(page)"
+            let batch = try await get(path, as: [VikunjaLabel].self)
+            all += batch
+            if batch.count < 50 { break }
+            page += 1
+        }
+        return all
     }
 
     static func createLabel(title: String) async throws -> VikunjaLabel {

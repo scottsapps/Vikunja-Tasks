@@ -73,7 +73,7 @@ Replace `XXXXXXXXXX` with your 10-character Apple Developer Team ID, found in Xc
 
 ### 4. Replace the TelemetryDeck App ID
 
-The app uses [TelemetryDeck](https://telemetrydeck.com) for opt-in analytics. The App ID in `VikunjaWidgetApp/VeyrnTelemetry.swift` is specific to this project — if you fork the repo, replace it with your own:
+The app uses [TelemetryDeck](https://telemetrydeck.com) for opt-out analytics (on by default, user-toggled in Settings). The App ID in `VikunjaWidgetApp/VeyrnTelemetry.swift` is specific to this project — if you fork the repo, replace it with your own:
 
 ```swift
 var config = TelemetryDeck.Config(appID: "YOUR-APP-ID-HERE")

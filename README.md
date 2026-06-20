@@ -11,8 +11,10 @@ Available on the [App Store](https://apps.apple.com/us/app/veyrn/id6764057920).
 ## Features
 
 - **Full task management** — create, edit, complete, and reopen tasks
+- **Subtasks** — inline checklist with progress badge, add subtasks directly from the task editor
 - **Inbox, Scheduled, Logbook, and Projects** sidebar, similar to Things 3
-- **WidgetKit extension** for macOS and iOS showing upcoming tasks grouped by date
+- **Project and label colors** — hex color tinting throughout the UI for projects and label chips
+- **WidgetKit extension** for macOS and iOS showing upcoming tasks grouped by date, including Lock Screen and StandBy widgets (accessory families: rectangular, circular, inline)
 - **Quick Add** with a natural-language parser: `*tag`, `+project`, `!priority`, dates like `tomorrow`, `next monday`, `in 3 days`, and recurrence like `every week`
 - **Bulk import** — paste or drag in a plain-text list of tasks
 - **Rich text notes** — Vikunja's HTML task descriptions, with bold/italic/links/bullets
@@ -21,6 +23,8 @@ Available on the [App Store](https://apps.apple.com/us/app/veyrn/id6764057920).
 - **iOS Home Screen Quick Actions** — jump straight to New Task or Scheduled
 - **Reminders** — synced to the system notification center
 - **Apple Watch app** — Scheduled (7-day window) and Inbox views, tap to complete, dictation/Scribble Quick Add with confirm-chips screen; credentials pushed from the phone over WatchConnectivity
+- **Apple Watch Smart Stack widget** — complications and Smart Stack widget showing upcoming tasks
+- **Opt-out analytics** — TelemetryDeck integration (on by default; user-toggled in Settings)
 
 ## Requirements
 
@@ -67,15 +71,25 @@ CURRENT_PROJECT_VERSION = 1
 
 Replace `XXXXXXXXXX` with your 10-character Apple Developer Team ID, found in Xcode → Settings → Accounts → click your team → Team ID column. Increment `CURRENT_PROJECT_VERSION` before each TestFlight/App Store upload — keeping it here means `make gen` never resets it.
 
-### 4. Generate the Xcode project
+### 4. Replace the TelemetryDeck App ID
+
+The app uses [TelemetryDeck](https://telemetrydeck.com) for opt-in analytics. The App ID in `VikunjaWidgetApp/VeyrnTelemetry.swift` is specific to this project — if you fork the repo, replace it with your own:
+
+```swift
+var config = TelemetryDeck.Config(appID: "YOUR-APP-ID-HERE")
+```
+
+You can create a free TelemetryDeck account and get an App ID at [telemetrydeck.com](https://telemetrydeck.com). Alternatively, remove the `TelemetryDeck` package from the project and delete `VeyrnTelemetry.swift` (and its call sites throughout `VikunjaWidgetApp/`) to ship without analytics entirely.
+
+### 5. Generate the Xcode project
 
 ```bash
 make gen
 ```
 
-Always use `make gen` rather than running xcodegen directly — the Makefile regenerates the five entitlements files after each xcodegen run (xcodegen writes them empty).
+Always use `make gen` rather than running xcodegen directly — the Makefile regenerates the six entitlements files after each xcodegen run (xcodegen writes them empty).
 
-### 5. Open and build
+### 6. Open and build
 
 ```bash
 open VikunjaWidget.xcodeproj
@@ -83,7 +97,7 @@ open VikunjaWidget.xcodeproj
 
 Select the `VikunjaWidgetApp` scheme for macOS, `VikunjaWidgetAppIOS` for iOS, or `VikunjaWidgetWatch` for the Watch app, then build and run.
 
-### 6. Configure the app
+### 7. Configure the app
 
 On first launch, go to Settings and enter:
 - Your Vikunja instance URL (e.g. `https://tasks.example.com`)
@@ -92,12 +106,13 @@ On first launch, go to Settings and enter:
 ## Project Structure
 
 ```
-VikunjaCore/            Shared code — models, API client, config, parser, offline outbox
-VikunjaWidgetApp/       App target sources (macOS + iOS, platform-conditional)
-VikunjaWidgetExtension/ Widget extension sources (shared by macOS and iOS widget targets)
-VikunjaWidgetWatch/     Apple Watch app (standalone; online-only)
-project.yml             XcodeGen project definition
-Makefile                Wraps xcodegen + regenerates entitlements
+VikunjaCore/                 Shared code — models, API client, config, parser, offline outbox
+VikunjaWidgetApp/            App target sources (macOS + iOS, platform-conditional)
+VikunjaWidgetExtension/      Widget extension sources (shared by macOS and iOS widget targets)
+VikunjaWidgetWatch/          Apple Watch app (standalone; online-only)
+VikunjaWidgetWatchExtension/ Watch widget extension (Smart Stack + face complications)
+project.yml                  XcodeGen project definition
+Makefile                     Wraps xcodegen + regenerates entitlements
 ```
 
 > **Note on naming:** The project started as a widget-only app, so internal identifiers (`VikunjaWidget.xcodeproj`, scheme names, bundle IDs, folder names) still use the `VikunjaWidget` prefix. The user-facing name is Veyrn.

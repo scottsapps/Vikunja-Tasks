@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WatchRootView: View {
     @Bindable var store: WatchStore
+    @State private var openScheduled = false
 
     var body: some View {
         NavigationStack {
@@ -18,6 +19,12 @@ struct WatchRootView: View {
                 }
             }
             .navigationTitle("Veyrn")
+            .navigationDestination(isPresented: $openScheduled) {
+                ScheduledListView(store: store)
+            }
+        }
+        .onOpenURL { url in
+            if url.host == "scheduled" { openScheduled = true }
         }
         .task { await store.refresh() }
     }

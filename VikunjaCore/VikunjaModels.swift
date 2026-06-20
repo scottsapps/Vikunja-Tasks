@@ -15,6 +15,7 @@ struct VikunjaTask: Codable {
     var reminders: [VikunjaReminder]?
     var repeatAfter: Int?
     var repeatMode: Int?
+    var relatedTasks: [String: [VikunjaTask]]?
 
     enum CodingKeys: String, CodingKey {
         case id, title, done, labels, description, priority, reminders
@@ -23,6 +24,7 @@ struct VikunjaTask: Codable {
         case updated
         case repeatAfter = "repeat_after"
         case repeatMode = "repeat_mode"
+        case relatedTasks = "related_tasks"
     }
 
     var effectiveDueDate: Date? {
@@ -34,16 +36,41 @@ struct VikunjaTask: Codable {
         guard let str = updated else { return nil }
         return ISO8601DateFormatter().date(from: str)
     }
+
+    var subtasks: [VikunjaTask] {
+        relatedTasks?["subtask"] ?? []
+    }
+
+    var subtaskProgress: (done: Int, total: Int) {
+        let all = subtasks
+        return (all.filter { $0.done }.count, all.count)
+    }
 }
 
 struct VikunjaLabel: Codable, Identifiable {
     let id: Int
     let title: String
+    let hexColor: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title
+        case hexColor = "hex_color"
+    }
 }
 
 struct VikunjaProject: Codable, Identifiable, Equatable {
     let id: Int
     let title: String
+    let hexColor: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title
+        case hexColor = "hex_color"
+    }
+
+    static func == (lhs: VikunjaProject, rhs: VikunjaProject) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
 struct VikunjaReminder: Codable {
@@ -51,6 +78,17 @@ struct VikunjaReminder: Codable {
 
     var date: Date? {
         ISO8601DateFormatter().date(from: reminder)
+    }
+}
+
+struct VikunjaUser: Codable {
+    let id: Int
+    let username: String
+    let name: String?
+
+    var displayName: String {
+        let n = name?.trimmingCharacters(in: .whitespaces) ?? ""
+        return n.isEmpty ? username : n
     }
 }
 

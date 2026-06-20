@@ -58,6 +58,7 @@ struct VikunjaWidgetAppEntry: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        VeyrnTelemetry.initialize()
         #if os(macOS)
         VikunjaConfig.registerHotkeyDefaults()
         #endif

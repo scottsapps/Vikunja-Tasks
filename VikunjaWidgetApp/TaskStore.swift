@@ -140,6 +140,7 @@ final class TaskStore {
         )
         outbox.append(op)
         rebuildMergedTasks()
+        VeyrnTelemetry.signal("TaskCreated")
         Task { await drainOutbox() }
     }
 
@@ -166,6 +167,17 @@ final class TaskStore {
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    // MARK: - Delete task
+
+    func deleteTask(task: VikunjaTask) async {
+        undoneTasks.removeAll { $0.id == task.id }
+        lastServerUndone.removeAll { $0.id == task.id }
+        if task.id > 0 {
+            try? await VikunjaAPI.deleteTask(id: task.id)
+        }
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: - Update task (enqueues to outbox)
@@ -213,6 +225,7 @@ final class TaskStore {
     }
 
     private func commitCompletion(task: VikunjaTask) async {
+        VeyrnTelemetry.signal("TaskCompleted")
         pendingUndo.removeValue(forKey: task.id)
         undoTimers.removeValue(forKey: task.id)
         var completedTask = task
@@ -283,6 +296,14 @@ final class TaskStore {
                 case .reopen:
                     guard let serverId = serverId(for: op.ref) else { continue }
                     try await VikunjaAPI.reopenTask(id: serverId)
+                case .relation(let parentRef, let childRef, let kind, let add):
+                    guard let parentId = serverId(for: parentRef),
+                          let childId = serverId(for: childRef) else { continue }
+                    if add {
+                        try await VikunjaAPI.addRelation(taskId: parentId, otherTaskId: childId, kind: kind)
+                    } else {
+                        try await VikunjaAPI.removeRelation(taskId: parentId, otherTaskId: childId, kind: kind)
+                    }
                 }
                 outbox.remove(id: op.id)
             } catch let error as VikunjaAPI.APIError where error.isClient4xx {

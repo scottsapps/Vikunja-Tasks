@@ -18,6 +18,8 @@ struct QuickAddSheet: View {
     @State private var expandedProjectId: Int? = nil
     @State private var expandedLabelIds: Set<Int> = []
     @State private var expandedNotes = ""
+    @State private var subtaskTitles: [String] = []
+    @State private var newSubtaskTitle = ""
 
     private var parsed: QuickAddResult {
         QuickAddParser.parse(inputText, knownProjects: store.projects, knownLabels: store.labels)
@@ -149,6 +151,50 @@ struct QuickAddSheet: View {
                 #if os(iOS)
                 .autocorrectionDisabled()
                 #endif
+
+            // Subtasks
+            VStack(alignment: .leading, spacing: 4) {
+                if !subtaskTitles.isEmpty {
+                    ForEach(subtaskTitles.indices, id: \.self) { index in
+                        HStack(spacing: 6) {
+                            Image(systemName: "circle")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                            Text(subtaskTitles[index])
+                                .font(.system(size: 13))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Button {
+                                subtaskTitles.remove(at: index)
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 6))
+                    }
+                }
+
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    TextField("Add subtask…", text: $newSubtaskTitle)
+                        .font(.system(size: 13))
+                        #if os(iOS)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.sentences)
+                        #endif
+                        .onSubmit {
+                            let t = newSubtaskTitle.trimmingCharacters(in: .whitespaces)
+                            if !t.isEmpty { subtaskTitles.append(t); newSubtaskTitle = "" }
+                        }
+                }
+            }
         }
     }
 
@@ -400,16 +446,50 @@ struct QuickAddSheet: View {
             let effectivePriority = isExpanded ? (expandedPriority > 0 ? expandedPriority : nil) : p.priority
             let notes: String? = isExpanded && !expandedNotes.isEmpty ? expandedNotes : nil
 
-            store.createTask(
-                projectId: project.id,
-                title: p.cleanedTitle,
-                description: notes,
-                dueDate: effectiveDueDate,
-                priority: effectivePriority,
-                labels: resolvedLabels,
-                repeatAfter: p.repeatAfter,
-                repeatMode: p.repeatMode
-            )
+            let pendingSubtasks = subtaskTitles.filter { !$0.isEmpty }
+
+            if pendingSubtasks.isEmpty {
+                store.createTask(
+                    projectId: project.id,
+                    title: p.cleanedTitle,
+                    description: notes,
+                    dueDate: effectiveDueDate,
+                    priority: effectivePriority,
+                    labels: resolvedLabels,
+                    repeatAfter: p.repeatAfter,
+                    repeatMode: p.repeatMode
+                )
+            } else {
+                // Subtasks require a real server ID — go direct (online only)
+                guard store.reachability.isOnline else {
+                    errorMessage = "Go online to add subtasks."
+                    isSubmitting = false
+                    return
+                }
+                do {
+                    let created = try await VikunjaAPI.createTask(
+                        projectId: project.id,
+                        title: p.cleanedTitle,
+                        description: notes,
+                        dueDate: effectiveDueDate,
+                        priority: effectivePriority,
+                        labelIds: resolvedLabels.map(\.id),
+                        repeatAfter: p.repeatAfter,
+                        repeatMode: p.repeatMode
+                    )
+                    for subTitle in pendingSubtasks {
+                        let sub = try await VikunjaAPI.createTask(projectId: project.id, title: subTitle)
+                        try await VikunjaAPI.addRelation(taskId: created.id, otherTaskId: sub.id, kind: "subtask")
+                        VeyrnTelemetry.signal("SubtaskAdded")
+                    }
+                    VeyrnTelemetry.signal("TaskCreated")
+                    await store.refresh()
+                } catch {
+                    errorMessage = error.localizedDescription
+                    isSubmitting = false
+                    return
+                }
+            }
 
             dismiss()
             isSubmitting = false

@@ -1,5 +1,8 @@
 import AppIntents
 import WidgetKit
+import os
+
+private let intentLog = Logger(subsystem: "net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension", category: "intent")
 
 struct CompleteTaskIntent: AppIntent {
     static var title: LocalizedStringResource = "Complete Task"
@@ -21,7 +24,13 @@ struct CompleteTaskIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult {
-        try await VikunjaAPI.completeTask(id: taskId)
+        intentLog.notice("CompleteTaskIntent.perform fired for task \(taskId, privacy: .public)")
+        do {
+            try await VikunjaAPI.completeTask(id: taskId)
+        } catch {
+            intentLog.error("completeTask(\(taskId, privacy: .public)) failed: \(error.localizedDescription, privacy: .public)")
+            throw error
+        }
         SharedState.add(PendingUndo(
             taskId: taskId,
             title: title,

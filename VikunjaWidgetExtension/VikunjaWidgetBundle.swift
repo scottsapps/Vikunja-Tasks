@@ -15,7 +15,14 @@ struct VikunjaWidget: Widget {
 
     private var supportedFamilies: [WidgetFamily] {
         #if os(iOS)
-        return [.systemMedium, .systemLarge]
+        return [
+            .systemSmall,
+            .systemMedium,
+            .systemLarge,
+            .accessoryRectangular,
+            .accessoryCircular,
+            .accessoryInline,
+        ]
         #else
         return [.systemLarge]
         #endif

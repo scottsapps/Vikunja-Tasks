@@ -6,19 +6,23 @@ options:
     iOS: "17.0"
     watchOS: "10.0"
 
+packages:
+  TelemetryDeck:
+    url: https://github.com/TelemetryDeck/SwiftSDK
+    from: "2.0.0"
+
 settings:
   SWIFT_VERSION: "5"
   base:
     # Signing is in Signing.xcconfig (git-ignored) so make gen never clobbers it.
     CODE_SIGN_STYLE: Automatic
-    # Bump this before each TestFlight/App Store upload.
-    CURRENT_PROJECT_VERSION: 35
     # Xcode recommended settings
     DEAD_CODE_STRIPPING: YES
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     REGISTER_APP_GROUPS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+    CURRENT_PROJECT_VERSION: 40
 
 configFiles:
   Debug: Signing.xcconfig
@@ -61,6 +65,7 @@ schemes:
     build:
       targets:
         VikunjaWidgetWatch: all
+        VikunjaWidgetWatchExtension: all
     run:
       config: Debug
     archive:
@@ -82,14 +87,16 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp
       PRODUCT_NAME: Veyrn
+      MARKETING_VERSION: "2.5.0"
       GENERATE_INFOPLIST_FILE: NO
       INFOPLIST_FILE: VikunjaWidgetApp/Info.plist
       MACOSX_DEPLOYMENT_TARGET: "14.0"
-      MARKETING_VERSION: "2.0.6"
+      ENABLE_HARDENED_RUNTIME: YES
       ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - target: VikunjaWidgetExtension
         embed: true
+      - package: TelemetryDeck
 
   VikunjaWidgetExtension:
     type: app-extension
@@ -103,16 +110,18 @@ targets:
       path: VikunjaWidgetExtension/Info.plist
       properties:
         CFBundleDisplayName: Veyrn
+        CFBundleName: Veyrn
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension
+      MARKETING_VERSION: "2.5.0"
       GENERATE_INFOPLIST_FILE: NO
       MACOSX_DEPLOYMENT_TARGET: "14.0"
+      ENABLE_HARDENED_RUNTIME: YES
       SKIP_INSTALL: YES
-      MARKETING_VERSION: "2.0.6"
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
@@ -133,16 +142,17 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp
       PRODUCT_NAME: Veyrn
+      MARKETING_VERSION: "2.5.0"
       GENERATE_INFOPLIST_FILE: NO
       INFOPLIST_FILE: VikunjaWidgetApp/InfoIOS.plist
       IPHONEOS_DEPLOYMENT_TARGET: "17.0"
-      MARKETING_VERSION: "2.1"
       ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - target: VikunjaWidgetExtensionIOS
         embed: true
       - target: VikunjaWidgetWatch
         embed: true
+      - package: TelemetryDeck
 
   VikunjaWidgetExtensionIOS:
     type: app-extension
@@ -154,11 +164,11 @@ targets:
       path: VikunjaWidgetExtension/VikunjaWidgetExtensionIOS.entitlements
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension
+      MARKETING_VERSION: "2.5.0"
       GENERATE_INFOPLIST_FILE: NO
       INFOPLIST_FILE: VikunjaWidgetExtension/Info.plist
       IPHONEOS_DEPLOYMENT_TARGET: "17.0"
       SKIP_INSTALL: YES
-      MARKETING_VERSION: "2.1"
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
@@ -176,13 +186,44 @@ targets:
           - VikunjaAPI.swift
           - VikunjaConfig.swift
           - QuickAddParser.swift
+          - WidgetCache.swift
+          - ColorUtils.swift
     entitlements:
       path: VikunjaWidgetWatch/VikunjaWidgetWatch.entitlements
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp.watchkitapp
       PRODUCT_NAME: Veyrn
+      MARKETING_VERSION: "2.5.0"
       GENERATE_INFOPLIST_FILE: NO
       INFOPLIST_FILE: VikunjaWidgetWatch/Info.plist
       WATCHOS_DEPLOYMENT_TARGET: "10.0"
-      MARKETING_VERSION: "2.1"
       ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - target: VikunjaWidgetWatchExtension
+        embed: true
+      - package: TelemetryDeck
+
+  VikunjaWidgetWatchExtension:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - path: VikunjaWidgetWatchExtension
+      - path: VikunjaCore
+        includes:
+          - VikunjaModels.swift
+          - VikunjaConfig.swift
+          - WidgetCache.swift
+          - ColorUtils.swift
+          - VikunjaAPI.swift
+    entitlements:
+      path: VikunjaWidgetWatchExtension/VikunjaWidgetWatchExtension.entitlements
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp.watchkitapp.widget
+      MARKETING_VERSION: "2.5.0"
+      GENERATE_INFOPLIST_FILE: NO
+      INFOPLIST_FILE: VikunjaWidgetWatchExtension/Info.plist
+      WATCHOS_DEPLOYMENT_TARGET: "10.0"
+      SKIP_INSTALL: YES
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework

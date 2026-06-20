@@ -21,6 +21,7 @@ struct PendingOp: Codable, Identifiable {
         case update(update: TaskUpdate)
         case complete
         case reopen
+        case relation(parentRef: TaskRef, childRef: TaskRef, kind: String, add: Bool)
     }
 }
 

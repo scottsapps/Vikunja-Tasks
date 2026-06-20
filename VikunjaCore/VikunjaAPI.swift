@@ -2,7 +2,6 @@ import Foundation
 
 enum VikunjaAPI {
     private static var baseURL: String { VikunjaConfig.baseURL }
-    private static var apiToken: String { VikunjaConfig.apiToken }
 
     // MARK: - Projects
 
@@ -66,7 +65,22 @@ enum VikunjaAPI {
         return tasks.sorted { ($0.updatedDate ?? .distantPast) > ($1.updatedDate ?? .distantPast) }
     }
 
+    // MARK: - Single task (includes related_tasks from the server)
+
+    static func fetchTask(id: Int) async throws -> VikunjaTask {
+        return try await get("/tasks/\(id)", as: VikunjaTask.self)
+    }
+
     // MARK: - Mutations
+
+    static func deleteTask(id: Int) async throws {
+        let request = makeRequest("/tasks/\(id)", method: "DELETE")
+        let (_, response) = try await URLSession.shared.data(for: request)
+        let http = response as? HTTPURLResponse
+        guard let http, (200...299).contains(http.statusCode) else {
+            throw APIError.badStatus(http?.statusCode ?? -1)
+        }
+    }
 
     static func completeTask(id: Int) async throws {
         try await setDone(id: id, done: true)
@@ -167,6 +181,28 @@ enum VikunjaAPI {
         }
     }
 
+    // MARK: - Task relations (subtasks)
+
+    static func addRelation(taskId: Int, otherTaskId: Int, kind: String = "subtask") async throws {
+        let body = try JSONSerialization.data(withJSONObject: [
+            "other_task_id": otherTaskId,
+            "relation_kind": kind,
+        ])
+        let request = makeRequest("/tasks/\(taskId)/relations", method: "PUT", body: body)
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw APIError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+    }
+
+    static func removeRelation(taskId: Int, otherTaskId: Int, kind: String = "subtask") async throws {
+        let request = makeRequest("/tasks/\(taskId)/relations/\(kind)/\(otherTaskId)", method: "DELETE")
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw APIError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+    }
+
     // MARK: - Date helpers
 
     /// Snaps a date to 8 PM Eastern time, preserving the calendar day in Eastern time.
@@ -194,10 +230,6 @@ enum VikunjaAPI {
 
     // MARK: - Private helpers
 
-    private static func fetchTask(id: Int) async throws -> VikunjaTask {
-        return try await get("/tasks/\(id)", as: VikunjaTask.self)
-    }
-
     private static func fetchTasks(projectId: Int, done: Bool, page: Int = 1) async throws -> [VikunjaTask] {
         let filter = done ? "done+%3D+true" : "done+%3D+false"
         var all: [VikunjaTask] = []
@@ -212,7 +244,7 @@ enum VikunjaAPI {
         return all
     }
 
-private static func get<T: Decodable>(_ path: String, as type: T.Type) async throws -> T {
+    private static func get<T: Decodable>(_ path: String, as type: T.Type) async throws -> T {
         let request = makeRequest(path)
         let (data, response) = try await URLSession.shared.data(for: request)
         let http = response as? HTTPURLResponse
@@ -245,7 +277,7 @@ private static func get<T: Decodable>(_ path: String, as type: T.Type) async thr
     private static func makeRequest(_ path: String, method: String = "GET", body: Data? = nil) -> URLRequest {
         var request = URLRequest(url: URL(string: "\(baseURL)\(path)")!, timeoutInterval: 20)
         request.httpMethod = method
-        request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(VikunjaConfig.apiToken)", forHTTPHeaderField: "Authorization")
         if let body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = body
@@ -266,7 +298,9 @@ private static func get<T: Decodable>(_ path: String, as type: T.Type) async thr
         }
 
         var errorDescription: String? {
-            "Server returned HTTP \(statusCode)"
+            switch self {
+            case .badStatus(let code): return "Server returned HTTP \(code)"
+            }
         }
     }
 }

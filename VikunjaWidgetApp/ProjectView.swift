@@ -9,7 +9,7 @@ struct ProjectView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Tag filter chips (horizontal scroll row)
-            if !availableTags.isEmpty {
+            if !availableLabels.isEmpty {
                 tagFilterRow
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)
@@ -27,6 +27,16 @@ struct ProjectView: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
+            #if os(iOS)
+            if let color = Color(vikunjaHex: project.hexColor) {
+                ToolbarItem(placement: .principal) {
+                    Label(project.title, systemImage: "folder.fill")
+                        .foregroundStyle(color)
+                        .font(.headline)
+                        .labelStyle(.titleAndIcon)
+                }
+            }
+            #endif
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     Task { await store.refresh() }
@@ -50,11 +60,11 @@ struct ProjectView: View {
     private var tagFilterRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(availableTags, id: \.self) { tag in
-                    TagChip(
-                        title: tag,
-                        isSelected: activeTagFilter.contains(tag),
-                        onTap: { toggleTag(tag) }
+                ForEach(availableLabels) { label in
+                    LabelChip(
+                        label: label,
+                        isSelected: activeTagFilter.contains(label.title),
+                        onTap: { toggleTag(label.title) }
                     )
                 }
                 if !activeTagFilter.isEmpty {
@@ -75,15 +85,15 @@ struct ProjectView: View {
         store.tasks(for: project)
     }
 
-    /// All unique tags present in this project's undone tasks
-    private var availableTags: [String] {
-        var seen = Set<String>()
+    /// All unique labels present in this project's undone tasks
+    private var availableLabels: [VikunjaLabel] {
+        var seen: [Int: VikunjaLabel] = [:]
         for task in projectTasks {
             for label in task.labels ?? [] {
-                seen.insert(label.title)
+                seen[label.id] = label
             }
         }
-        return seen.sorted()
+        return seen.values.sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
     }
 
     private func toggleTag(_ tag: String) {
@@ -95,21 +105,29 @@ struct ProjectView: View {
     }
 }
 
-// MARK: - Tag chip
+// MARK: - Label chip (color-aware)
 
-private struct TagChip: View {
-    let title: String
+private struct LabelChip: View {
+    let label: VikunjaLabel
     let isSelected: Bool
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
-            Text(title)
+            let labelColor = Color(vikunjaHex: label.hexColor)
+            let bg: Color = isSelected
+                ? (labelColor ?? Color.accentColor)
+                : (labelColor?.opacity(0.15) ?? Color.secondary.opacity(0.12))
+            let fg: Color = isSelected
+                ? (labelColor != nil ? (labelColor!.contrastingForeground) : .white)
+                : (labelColor ?? .primary)
+
+            Text(label.title)
                 .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.12))
-                .foregroundStyle(isSelected ? .white : .primary)
+                .background(bg)
+                .foregroundStyle(fg)
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)

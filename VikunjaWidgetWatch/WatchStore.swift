@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import WidgetKit
 
 @Observable
 final class WatchStore {
@@ -23,6 +24,8 @@ final class WatchStore {
             projects = p
             tasks = t
             if let l = try? await VikunjaAPI.fetchLabels() { labels = l }
+            WidgetCache.save(tasks: t, projects: p)
+            WidgetCenter.shared.reloadAllTimelines()
         } catch {
             errorMessage = error.localizedDescription
         }

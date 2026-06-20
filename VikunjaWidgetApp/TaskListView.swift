@@ -21,6 +21,7 @@ struct TaskListView: View {
 
     // Inline editor state — which task is expanded
     @State private var expandedTaskId: Int? = nil
+    @State private var taskToDelete: VikunjaTask? = nil
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -47,6 +48,18 @@ struct TaskListView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: store.pendingUndo.isEmpty)
+        .confirmationDialog(
+            "Delete \"\(taskToDelete?.title ?? "")\"?",
+            isPresented: Binding(get: { taskToDelete != nil }, set: { if !$0 { taskToDelete = nil } }),
+            titleVisibility: .visible
+        ) {
+            if let task = taskToDelete {
+                Button("Delete Task", role: .destructive) {
+                    Task { await store.deleteTask(task: task) }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
     }
 
     // MARK: - Undo bar
@@ -144,7 +157,10 @@ struct TaskListView: View {
     @ViewBuilder
     private func taskRowOrEditor(_ task: VikunjaTask) -> some View {
         if expandedTaskId == task.id {
-            InlineTaskEditor(task: task) {
+            InlineTaskEditor(task: task, onDelete: {
+                expandedTaskId = nil
+                taskToDelete = task
+            }) {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     expandedTaskId = nil
                 }
@@ -163,6 +179,13 @@ struct TaskListView: View {
                 onComplete: { Task { await store.complete(task: task) } },
                 suppressUpcomingDueDate: suppressUpcomingDueDate
             )
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(role: .destructive) {
+                    taskToDelete = task
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
         }
     }
 

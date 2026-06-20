@@ -27,16 +27,23 @@ struct Sidebar: View {
 
             Section {
                 ForEach(visibleProjects) { project in
-                    Label(project.title, systemImage: "folder.fill")
-                        .badge(projectCount(project))
-                        .tag(SidebarItem.project(project.id))
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                projectToDelete = project
-                            } label: {
-                                Label("Delete Project…", systemImage: "trash")
-                            }
+                    let projectColor = Color(vikunjaHex: project.hexColor) ?? Color.accentColor
+                    HStack(spacing: 11) {
+                        Image(systemName: "folder.fill")
+                            .foregroundStyle(projectColor)
+                            .imageScale(.large)
+                            .frame(width: 26)
+                        Text(project.title)
+                    }
+                    .badge(projectCount(project))
+                    .tag(SidebarItem.project(project.id))
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            projectToDelete = project
+                        } label: {
+                            Label("Delete Project…", systemImage: "trash")
                         }
+                    }
                 }
             } header: {
                 HStack {

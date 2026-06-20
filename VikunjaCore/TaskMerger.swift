@@ -36,6 +36,26 @@ enum TaskMerger {
                 guard let id = resolveId(op.ref, placeholderByClient: placeholderByClient),
                       let existing = byId[id] else { continue }
                 byId[id] = setDone(existing, done: false)
+
+            case .relation(let parentRef, let childRef, let kind, let add):
+                // Attach/detach placeholder subtask under the parent task so offline-created
+                // subtasks appear immediately in the InlineTaskEditor without waiting for a sync.
+                guard let parentId = resolveId(parentRef, placeholderByClient: placeholderByClient),
+                      var parent = byId[parentId],
+                      let childId = resolveId(childRef, placeholderByClient: placeholderByClient),
+                      let child = byId[childId] else { continue }
+                var relations = parent.relatedTasks ?? [:]
+                var kindList = relations[kind] ?? []
+                if add {
+                    if !kindList.contains(where: { $0.id == child.id }) {
+                        kindList.append(child)
+                    }
+                } else {
+                    kindList.removeAll { $0.id == child.id }
+                }
+                relations[kind] = kindList.isEmpty ? nil : kindList
+                parent.relatedTasks = relations.isEmpty ? nil : relations
+                byId[parentId] = parent
             }
         }
 
@@ -70,7 +90,8 @@ enum TaskMerger {
             description: payload.description,
             updated: nil,
             priority: payload.priority,
-            reminders: reminders.isEmpty ? nil : reminders
+            reminders: reminders.isEmpty ? nil : reminders,
+            relatedTasks: nil
         )
     }
 
@@ -100,7 +121,7 @@ enum TaskMerger {
             var lookup: [Int: VikunjaLabel] = [:]
             for label in task.labels ?? [] { lookup[label.id] = label }
             for (id, label) in labelDirectory { lookup[id] = label }
-            newLabels = ids.map { lookup[$0] ?? VikunjaLabel(id: $0, title: "") }
+            newLabels = ids.map { lookup[$0] ?? VikunjaLabel(id: $0, title: "", hexColor: nil) }
         }
 
         var newReminders = task.reminders
@@ -118,7 +139,8 @@ enum TaskMerger {
             description: update.description ?? task.description,
             updated: task.updated,
             priority: newPriority,
-            reminders: newReminders
+            reminders: newReminders,
+            relatedTasks: task.relatedTasks
         )
     }
 
@@ -133,7 +155,8 @@ enum TaskMerger {
             description: task.description,
             updated: task.updated,
             priority: task.priority,
-            reminders: task.reminders
+            reminders: task.reminders,
+            relatedTasks: task.relatedTasks
         )
     }
 }

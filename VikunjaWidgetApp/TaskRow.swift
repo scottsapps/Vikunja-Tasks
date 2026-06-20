@@ -79,12 +79,27 @@ struct TaskRow: View {
                 }
 
                 ForEach(task.labels ?? [], id: \.id) { label in
+                    let bg = Color(vikunjaHex: label.hexColor) ?? Color.accentColor.opacity(0.12)
+                    let fg = Color(vikunjaHex: label.hexColor) != nil
+                        ? bg.contrastingForeground
+                        : Color.accentColor
                     Text(label.title)
                         .font(.system(size: CGFloat(10 + max(fs, 0))))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
-                        .background(Color.accentColor.opacity(0.12))
-                        .foregroundStyle(Color.accentColor)
+                        .background(Color(vikunjaHex: label.hexColor) != nil ? bg : Color.accentColor.opacity(0.12))
+                        .foregroundStyle(fg)
+                        .clipShape(Capsule())
+                }
+
+                let (doneSub, totalSub) = task.subtaskProgress
+                if totalSub > 0 {
+                    Text("\(doneSub)/\(totalSub)")
+                        .font(.system(size: CGFloat(10 + max(fs, 0))))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color.secondary.opacity(0.12))
+                        .foregroundStyle(.secondary)
                         .clipShape(Capsule())
                 }
 

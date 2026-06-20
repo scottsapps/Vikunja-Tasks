@@ -139,7 +139,13 @@ struct AppRoot: View {
                 Section {
                     ForEach(visibleProjects) { project in
                         NavigationLink(value: SidebarItem.project(project.id)) {
-                            Label(project.title, systemImage: "folder.fill")
+                            HStack(spacing: 11) {
+                                Image(systemName: "folder.fill")
+                                    .foregroundStyle(Color(vikunjaHex: project.hexColor) ?? Color.accentColor)
+                                    .imageScale(.large)
+                                    .frame(width: 26)
+                                Text(project.title)
+                            }
                         }
                         .badge(store.tasks(for: project).count)
                         .swipeActions(edge: .trailing) {

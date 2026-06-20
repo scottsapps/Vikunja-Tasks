@@ -5,6 +5,7 @@ import SwiftUI
 struct InlineTaskEditor: View {
     let task: VikunjaTask
     @Environment(TaskStore.self) private var store
+    var onDelete: (() -> Void)? = nil
     var onDismiss: () -> Void
 
     // Editable field state — initialised from task
@@ -29,8 +30,14 @@ struct InlineTaskEditor: View {
     @State private var showReminderPicker = false
     @FocusState private var titleFocused: Bool
 
-    init(task: VikunjaTask, onDismiss: @escaping () -> Void) {
+    // Subtask state
+    @State private var loadedSubtasks: [VikunjaTask]? = nil
+    @State private var newSubtaskTitle = ""
+    @State private var isAddingSubtask = false
+
+    init(task: VikunjaTask, onDelete: (() -> Void)? = nil, onDismiss: @escaping () -> Void) {
         self.task = task
+        self.onDelete = onDelete
         self.onDismiss = onDismiss
         _title = State(initialValue: task.title)
         _notesAttrStr = State(initialValue: NSAttributedString())
@@ -112,10 +119,27 @@ struct InlineTaskEditor: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
+            // Subtasks section (lazy-loaded when editor opens)
+            if let subtasks = loadedSubtasks {
+                Divider()
+                subtaskSection(subtasks)
+            }
+
             Divider()
 
             // Action bar
             HStack(spacing: 12) {
+                if let onDelete {
+                    Button(role: .destructive) {
+                        onDelete()
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.system(size: 13))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.red.opacity(0.8))
+                }
+
                 if let err = errorMessage {
                     Text(err)
                         .font(.caption)
@@ -158,6 +182,12 @@ struct InlineTaskEditor: View {
             // triggering an AttributeGraph precondition failure (SIGABRT).
             notesAttrStr = RichTextUtils.attributedString(from: task.description ?? "")
             titleFocused = true
+            // Lazy-load subtasks (single-task GET returns related_tasks; list endpoint doesn't).
+            if task.id > 0, let full = try? await VikunjaAPI.fetchTask(id: task.id) {
+                loadedSubtasks = full.subtasks
+            } else {
+                loadedSubtasks = task.subtasks.isEmpty ? [] : task.subtasks
+            }
         }
         .animation(.easeInOut(duration: 0.18), value: showDatePicker)
         .animation(.easeInOut(duration: 0.18), value: showReminderPicker)
@@ -394,6 +424,95 @@ struct InlineTaskEditor: View {
             if days % 7 == 0 { return "Every \(days / 7)w" }
             return "Every \(days)d"
         }
+    }
+
+    // MARK: - Subtasks
+
+    private func subtaskSection(_ subtasks: [VikunjaTask]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("SUBTASKS")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+
+            ForEach(subtasks, id: \.id) { sub in
+                HStack(spacing: 8) {
+                    Button {
+                        completeSubtask(sub)
+                    } label: {
+                        Image(systemName: sub.done ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 15))
+                            .foregroundStyle(sub.done ? Color.secondary : Color.accentColor)
+                    }
+                    .buttonStyle(.plain)
+
+                    Text(sub.title)
+                        .font(.system(size: 13))
+                        .foregroundStyle(sub.done ? .secondary : .primary)
+                        .strikethrough(sub.done, color: .secondary)
+                        .lineLimit(2)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+            }
+
+            // Add subtask field
+            HStack(spacing: 8) {
+                Image(systemName: "plus.circle")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.secondary)
+
+                TextField("Add subtask…", text: $newSubtaskTitle)
+                    .font(.system(size: 13))
+                    .onSubmit { Task { await addSubtask() } }
+
+                if isAddingSubtask {
+                    ProgressView().controlSize(.mini)
+                } else if !newSubtaskTitle.trimmingCharacters(in: .whitespaces).isEmpty {
+                    Button("Add") { Task { await addSubtask() } }
+                        .font(.system(size: 12))
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+        }
+    }
+
+    private func completeSubtask(_ subtask: VikunjaTask) {
+        // Optimistically update the local list
+        if var list = loadedSubtasks, let idx = list.firstIndex(where: { $0.id == subtask.id }) {
+            list[idx].done.toggle()
+            loadedSubtasks = list
+        }
+        Task {
+            if subtask.done {
+                try? await VikunjaAPI.reopenTask(id: subtask.id)
+            } else {
+                try? await VikunjaAPI.completeTask(id: subtask.id)
+            }
+        }
+        VeyrnTelemetry.signal("TaskCompleted")
+    }
+
+    private func addSubtask() async {
+        let title = newSubtaskTitle.trimmingCharacters(in: .whitespaces)
+        guard !title.isEmpty, task.id > 0 else { return }
+        isAddingSubtask = true
+        newSubtaskTitle = ""
+        do {
+            let newTask = try await VikunjaAPI.createTask(projectId: task.projectId, title: title)
+            try await VikunjaAPI.addRelation(taskId: task.id, otherTaskId: newTask.id, kind: "subtask")
+            loadedSubtasks = (loadedSubtasks ?? []) + [newTask]
+            VeyrnTelemetry.signal("SubtaskAdded")
+        } catch {
+            // Restore title on failure
+            newSubtaskTitle = title
+        }
+        isAddingSubtask = false
     }
 
     // MARK: - Save

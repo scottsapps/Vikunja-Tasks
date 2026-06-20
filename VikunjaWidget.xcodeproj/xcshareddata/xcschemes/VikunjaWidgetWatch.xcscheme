@@ -20,6 +20,20 @@
                ReferencedContainer = "container:VikunjaWidget.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "0F7E0CF84A988BC300A48423"
+               BuildableName = "VikunjaWidgetWatchExtension.appex"
+               BlueprintName = "VikunjaWidgetWatchExtension"
+               ReferencedContainer = "container:VikunjaWidget.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

@@ -19,8 +19,8 @@ struct TaskListView: View {
     var activeTagFilter: Set<String> = []
     var suppressUpcomingDueDate: Bool = false
 
-    // Inline editor state — which task is expanded
-    @State private var expandedTaskId: Int? = nil
+    // Sheet editor state
+    @State private var editingTask: VikunjaTask? = nil
     @State private var taskToDelete: VikunjaTask? = nil
 
     var body: some View {
@@ -48,6 +48,22 @@ struct TaskListView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: store.pendingUndo.isEmpty)
+        .sheet(isPresented: Binding(
+            get: { editingTask != nil },
+            set: { if !$0 { editingTask = nil } }
+        )) {
+            if let task = editingTask {
+                InlineTaskEditor(task: task, onDelete: {
+                    editingTask = nil
+                    taskToDelete = task
+                }, onDismiss: {
+                    editingTask = nil
+                })
+                #if os(iOS)
+                .presentationDragIndicator(.visible)
+                #endif
+            }
+        }
         .confirmationDialog(
             "Delete \"\(taskToDelete?.title ?? "")\"?",
             isPresented: Binding(get: { taskToDelete != nil }, set: { if !$0 { taskToDelete = nil } }),
@@ -152,39 +168,22 @@ struct TaskListView: View {
         .listStyle(.plain)
     }
 
-    // MARK: - Row / editor toggle
+    // MARK: - Row
 
     @ViewBuilder
     private func taskRowOrEditor(_ task: VikunjaTask) -> some View {
-        if expandedTaskId == task.id {
-            InlineTaskEditor(task: task, onDelete: {
-                expandedTaskId = nil
+        TaskRow(
+            task: task,
+            projectName: store.projectMap[task.projectId] ?? "",
+            onTap: { editingTask = task },
+            onComplete: { Task { await store.complete(task: task) } },
+            suppressUpcomingDueDate: suppressUpcomingDueDate
+        )
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) {
                 taskToDelete = task
-            }) {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    expandedTaskId = nil
-                }
-            }
-            .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
-            .padding(.vertical, 4)
-        } else {
-            TaskRow(
-                task: task,
-                projectName: store.projectMap[task.projectId] ?? "",
-                onTap: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        expandedTaskId = task.id
-                    }
-                },
-                onComplete: { Task { await store.complete(task: task) } },
-                suppressUpcomingDueDate: suppressUpcomingDueDate
-            )
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                Button(role: .destructive) {
-                    taskToDelete = task
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
+            } label: {
+                Label("Delete", systemImage: "trash")
             }
         }
     }

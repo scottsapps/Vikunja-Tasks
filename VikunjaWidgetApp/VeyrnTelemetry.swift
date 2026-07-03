@@ -7,7 +7,7 @@ enum VeyrnTelemetry {
     static func initialize() {
         // App ID is for Veyrn specifically (not shared with SCOTUSWatch).
         // TelemetryDeck 2.x: verify the exact namespace property name against the SDK README.
-        var config = TelemetryDeck.Config(appID: "5C1C6525-EC34-4D78-99A4-FCB2421B1E29")
+        let config = TelemetryDeck.Config(appID: "5C1C6525-EC34-4D78-99A4-FCB2421B1E29")
         config.defaultParameters = { ["namespace": "net.angstreich.scottsapps"] }
         TelemetryDeck.initialize(config: config)
     }

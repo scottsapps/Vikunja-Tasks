@@ -22,7 +22,7 @@ settings:
     REGISTER_APP_GROUPS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
-    CURRENT_PROJECT_VERSION: 40
+    CURRENT_PROJECT_VERSION: 45
 
 configFiles:
   Debug: Signing.xcconfig
@@ -87,7 +87,7 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp
       PRODUCT_NAME: Veyrn
-      MARKETING_VERSION: "2.5.0"
+      MARKETING_VERSION: "2.6.0"
       GENERATE_INFOPLIST_FILE: NO
       INFOPLIST_FILE: VikunjaWidgetApp/Info.plist
       MACOSX_DEPLOYMENT_TARGET: "14.0"
@@ -117,7 +117,7 @@ targets:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension
-      MARKETING_VERSION: "2.5.0"
+      MARKETING_VERSION: "2.6.0"
       GENERATE_INFOPLIST_FILE: NO
       MACOSX_DEPLOYMENT_TARGET: "14.0"
       ENABLE_HARDENED_RUNTIME: YES
@@ -142,7 +142,7 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp
       PRODUCT_NAME: Veyrn
-      MARKETING_VERSION: "2.5.0"
+      MARKETING_VERSION: "2.6.0"
       GENERATE_INFOPLIST_FILE: NO
       INFOPLIST_FILE: VikunjaWidgetApp/InfoIOS.plist
       IPHONEOS_DEPLOYMENT_TARGET: "17.0"
@@ -164,7 +164,7 @@ targets:
       path: VikunjaWidgetExtension/VikunjaWidgetExtensionIOS.entitlements
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension
-      MARKETING_VERSION: "2.5.0"
+      MARKETING_VERSION: "2.6.0"
       GENERATE_INFOPLIST_FILE: NO
       INFOPLIST_FILE: VikunjaWidgetExtension/Info.plist
       IPHONEOS_DEPLOYMENT_TARGET: "17.0"
@@ -193,7 +193,7 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp.watchkitapp
       PRODUCT_NAME: Veyrn
-      MARKETING_VERSION: "2.5.0"
+      MARKETING_VERSION: "2.6.0"
       GENERATE_INFOPLIST_FILE: NO
       INFOPLIST_FILE: VikunjaWidgetWatch/Info.plist
       WATCHOS_DEPLOYMENT_TARGET: "10.0"
@@ -219,7 +219,7 @@ targets:
       path: VikunjaWidgetWatchExtension/VikunjaWidgetWatchExtension.entitlements
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetApp.watchkitapp.widget
-      MARKETING_VERSION: "2.5.0"
+      MARKETING_VERSION: "2.6.0"
       GENERATE_INFOPLIST_FILE: NO
       INFOPLIST_FILE: VikunjaWidgetWatchExtension/Info.plist
       WATCHOS_DEPLOYMENT_TARGET: "10.0"

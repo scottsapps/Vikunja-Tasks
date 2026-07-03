@@ -4,98 +4,126 @@ struct QuickAddSheet: View {
     var store: TaskStore
     var onExpandToggle: ((Bool) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var cs
 
     @State private var inputText = ""
     @State private var isSubmitting = false
     @State private var errorMessage: String?
     @FocusState private var fieldFocused: Bool
 
-    // Expanded section state
+    // Expanded toggle
     @State private var isExpanded = false
+
+    // Expanded metadata
     @State private var expandedHasDueDate = false
     @State private var expandedDueDate: Date? = nil
     @State private var expandedPriority: Int = 0
     @State private var expandedProjectId: Int? = nil
     @State private var expandedLabelIds: Set<Int> = []
     @State private var expandedNotes = ""
+    @State private var expandedRepeatAfter: Int? = nil
+    @State private var expandedRepeatMode: Int? = nil
+
+    // Subtasks
     @State private var subtaskTitles: [String] = []
     @State private var newSubtaskTitle = ""
+
+    // UI state
+    @State private var showExpandedDatePicker = false
+    @State private var showingRepeatSheet = false
+    @State private var showLabelPicker = false
 
     private var parsed: QuickAddResult {
         QuickAddParser.parse(inputText, knownProjects: store.projects, knownLabels: store.labels)
     }
 
+    // MARK: - Design tokens
+
+    private var insetBg: Color { cs == .dark ? Color(red: 42/255, green: 42/255, blue: 45/255) : Color(red: 245/255, green: 245/255, blue: 247/255) }
+    private var primaryText: Color { cs == .dark ? Color(red: 242/255, green: 242/255, blue: 247/255) : Color(red: 28/255, green: 28/255, blue: 30/255) }
+    private var mutedText: Color { cs == .dark ? Color(red: 134/255, green: 134/255, blue: 140/255) : Color(red: 138/255, green: 138/255, blue: 142/255) }
+    private var hairline: Color { cs == .dark ? Color.white.opacity(0.10) : Color(red: 60/255, green: 60/255, blue: 67/255).opacity(0.10) }
+    private var circleStroke: Color { cs == .dark ? Color(red: 85/255, green: 85/255, blue: 92/255) : Color(red: 202/255, green: 202/255, blue: 208/255) }
+    private var accentBlue: Color { cs == .dark ? Color(red: 10/255, green: 132/255, blue: 255/255) : Color(red: 0, green: 122/255, blue: 255/255) }
+
+    // Chip palette
+    private var dueBg: Color    { cs == .dark ? Color(red: 10/255,  green: 132/255, blue: 255/255).opacity(0.18) : Color(red: 231/255, green: 240/255, blue: 255/255) }
+    private var dueFg: Color    { cs == .dark ? Color(red: 90/255,  green: 169/255, blue: 255/255) : Color(red: 31/255,  green: 111/255, blue: 224/255) }
+    private var repBg: Color    { cs == .dark ? Color(red: 48/255,  green: 209/255, blue: 88/255 ).opacity(0.18) : Color(red: 226/255, green: 246/255, blue: 232/255) }
+    private var repFg: Color    { cs == .dark ? Color(red: 79/255,  green: 208/255, blue: 106/255) : Color(red: 30/255,  green: 142/255, blue: 64/255 ) }
+    private var priNeutralBg: Color { cs == .dark ? Color(red: 120/255, green: 120/255, blue: 128/255).opacity(0.24) : Color(red: 239/255, green: 239/255, blue: 242/255) }
+    private var priNeutralFg: Color { cs == .dark ? Color(red: 166/255, green: 166/255, blue: 172/255) : Color(red: 124/255, green: 124/255, blue: 130/255) }
+    private var addBorder: Color { cs == .dark ? Color(red: 74/255, green: 74/255, blue: 78/255) : Color(red: 205/255, green: 205/255, blue: 211/255) }
+    private var addFg: Color    { cs == .dark ? Color(red: 134/255, green: 134/255, blue: 140/255) : Color(red: 154/255, green: 154/255, blue: 160/255) }
+
+    // MARK: - Body
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Title row
-            HStack {
-                Text("New Task")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                Spacer()
-                Button {
-                    toggleExpand()
-                } label: {
-                    Image(systemName: isExpanded ? "chevron.up.circle" : "chevron.down.circle")
-                        .font(.system(size: 18))
-                        .foregroundStyle(isExpanded ? Color.accentColor : .secondary)
-                }
-                .buttonStyle(.plain)
-                .help(isExpanded ? "Collapse" : "More options")
-            }
-
-            // Input field
-            TextField("Buy milk *groceries +Home !2 tomorrow", text: $inputText)
-                .textFieldStyle(.roundedBorder)
-                .font(.system(size: 15))
-                .focused($fieldFocused)
-                #if os(iOS)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.sentences)
-                #endif
-                .onSubmit { submit() }
-
-            // Live preview chips (collapsed only, or always when parsing produces results)
-            if !inputText.isEmpty && !isExpanded {
-                previewRow
-            }
-
-            // Expanded section
-            if isExpanded {
-                expandedSection
-            }
-
-            if let err = errorMessage {
-                Text(err)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
-
-            // Actions
-            HStack {
-                Button("Cancel") { dismiss() }
-                    .buttonStyle(.bordered)
-                    .keyboardShortcut(.escape, modifiers: [])
-
-                Spacer()
-
-                Button {
-                    submit()
-                } label: {
-                    if isSubmitting {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Text("Add Task")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // Heading row
+                HStack {
+                    Text("New Task")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                    Spacer()
+                    Button {
+                        toggleExpand()
+                    } label: {
+                        Image(systemName: isExpanded ? "chevron.up.circle" : "chevron.down.circle")
+                            .font(.system(size: 18))
+                            .foregroundStyle(isExpanded ? accentBlue : .secondary)
                     }
+                    .buttonStyle(.plain)
+                    .help(isExpanded ? "Collapse" : "More options")
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(parsed.cleanedTitle.isEmpty || isSubmitting)
-                .keyboardShortcut(.return, modifiers: [])
+
+                // Quick-add input
+                TextField("Buy milk *groceries +Home !2 tomorrow", text: $inputText)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 15))
+                    .focused($fieldFocused)
+                    #if os(iOS)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.sentences)
+                    #endif
+                    .onSubmit { submit() }
+
+                // Live preview chips (collapsed only)
+                if !inputText.isEmpty && !isExpanded {
+                    previewRow
+                }
+
+                // Expanded section
+                if isExpanded {
+                    expandedSection
+                }
+
+                if let err = errorMessage {
+                    Text(err)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+
+                // Footer
+                hairline.frame(height: 1)
+                footerRow
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 22)
         }
-        .padding(24)
         .onAppear { fieldFocused = true }
         .animation(.easeInOut(duration: 0.18), value: isExpanded)
+        .animation(.easeInOut(duration: 0.2), value: showExpandedDatePicker)
+        .sheet(isPresented: $showingRepeatSheet) {
+            RepeatPickerSheet(repeatAfter: $expandedRepeatAfter, repeatMode: $expandedRepeatMode)
+        }
+        .sheet(isPresented: $showLabelPicker) {
+            labelPickerSheet
+        }
+        #if os(macOS)
+        .frame(minWidth: 440, idealWidth: 520, maxWidth: 520)
+        #endif
     }
 
     // MARK: - Expand toggle
@@ -116,6 +144,8 @@ struct QuickAddSheet: View {
             expandedLabelIds = Set(p.labelTitles.compactMap { title in
                 store.labels.first { $0.title.lowercased() == title.lowercased() }?.id
             })
+            expandedRepeatAfter = p.repeatAfter
+            expandedRepeatMode = p.repeatMode
         }
         isExpanded.toggle()
         onExpandToggle?(isExpanded)
@@ -124,235 +154,333 @@ struct QuickAddSheet: View {
     // MARK: - Expanded section
 
     private var expandedSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Divider()
-
-            // Metadata row
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
-                    expandedDueDateButton
-                    Divider().frame(height: 24)
-                    expandedProjectMenu
-                    Divider().frame(height: 24)
-                    expandedLabelsMenu
-                    Divider().frame(height: 24)
-                    expandedPriorityMenu
-                }
-            }
-            .frame(height: 36)
-            .background(Color.primary.opacity(0.03))
-            .clipShape(RoundedRectangle(cornerRadius: 6))
-
-            // Notes
-            TextField("Notes (optional)", text: $expandedNotes, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
-                .font(.system(size: 13))
-                .lineLimit(3...5)
-                #if os(iOS)
-                .autocorrectionDisabled()
-                #endif
-
-            // Subtasks
-            VStack(alignment: .leading, spacing: 4) {
-                if !subtaskTitles.isEmpty {
-                    ForEach(subtaskTitles.indices, id: \.self) { index in
-                        HStack(spacing: 6) {
-                            Image(systemName: "circle")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
-                            Text(subtaskTitles[index])
-                                .font(.system(size: 13))
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Button {
-                                subtaskTitles.remove(at: index)
-                            } label: {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 6))
-                    }
-                }
-
-                HStack(spacing: 6) {
-                    Image(systemName: "plus.circle")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                    TextField("Add subtask…", text: $newSubtaskTitle)
-                        .font(.system(size: 13))
-                        #if os(iOS)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.sentences)
-                        #endif
-                        .onSubmit {
-                            let t = newSubtaskTitle.trimmingCharacters(in: .whitespaces)
-                            if !t.isEmpty { subtaskTitles.append(t); newSubtaskTitle = "" }
-                        }
-                }
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            expandedNotesBlock
+            expandedChipsSection.padding(.top, 14)
+            expandedSubtasksCard.padding(.top, 16)
         }
     }
 
-    // MARK: - Expanded due date
+    // MARK: - Notes block
 
-    private var expandedDueDateButton: some View {
-        Group {
-            if expandedHasDueDate {
-                HStack(spacing: 0) {
-                    DatePicker(
-                        "",
-                        selection: Binding(
-                            get: { expandedDueDate ?? Date() },
-                            set: { expandedDueDate = $0; expandedHasDueDate = true }
-                        ),
-                        displayedComponents: .date
-                    )
-                    .datePickerStyle(.compact)
-                    .labelsHidden()
-                    .padding(.horizontal, 8)
+    private var expandedNotesBlock: some View {
+        TextField("Notes…", text: $expandedNotes, axis: .vertical)
+            .font(.system(size: 14))
+            .foregroundStyle(primaryText)
+            .lineLimit(2...6)
+            #if os(iOS)
+            .autocorrectionDisabled()
+            #endif
+            .padding(15)
+            .background(insetBg)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
 
-                    Button {
-                        expandedHasDueDate = false
-                        expandedDueDate = nil
+    // MARK: - Chips section
+
+    private var expandedChipsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            FlowLayout(hSpacing: 8, vSpacing: 8) {
+                expandedProjectChip
+
+                if expandedHasDueDate, let d = expandedDueDate {
+                    chip(icon: "calendar", label: dateChipLabel(d), bg: dueBg, fg: dueFg) {
+                        withAnimation { showExpandedDatePicker.toggle() }
+                    }
+                    .contextMenu {
+                        Button("Clear due date", role: .destructive) {
+                            expandedHasDueDate = false; expandedDueDate = nil
+                            withAnimation { showExpandedDatePicker = false }
+                        }
+                    }
+                }
+
+                if expandedRepeatAfter != nil || expandedRepeatMode == 1 {
+                    chip(icon: "repeat", label: repeatChipLabel(), bg: repBg, fg: repFg) {
+                        showingRepeatSheet = true
+                    }
+                    .contextMenu {
+                        Button("Clear repeat", role: .destructive) {
+                            expandedRepeatAfter = nil; expandedRepeatMode = nil
+                        }
+                    }
+                }
+
+                if expandedPriority > 0 {
+                    Menu {
+                        Button("None") { expandedPriority = 0 }
+                        Divider()
+                        ForEach(1...5, id: \.self) { p in
+                            Button { expandedPriority = p } label: {
+                                Label(priorityLabel(p), systemImage: expandedPriority == p ? "checkmark" : "")
+                            }
+                        }
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+                        chipLabel(icon: "flag", label: priorityLabel(expandedPriority),
+                                  bg: priorityChipBg(expandedPriority), fg: priorityChipFg(expandedPriority))
                     }
                     .buttonStyle(.plain)
-                    .padding(.trailing, 8)
                 }
-            } else {
-                Button {
+
+                ForEach(selectedExpandedLabels, id: \.id) { label in
+                    let base = Color(vikunjaHex: label.hexColor)
+                    let bg = base.map { cs == .dark ? $0.opacity(0.20) : $0.opacity(0.15) } ?? dueBg
+                    let fg = base ?? dueFg
+                    chip(icon: "tag", label: label.title, bg: bg, fg: fg) {
+                        showLabelPicker = true
+                    }
+                }
+
+                addChip
+            }
+
+            if showExpandedDatePicker {
+                DatePicker(
+                    "",
+                    selection: Binding(
+                        get: { expandedDueDate ?? Date() },
+                        set: { expandedDueDate = $0; expandedHasDueDate = true }
+                    ),
+                    displayedComponents: .date
+                )
+                .datePickerStyle(.graphical)
+                .padding(.horizontal, 4)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+
+    private var expandedProjectChip: some View {
+        let project = store.projects.first { $0.id == expandedProjectId }
+        let base = Color(vikunjaHex: project?.hexColor) ?? Color(red: 107/255, green: 78/255, blue: 230/255)
+        let bg = cs == .dark ? base.opacity(0.20) : base.opacity(0.12)
+        let fg = cs == .dark ? base.opacity(0.90) : base
+
+        return Menu {
+            ForEach(store.projects) { proj in
+                Button { expandedProjectId = proj.id } label: {
+                    Label(proj.title, systemImage: expandedProjectId == proj.id ? "checkmark" : "folder")
+                }
+            }
+        } label: {
+            chipLabel(icon: "folder.fill", label: project?.title ?? "Inbox", bg: bg, fg: fg)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Subtasks card
+
+    private var expandedSubtasksCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Subtasks")
+                    .font(.system(size: 14.5, weight: .semibold))
+                    .foregroundStyle(primaryText)
+                Spacer()
+                if !subtaskTitles.isEmpty {
+                    Text("\(subtaskTitles.count)")
+                        .font(.system(size: 13))
+                        .foregroundStyle(mutedText)
+                }
+            }
+            .padding(.bottom, subtaskTitles.isEmpty ? 0 : 12)
+
+            ForEach(subtaskTitles.indices, id: \.self) { idx in
+                HStack(spacing: 11) {
+                    Circle()
+                        .stroke(circleStroke, lineWidth: 1.8)
+                        .frame(width: 21, height: 21)
+                    Text(subtaskTitles[idx])
+                        .font(.system(size: 15))
+                        .foregroundStyle(primaryText)
+                        .lineLimit(2)
+                    Spacer()
+                    Button { subtaskTitles.remove(at: idx) } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 15))
+                            .foregroundStyle(mutedText)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.vertical, 6)
+            }
+
+            HStack(spacing: 11) {
+                ZStack {
+                    Circle().stroke(mutedText, lineWidth: 1.5).frame(width: 21, height: 21)
+                    Image(systemName: "plus").font(.system(size: 10, weight: .bold)).foregroundStyle(mutedText)
+                }
+                TextField("Add subtask…", text: $newSubtaskTitle)
+                    .font(.system(size: 15))
+                    .foregroundStyle(mutedText)
+                    #if os(iOS)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.sentences)
+                    #endif
+                    .onSubmit {
+                        let t = newSubtaskTitle.trimmingCharacters(in: .whitespaces)
+                        if !t.isEmpty { subtaskTitles.append(t); newSubtaskTitle = "" }
+                    }
+            }
+            .padding(.top, subtaskTitles.isEmpty ? 0 : 6)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 14)
+        .background(insetBg)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+
+    // MARK: - Footer
+
+    private var footerRow: some View {
+        HStack(spacing: 0) {
+            Button("Cancel") { dismiss() }
+                .font(.system(size: 16))
+                .foregroundStyle(accentBlue)
+                .padding(.horizontal, 14).padding(.vertical, 9)
+                .buttonStyle(.plain)
+                .keyboardShortcut(.escape, modifiers: [])
+
+            Spacer()
+
+            Button {
+                submit()
+            } label: {
+                Group {
+                    if isSubmitting {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("Add Task")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .padding(.horizontal, 24).padding(.vertical, 10)
+            }
+            .background(
+                Capsule()
+                    .fill(accentBlue)
+                    .shadow(color: accentBlue.opacity(cs == .dark ? 0.40 : 0.35), radius: 8, y: 6)
+            )
+            .buttonStyle(.plain)
+            .disabled(parsed.cleanedTitle.isEmpty || isSubmitting)
+            .keyboardShortcut(.return, modifiers: [])
+        }
+    }
+
+    // MARK: - Chip helpers
+
+    @ViewBuilder
+    private func chip(icon: String, label: String, bg: Color, fg: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            chipLabel(icon: icon, label: label, bg: bg, fg: fg)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func chipLabel(icon: String, label: String, bg: Color, fg: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon).font(.system(size: 15))
+            Text(label).font(.system(size: 14, weight: .medium))
+        }
+        .foregroundStyle(fg)
+        .padding(.horizontal, 13)
+        .frame(height: 33)
+        .background(bg)
+        .clipShape(Capsule())
+    }
+
+    private var addChip: some View {
+        Menu {
+            if !expandedHasDueDate {
+                Button("Due Date") {
                     expandedHasDueDate = true
                     expandedDueDate = VikunjaAPI.applyDefaultTime(Date())
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "calendar")
-                            .font(.system(size: 12))
-                        Text("Due date")
-                            .font(.system(size: 12))
-                    }
-                    .padding(.horizontal, 10)
-                    .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    // MARK: - Expanded project menu
-
-    private var expandedProjectMenu: some View {
-        Menu {
-            ForEach(store.projects) { project in
-                Button {
-                    expandedProjectId = project.id
-                } label: {
-                    Label(
-                        project.title,
-                        systemImage: expandedProjectId == project.id ? "checkmark" : "folder"
-                    )
+                    withAnimation { showExpandedDatePicker = true }
                 }
             }
+            if expandedRepeatAfter == nil && expandedRepeatMode != 1 {
+                Button("Repeat") { showingRepeatSheet = true }
+            }
+            if expandedPriority == 0 {
+                Button("Priority") { expandedPriority = 1 }
+            }
+            Button("Label") { showLabelPicker = true }
         } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "folder")
-                    .font(.system(size: 12))
-                if let pid = expandedProjectId,
-                   let name = store.projects.first(where: { $0.id == pid })?.title {
-                    Text(name)
-                        .font(.system(size: 12))
-                        .lineLimit(1)
-                } else {
-                    Text("Project")
-                        .font(.system(size: 12))
-                }
+            HStack(spacing: 6) {
+                Image(systemName: "plus").font(.system(size: 15))
+                Text("Add").font(.system(size: 14, weight: .medium))
             }
-            .padding(.horizontal, 10)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(addFg)
+            .padding(.horizontal, 13)
+            .frame(height: 33)
+            .overlay(Capsule().strokeBorder(style: StrokeStyle(lineWidth: 1.4, dash: [5, 3])).foregroundStyle(addBorder))
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - Expanded labels menu
+    // MARK: - Chip label helpers
 
-    private var expandedLabelsMenu: some View {
-        Menu {
-            ForEach(store.labels.sorted { $0.title.localizedCompare($1.title) == .orderedAscending }) { label in
-                Button {
-                    if expandedLabelIds.contains(label.id) {
-                        expandedLabelIds.remove(label.id)
-                    } else {
-                        expandedLabelIds.insert(label.id)
-                    }
-                } label: {
-                    Label(label.title, systemImage: expandedLabelIds.contains(label.id) ? "checkmark" : "")
-                }
-            }
-            if store.labels.isEmpty {
-                Text("No labels yet").foregroundStyle(.secondary)
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: expandedLabelIds.isEmpty ? "tag" : "tag.fill")
-                    .font(.system(size: 12))
-                if !expandedLabelIds.isEmpty {
-                    let names = store.labels
-                        .filter { expandedLabelIds.contains($0.id) }
-                        .sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
-                        .map(\.title)
-                        .joined(separator: ", ")
-                    Text(names)
-                        .font(.system(size: 12))
-                        .lineLimit(1)
-                }
-            }
-            .padding(.horizontal, 10)
-            .foregroundStyle(expandedLabelIds.isEmpty ? .secondary : Color.accentColor)
-        }
-        .buttonStyle(.plain)
+    private func dateChipLabel(_ date: Date) -> String {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let day = cal.startOfDay(for: date)
+        if day < today { return "Overdue" }
+        if day == today { return "Today" }
+        if day == cal.date(byAdding: .day, value: 1, to: today)! { return "Tomorrow" }
+        let fmt = DateFormatter(); fmt.dateFormat = "MMM d"
+        return fmt.string(from: date)
     }
 
-    // MARK: - Expanded priority menu
-
-    private var expandedPriorityMenu: some View {
-        Menu {
-            Button("None") { expandedPriority = 0 }
-            Divider()
-            ForEach(1...5, id: \.self) { p in
-                Button {
-                    expandedPriority = p
-                } label: {
-                    Label(priorityLabel(p), systemImage: expandedPriority == p ? "checkmark" : "")
-                }
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: expandedPriority > 0 ? "flag.fill" : "flag")
-                    .font(.system(size: 12))
-                    .foregroundStyle(expandedPriority > 0 ? priorityColor(expandedPriority) : .secondary)
-                if expandedPriority > 0 {
-                    Text(priorityLabel(expandedPriority))
-                        .font(.system(size: 12))
-                        .foregroundStyle(priorityColor(expandedPriority))
-                } else {
-                    Text("Priority")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(.horizontal, 10)
+    private func repeatChipLabel() -> String {
+        if expandedRepeatMode == 1 { return "Monthly" }
+        guard let ra = expandedRepeatAfter, ra > 0 else { return "Repeat" }
+        let days = ra / 86_400
+        switch days {
+        case 1: return "Daily"; case 7: return "Weekly"; case 365: return "Yearly"
+        default: return days % 7 == 0 ? "Every \(days / 7)w" : "Every \(days)d"
         }
-        .buttonStyle(.plain)
     }
 
-    // MARK: - Preview chips
+    // MARK: - Priority chip colors
+
+    private func priorityChipBg(_ p: Int) -> Color {
+        switch p {
+        case 4, 5: return cs == .dark ? Color.red.opacity(0.18) : Color.red.opacity(0.10)
+        case 3:    return cs == .dark ? Color.orange.opacity(0.18) : Color.orange.opacity(0.10)
+        case 2:    return cs == .dark ? Color.yellow.opacity(0.20) : Color.yellow.opacity(0.10)
+        default:   return priNeutralBg
+        }
+    }
+
+    private func priorityChipFg(_ p: Int) -> Color {
+        switch p {
+        case 4, 5: return cs == .dark ? Color(red: 255/255, green: 99/255, blue: 90/255) : .red
+        case 3:    return cs == .dark ? Color(red: 255/255, green: 159/255, blue: 60/255) : .orange
+        case 2:    return cs == .dark ? Color(red: 255/255, green: 220/255, blue: 80/255) : Color(red: 153/255, green: 122/255, blue: 0)
+        default:   return priNeutralFg
+        }
+    }
+
+    private func priorityLabel(_ p: Int) -> String {
+        switch p {
+        case 1: return "Low"
+        case 2: return "Medium"
+        case 3: return "High"
+        case 4: return "Urgent"
+        case 5: return "Critical"
+        default: return "None"
+        }
+    }
+
+    // MARK: - Selected labels
+
+    private var selectedExpandedLabels: [VikunjaLabel] {
+        store.labels
+            .filter { expandedLabelIds.contains($0.id) }
+            .sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
+    }
+
+    // MARK: - Preview chips (collapsed)
 
     private var previewRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -383,16 +511,52 @@ struct QuickAddSheet: View {
 
     private func previewChip(icon: String, text: String) -> some View {
         HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 10))
-            Text(text)
-                .font(.system(size: 12))
+            Image(systemName: icon).font(.system(size: 10))
+            Text(text).font(.system(size: 12))
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color.accentColor.opacity(0.12))
-        .foregroundStyle(Color.accentColor)
+        .padding(.horizontal, 8).padding(.vertical, 4)
+        .background(accentBlue.opacity(0.12))
+        .foregroundStyle(accentBlue)
         .clipShape(Capsule())
+    }
+
+    // MARK: - Label picker
+
+    private var labelPickerSheet: some View {
+        NavigationStack {
+            List {
+                ForEach(store.labels.sorted { $0.title.localizedCompare($1.title) == .orderedAscending }) { label in
+                    Button {
+                        if expandedLabelIds.contains(label.id) {
+                            expandedLabelIds.remove(label.id)
+                        } else {
+                            expandedLabelIds.insert(label.id)
+                        }
+                    } label: {
+                        HStack {
+                            let isSelected = expandedLabelIds.contains(label.id)
+                            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                            Text(label.title).foregroundStyle(.primary)
+                            Spacer()
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+                if store.labels.isEmpty {
+                    Text("No labels yet").foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Labels")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { showLabelPicker = false }.fontWeight(.semibold)
+                }
+            }
+        }
     }
 
     // MARK: - Submission
@@ -405,7 +569,6 @@ struct QuickAddSheet: View {
         errorMessage = nil
 
         Task {
-            // Resolve project
             let targetProject: VikunjaProject?
             if isExpanded, let pid = expandedProjectId {
                 targetProject = store.projects.first { $0.id == pid } ?? store.inboxProject
@@ -423,7 +586,6 @@ struct QuickAddSheet: View {
                 return
             }
 
-            // Resolve labels
             var resolvedLabels: [VikunjaLabel] = []
             if isExpanded {
                 resolvedLabels = store.labels.filter { expandedLabelIds.contains($0.id) }
@@ -445,6 +607,8 @@ struct QuickAddSheet: View {
             let effectiveDueDate = isExpanded ? (expandedHasDueDate ? expandedDueDate : nil) : p.dueDate
             let effectivePriority = isExpanded ? (expandedPriority > 0 ? expandedPriority : nil) : p.priority
             let notes: String? = isExpanded && !expandedNotes.isEmpty ? expandedNotes : nil
+            let effectiveRepeatAfter = isExpanded ? expandedRepeatAfter : p.repeatAfter
+            let effectiveRepeatMode = isExpanded ? expandedRepeatMode : p.repeatMode
 
             let pendingSubtasks = subtaskTitles.filter { !$0.isEmpty }
 
@@ -456,11 +620,10 @@ struct QuickAddSheet: View {
                     dueDate: effectiveDueDate,
                     priority: effectivePriority,
                     labels: resolvedLabels,
-                    repeatAfter: p.repeatAfter,
-                    repeatMode: p.repeatMode
+                    repeatAfter: effectiveRepeatAfter,
+                    repeatMode: effectiveRepeatMode
                 )
             } else {
-                // Subtasks require a real server ID — go direct (online only)
                 guard store.reachability.isOnline else {
                     errorMessage = "Go online to add subtasks."
                     isSubmitting = false
@@ -474,8 +637,8 @@ struct QuickAddSheet: View {
                         dueDate: effectiveDueDate,
                         priority: effectivePriority,
                         labelIds: resolvedLabels.map(\.id),
-                        repeatAfter: p.repeatAfter,
-                        repeatMode: p.repeatMode
+                        repeatAfter: effectiveRepeatAfter,
+                        repeatMode: effectiveRepeatMode
                     )
                     for subTitle in pendingSubtasks {
                         let sub = try await VikunjaAPI.createTask(projectId: project.id, title: subTitle)
@@ -493,29 +656,6 @@ struct QuickAddSheet: View {
 
             dismiss()
             isSubmitting = false
-        }
-    }
-
-    // MARK: - Priority helpers
-
-    private func priorityLabel(_ p: Int) -> String {
-        switch p {
-        case 1: return "Low"
-        case 2: return "Medium"
-        case 3: return "High"
-        case 4: return "Urgent"
-        case 5: return "Critical"
-        default: return "None"
-        }
-    }
-
-    private func priorityColor(_ p: Int) -> Color {
-        switch p {
-        case 1: return .secondary
-        case 2: return .blue
-        case 3: return .orange
-        case 4, 5: return .red
-        default: return .secondary
         }
     }
 }

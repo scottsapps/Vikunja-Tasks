@@ -93,7 +93,6 @@ struct RichTextEditor: NSViewRepresentable {
 
         func perform(_ action: RichTextContext.Action) {
             guard let tv = textView else { return }
-            tv.window?.makeFirstResponder(tv)
             switch action {
             case .bold:              toggleFontTrait(.boldFontMask, in: tv)
             case .italic:            toggleFontTrait(.italicFontMask, in: tv)

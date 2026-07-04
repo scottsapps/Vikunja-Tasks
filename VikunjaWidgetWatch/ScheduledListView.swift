@@ -6,6 +6,13 @@ struct ScheduledListView: View {
 
     var body: some View {
         List {
+            Button {
+                Task { await store.refresh() }
+            } label: {
+                Label(store.isLoading ? "Refreshing…" : "Refresh", systemImage: "arrow.clockwise")
+            }
+            .disabled(store.isLoading)
+
             ForEach(store.scheduledGroups()) { group in
                 Section(group.title) {
                     ForEach(group.tasks, id: \.id) { task in

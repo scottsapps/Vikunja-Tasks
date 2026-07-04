@@ -6,6 +6,13 @@ struct InboxListView: View {
 
     var body: some View {
         List {
+            Button {
+                Task { await store.refresh() }
+            } label: {
+                Label(store.isLoading ? "Refreshing…" : "Refresh", systemImage: "arrow.clockwise")
+            }
+            .disabled(store.isLoading)
+
             ForEach(store.inboxTasks(), id: \.id) { task in
                 WatchTaskRow(store: store, task: task)
             }

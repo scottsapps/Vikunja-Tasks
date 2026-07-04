@@ -562,6 +562,7 @@ struct QuickAddSheet: View {
     // MARK: - Submission
 
     private func submit() {
+        guard !isSubmitting else { return }
         let p = parsed
         guard !p.cleanedTitle.isEmpty else { return }
 

@@ -23,6 +23,7 @@ struct VikunjaEntry: TimelineEntry {
     let date: Date
     let taskGroups: [TaskGroup]
     let error: String?
+    let todayCount: Int
 
     static let placeholder = VikunjaEntry(
         date: Date(),
@@ -35,6 +36,7 @@ struct VikunjaEntry: TimelineEntry {
                 TaskEntryItem(id: 3, title: "Call insurance company", projectName: "Finance", tags: [], dueDate: Date()),
             ]),
         ],
-        error: nil
+        error: nil,
+        todayCount: 2
     )
 }

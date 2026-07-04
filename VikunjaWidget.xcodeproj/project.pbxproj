@@ -49,6 +49,7 @@
 		371D2987193288C64379051C /* VeyrnTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55A53B67DF4D3C4E9B1789F8 /* VeyrnTelemetry.swift */; };
 		381229BBD48A5676294D14CB /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = 14AE83598AFB61939E4E4BF8 /* TelemetryDeck */; };
 		39D7FDFFA081DFF31787DBB8 /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
+		3A07D9BD742BFA923FE07562 /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02DFECBCB1BD52DDACF60742 /* BackgroundRefresh.swift */; };
 		3B1C3BDF5AF9E198D17FB79B /* LogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD6802321CF98C91D0FC1142 /* LogbookView.swift */; };
 		3D510CE375C0F14F755AC0C1 /* WatchRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F50C8AD74D69618B165D0A4 /* WatchRootView.swift */; };
 		3E1490212891E0F234F840AF /* RichTextUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E14A86ED969A63033CECCD3 /* RichTextUtils.swift */; };
@@ -101,6 +102,7 @@
 		950BD0C66AAC8B38D8A50D71 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
 		9760739F1921EFE07139E83C /* UndoCompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E12C5D7A535480216299E3 /* UndoCompleteTaskIntent.swift */; };
 		97AAC28FA52B79FBC01E7E6B /* TaskMerger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */; };
+		99248E0B0E92BD4F33A7E065 /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02DFECBCB1BD52DDACF60742 /* BackgroundRefresh.swift */; };
 		992A9E0CAEE76F2BA5F3F56D /* ColorUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1254289BB5BBCBD170DCACE /* ColorUtils.swift */; };
 		99639FCF960339B2F9FA2670 /* ProjectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BB9C870B4EF39EC432A03D /* ProjectView.swift */; };
 		99C8071009FEC4A664529A72 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77E4BA4BD463D4E6942E3495 /* WidgetKit.framework */; };
@@ -249,6 +251,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		02DFECBCB1BD52DDACF60742 /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
 		039E06183BAECB4910FE90E7 /* VikunjaWidgetWatchExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VikunjaWidgetWatchExtension.entitlements; sourceTree = "<group>"; };
 		097AE4727EE099A83DE65940 /* NotificationResponseHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationResponseHandler.swift; sourceTree = "<group>"; };
 		0AE258581908AFA1F1F06A90 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -421,6 +424,7 @@
 			children = (
 				C19BA8BB693A0D3B77D8FD25 /* AppRoot.swift */,
 				A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */,
+				02DFECBCB1BD52DDACF60742 /* BackgroundRefresh.swift */,
 				CDB4EF59CB974358A163128A /* BulkImportSheet.swift */,
 				C9F88B5A5977A4665065232F /* FlowLayout.swift */,
 				3D2233282108571CCBCFADE2 /* FontSizeEnvironment.swift */,
@@ -787,6 +791,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1A77E9F6D003D8266DDF5B1 /* AppRoot.swift in Sources */,
+				3A07D9BD742BFA923FE07562 /* BackgroundRefresh.swift in Sources */,
 				13432CFDA3F3F4FEAC708519 /* BulkImportParser.swift in Sources */,
 				BBDAED74A2CE38A0D6CB6B3D /* BulkImportSheet.swift in Sources */,
 				95081F050067C8886AB0A59D /* ColorUtils.swift in Sources */,
@@ -858,6 +863,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A01292FCA9718460BA3186F7 /* AppRoot.swift in Sources */,
+				99248E0B0E92BD4F33A7E065 /* BackgroundRefresh.swift in Sources */,
 				557C43CFE255EBCE5CCB0D5B /* BulkImportParser.swift in Sources */,
 				F7A9AEBEDFC251D941B03C72 /* BulkImportSheet.swift in Sources */,
 				E553C0F4C22FDFE41056EFF1 /* ColorUtils.swift in Sources */,
@@ -995,7 +1001,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetExtension/VikunjaWidgetExtensionIOS.entitlements;
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 49;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1004,7 +1010,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.6.0;
+				MARKETING_VERSION = 2.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1017,7 +1023,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetExtension/VikunjaWidgetExtension.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 49;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetExtension/Info.plist;
@@ -1027,7 +1033,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.6.0;
+				MARKETING_VERSION = 2.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -1040,7 +1046,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetApp/VikunjaWidgetApp.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 49;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetApp/Info.plist;
@@ -1049,7 +1055,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.6.0;
+				MARKETING_VERSION = 2.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = macosx;
@@ -1060,7 +1066,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetWatchExtension/VikunjaWidgetWatchExtension.entitlements;
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 49;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetWatchExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1068,7 +1074,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.6.0;
+				MARKETING_VERSION = 2.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.watchkitapp.widget;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1155,7 +1161,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetApp/VikunjaWidgetApp.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 49;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetApp/Info.plist;
@@ -1164,7 +1170,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.6.0;
+				MARKETING_VERSION = 2.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = macosx;
@@ -1176,7 +1182,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetExtension/VikunjaWidgetExtension.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 49;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetExtension/Info.plist;
@@ -1186,7 +1192,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.6.0;
+				MARKETING_VERSION = 2.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -1199,7 +1205,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetApp/VikunjaWidgetAppIOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 49;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetApp/InfoIOS.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1207,7 +1213,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.6.0;
+				MARKETING_VERSION = 2.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = iphoneos;
@@ -1220,10 +1226,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetWatch/VikunjaWidgetWatch.entitlements;
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 49;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetWatch/Info.plist;
-				MARKETING_VERSION = 2.6.0;
+				MARKETING_VERSION = 2.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.watchkitapp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = watchos;
@@ -1237,7 +1243,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetWatchExtension/VikunjaWidgetWatchExtension.entitlements;
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 49;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetWatchExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1245,7 +1251,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.6.0;
+				MARKETING_VERSION = 2.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.watchkitapp.widget;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1259,10 +1265,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetWatch/VikunjaWidgetWatch.entitlements;
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 49;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetWatch/Info.plist;
-				MARKETING_VERSION = 2.6.0;
+				MARKETING_VERSION = 2.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.watchkitapp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = watchos;
@@ -1278,7 +1284,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetApp/VikunjaWidgetAppIOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 49;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetApp/InfoIOS.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1286,7 +1292,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.6.0;
+				MARKETING_VERSION = 2.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = iphoneos;
@@ -1298,7 +1304,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetExtension/VikunjaWidgetExtensionIOS.entitlements;
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 49;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1307,7 +1313,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.6.0;
+				MARKETING_VERSION = 2.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;

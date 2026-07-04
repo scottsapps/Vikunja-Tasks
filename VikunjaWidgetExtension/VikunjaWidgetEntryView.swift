@@ -88,7 +88,7 @@ struct VikunjaWidgetEntryView: View {
     // MARK: - Accessory: Circular (count of today's tasks)
 
     private var accessoryCircularView: some View {
-        let todayCount = todayTaskCount
+        let todayCount = entry.todayCount
         return ZStack {
             Circle().strokeBorder(lineWidth: 2).foregroundStyle(.secondary.opacity(0.3))
             VStack(spacing: 0) {
@@ -104,20 +104,12 @@ struct VikunjaWidgetEntryView: View {
     // MARK: - Accessory: Inline (brief text)
 
     private var accessoryInlineView: some View {
-        let count = todayTaskCount
+        let count = entry.todayCount
         if count == 0 {
             return Text("No tasks due today")
         } else {
             return Text("\(count) due today")
         }
-    }
-
-    private var todayTaskCount: Int {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-        return entry.taskGroups.flatMap(\.tasks).filter { task in
-            cal.startOfDay(for: task.dueDate) <= today
-        }.count
     }
     #endif
 

@@ -26,6 +26,9 @@ struct WatchRootView: View {
         .onOpenURL { url in
             if url.host == "scheduled" { openScheduled = true }
         }
-        .task { await store.refresh() }
+        .task {
+            store.loadFromCache()
+            await store.refresh()
+        }
     }
 }

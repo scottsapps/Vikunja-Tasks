@@ -6,11 +6,19 @@ enum WidgetCache {
     private static let suiteName = "group.net.angstreich.VikunjaWidgetApp"
     private static let tasksKey = "widget.cache.tasks"
     private static let projectsKey = "widget.cache.projects"
+    private static let savedAtKey = "widget.cache.savedAt"
 
     static func save(tasks: [VikunjaTask], projects: [VikunjaProject]) {
         guard let defaults = UserDefaults(suiteName: suiteName) else { return }
         defaults.set(try? JSONEncoder().encode(tasks), forKey: tasksKey)
         defaults.set(try? JSONEncoder().encode(projects), forKey: projectsKey)
+        defaults.set(Date().timeIntervalSince1970, forKey: savedAtKey)
+    }
+
+    static var savedAt: Date? {
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return nil }
+        let t = defaults.double(forKey: savedAtKey)
+        return t > 0 ? Date(timeIntervalSince1970: t) : nil
     }
 
     static func load() -> (tasks: [VikunjaTask], projects: [VikunjaProject])? {

@@ -1,5 +1,6 @@
 import Foundation
 import UserNotifications
+import WidgetKit
 
 final class NotificationResponseHandler: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationResponseHandler()
@@ -26,7 +27,9 @@ final class NotificationResponseHandler: NSObject, UNUserNotificationCenterDeleg
         case ReminderScheduler.actionComplete:
             guard let taskId = userInfo["taskId"] as? Int else { completionHandler(); return }
             Task {
-                try? await VikunjaAPI.completeTask(id: taskId)
+                if (try? await VikunjaAPI.completeTask(id: taskId)) != nil {
+                    WidgetCenter.shared.reloadAllTimelines()
+                }
                 completionHandler()
             }
 

@@ -154,13 +154,10 @@ struct InlineTaskEditor: View {
     private var titleRow: some View {
         HStack(alignment: .top, spacing: 13) {
             Button {
+                let t = task
                 Task {
-                    if task.done {
-                        try? await VikunjaAPI.reopenTask(id: task.id)
-                    } else {
-                        try? await VikunjaAPI.completeTask(id: task.id)
-                        VeyrnTelemetry.signal("TaskCompleted")
-                    }
+                    if t.done { await store.reopen(task: t) }
+                    else { await store.complete(task: t) }
                 }
                 onDismiss()
             } label: {
@@ -616,7 +613,7 @@ struct InlineTaskEditor: View {
 
     private func defaultReminderDate() -> Date {
         var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "America/New_York")!
+        cal.timeZone = TimeZone.current
         if let due = dueDate {
             var comps = cal.dateComponents([.year, .month, .day], from: due)
             comps.hour = 8; comps.minute = 0; comps.second = 0
@@ -639,13 +636,22 @@ struct InlineTaskEditor: View {
             loadedSubtasks = list
         }
         Task {
-            if subtask.done {
-                try? await VikunjaAPI.reopenTask(id: subtask.id)
-            } else {
-                try? await VikunjaAPI.completeTask(id: subtask.id)
+            do {
+                if subtask.done {
+                    try await VikunjaAPI.reopenTask(id: subtask.id)
+                } else {
+                    try await VikunjaAPI.completeTask(id: subtask.id)
+                    VeyrnTelemetry.signal("TaskCompleted")
+                }
+            } catch {
+                // revert the optimistic flip
+                if var list = loadedSubtasks,
+                   let idx = list.firstIndex(where: { $0.id == subtask.id }) {
+                    list[idx].done = subtask.done
+                    loadedSubtasks = list
+                }
             }
         }
-        VeyrnTelemetry.signal("TaskCompleted")
     }
 
     private func addSubtask() async {
@@ -681,7 +687,10 @@ struct InlineTaskEditor: View {
         if !hasDueDate && originalDue != nil {
             update.clearDueDate = true
         } else if hasDueDate, let d = dueDate {
-            update.dueDate = VikunjaAPI.applyDefaultTime(d)
+            let cal = Calendar.current
+            if originalDue == nil || !cal.isDate(d, inSameDayAs: originalDue!) {
+                update.dueDate = VikunjaAPI.applyDefaultTime(d)
+            }
         }
 
         let originalPriority = task.priority ?? 0

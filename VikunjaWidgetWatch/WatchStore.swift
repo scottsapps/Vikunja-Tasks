@@ -14,8 +14,17 @@ final class WatchStore {
         projects.first { $0.title.lowercased() == "inbox" }
     }
 
+    /// Instantly populate the list from the App-Group cache (kept fresh by the
+    /// phone's snapshot push — the same source the complication reads) so the
+    /// app shows current data the moment it opens, before the live fetch returns.
+    func loadFromCache() {
+        guard let cached = WidgetCache.load() else { return }
+        projects = cached.projects
+        tasks = cached.tasks
+    }
+
     func refresh() async {
-        guard VikunjaConfig.isConfigured else { return }
+        guard VikunjaConfig.isConfigured, !isLoading else { return }
         isLoading = true
         errorMessage = nil
         do {
@@ -80,6 +89,8 @@ final class WatchStore {
         tasks.removeAll { $0.id == task.id }
         do {
             try await VikunjaAPI.completeTask(id: task.id)
+            WidgetCache.save(tasks: tasks, projects: projects)
+            WidgetCenter.shared.reloadAllTimelines()
         } catch {
             tasks = snapshot
             errorMessage = "Couldn't complete. Tap to retry."

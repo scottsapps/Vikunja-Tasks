@@ -54,6 +54,8 @@ final class TaskStore {
 
     // MARK: - Refresh
 
+    private var lastRefreshAt: Date?
+
     func refresh() async {
         guard VikunjaConfig.isConfigured else { return }
         isLoading = true
@@ -70,11 +72,23 @@ final class TaskStore {
             }
             rebuildMergedTasks()
             saveCache()
+            #if os(iOS)
+            WatchSessionProvider.shared.pushSnapshot(tasks: undoneTasks, projects: projects)
+            #endif
             await ReminderScheduler.sync(tasks: undoneTasks)
+            lastRefreshAt = Date()
         } catch {
             self.error = error.localizedDescription
         }
         isLoading = false
+    }
+
+    /// Refreshes only if the last successful refresh is older than `maxAge`.
+    /// Lets foreground/poll triggers pull server-side changes without
+    /// hammering the API on every 60s outbox drain.
+    func refreshIfStale(maxAge: TimeInterval = 300) async {
+        if let last = lastRefreshAt, Date().timeIntervalSince(last) < maxAge { return }
+        await refresh()
     }
 
     func refreshLogbook() async {
@@ -99,7 +113,7 @@ final class TaskStore {
             ops: outbox.ops,
             labelDirectory: labelDirectory
         )
-        undoneTasks = merged.filter { !$0.done }
+        undoneTasks = merged.filter { !$0.done && pendingUndo[$0.id] == nil }
     }
 
     private var labelDirectory: [Int: VikunjaLabel] {
@@ -344,6 +358,7 @@ final class TaskStore {
                 try? await Task.sleep(for: .seconds(60))
                 guard !Task.isCancelled else { break }
                 await self?.drainOutbox()
+                await self?.refreshIfStale()
             }
         }
     }

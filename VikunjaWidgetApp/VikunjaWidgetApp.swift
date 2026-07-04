@@ -5,6 +5,12 @@ import UIKit
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        BackgroundRefresh.register()
+        return true
+    }
+
+    func application(_ application: UIApplication,
                      configurationForConnecting connectingSceneSession: UISceneSession,
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {
         let config = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
@@ -83,8 +89,16 @@ struct VikunjaWidgetAppEntry: App {
         #endif
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
-                Task { await store.drainOutbox() }
+                Task {
+                    await store.drainOutbox()
+                    await store.refreshIfStale(maxAge: 60)
+                }
             }
+            #if os(iOS)
+            if newPhase == .background {
+                BackgroundRefresh.schedule()
+            }
+            #endif
         }
     }
 }

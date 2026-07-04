@@ -18,29 +18,32 @@ struct WatchWidgetProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<WatchWidgetEntry>) -> Void) {
         Task {
             let entry = await buildEntry()
-            // Provide relevance so the Smart Stack surfaces near due times.
-            let policy: TimelineReloadPolicy
-            if let next = entry.nextTask?.effectiveDueDate {
-                policy = .after(next)
-            } else {
-                let refresh = Calendar.current.date(byAdding: .minute, value: 30, to: Date())!
-                policy = .after(refresh)
-            }
+            // Provide relevance so the Smart Stack surfaces near due times, but never
+            // schedule a reload in the past (stale cache) or absurdly far out.
+            let now = Date()
+            let nextDue = entry.nextTask?.effectiveDueDate ?? .distantFuture
+            let target = min(nextDue, now.addingTimeInterval(30 * 60))
+            let policy: TimelineReloadPolicy = .after(max(target, now.addingTimeInterval(15 * 60)))
             completion(Timeline(entries: [entry], policy: policy))
         }
     }
 
     // MARK: - Build
 
+    private static let maxCacheAge: TimeInterval = 30 * 60
+
     private func buildEntry() async -> WatchWidgetEntry {
-        // Read from the WidgetCache written by the Watch app after each refresh.
-        // This is the fast, battery-friendly path used by the widget timeline.
-        if let cached = WidgetCache.load() {
-            let sorted = upcoming(from: cached.tasks)
-            return WatchWidgetEntry(date: Date(), tasks: sorted, error: nil)
+        // Fast path: a cache written recently (either by the Watch app itself or
+        // pushed over from the phone) is trusted without hitting the network.
+        if let cached = WidgetCache.load(),
+           let savedAt = WidgetCache.savedAt,
+           Date().timeIntervalSince(savedAt) < Self.maxCacheAge {
+            return WatchWidgetEntry(date: Date(), tasks: upcoming(from: cached.tasks), error: nil)
         }
-        // If no cache exists, attempt a quick live fetch (first launch).
         guard VikunjaConfig.isConfigured else {
+            if let cached = WidgetCache.load() {
+                return WatchWidgetEntry(date: Date(), tasks: upcoming(from: cached.tasks), error: nil)
+            }
             return WatchWidgetEntry(date: Date(), tasks: [], error: "Open Veyrn on iPhone to set up.")
         }
         do {
@@ -49,6 +52,10 @@ struct WatchWidgetProvider: TimelineProvider {
             WidgetCache.save(tasks: tasks, projects: projects)
             return WatchWidgetEntry(date: Date(), tasks: upcoming(from: tasks), error: nil)
         } catch {
+            // Stale cache beats a blank widget.
+            if let cached = WidgetCache.load() {
+                return WatchWidgetEntry(date: Date(), tasks: upcoming(from: cached.tasks), error: nil)
+            }
             return WatchWidgetEntry(date: Date(), tasks: [], error: error.localizedDescription)
         }
     }

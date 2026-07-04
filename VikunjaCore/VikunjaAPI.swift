@@ -205,16 +205,16 @@ enum VikunjaAPI {
 
     // MARK: - Date helpers
 
-    /// Snaps a date to 8 PM Eastern time, preserving the calendar day in Eastern time.
+    /// Snaps a date to 8 PM local time, preserving the calendar day in local time.
     static func applyDefaultTime(_ date: Date) -> Date {
-        let eastern = TimeZone(identifier: "America/New_York")!
+        let local = TimeZone.current
         var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = eastern
+        cal.timeZone = local
         var comps = cal.dateComponents([.year, .month, .day], from: date)
         comps.hour = 20
         comps.minute = 0
         comps.second = 0
-        comps.timeZone = eastern
+        comps.timeZone = local
         return cal.date(from: comps) ?? date
     }
 

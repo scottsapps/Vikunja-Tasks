@@ -27,7 +27,7 @@ struct VikunjaTimelineProvider: TimelineProvider {
             if !active.isEmpty {
                 let earliestCompletion = active.map(\.completedAt).min()!
                 let cleanAt = earliestCompletion.addingTimeInterval(SharedState.undoWindow + 0.5)
-                entries.append(VikunjaEntry(date: cleanAt, taskGroups: entry.taskGroups, error: nil))
+                entries.append(VikunjaEntry(date: cleanAt, taskGroups: entry.taskGroups, error: nil, todayCount: entry.todayCount))
                 policy = .after(cleanAt)
             } else {
                 let refreshAt = Calendar.current.date(byAdding: .minute, value: 5, to: Date())!
@@ -41,21 +41,50 @@ struct VikunjaTimelineProvider: TimelineProvider {
     // MARK: - Entry construction
 
     private func buildEntry(family: WidgetFamily) async -> VikunjaEntry {
-        do {
-            let projects = try await VikunjaAPI.fetchAllProjects()
-            let rawTasks = try await VikunjaAPI.fetchAllUndoneTasks(projects: projects)
-            WidgetCache.save(tasks: rawTasks, projects: projects)
-            let allItems = makeItems(tasks: rawTasks, projects: projects)
-            let grouped = group(allItems)
-            return VikunjaEntry(date: Date(), taskGroups: cap(grouped, max: maxTasks(family: family, sectionCount: grouped.count)), error: nil)
-        } catch {
-            if let cached = WidgetCache.load() {
-                let allItems = makeItems(tasks: cached.tasks, projects: cached.projects)
-                let grouped = group(allItems)
-                return VikunjaEntry(date: Date(), taskGroups: cap(grouped, max: maxTasks(family: family, sectionCount: grouped.count)), error: nil)
-            }
-            return VikunjaEntry(date: Date(), taskGroups: [], error: error.localizedDescription)
+        // 1. Fresh cache → no network at all. The app writes the cache on
+        //    every refresh (and iOS background refresh does too), so this is
+        //    the common path and keeps the extension well inside WidgetKit's
+        //    time budget.
+        if let cached = WidgetCache.load(),
+           let savedAt = WidgetCache.savedAt,
+           Date().timeIntervalSince(savedAt) < 5 * 60 {
+            return entry(tasks: cached.tasks, projects: cached.projects, family: family)
         }
+        // 2. Network, hard-capped at 10 s so the system never kills us mid-fetch.
+        do {
+            let (projects, tasks) = try await withTimeout(seconds: 10) {
+                let p = try await VikunjaAPI.fetchAllProjects()
+                let t = try await VikunjaAPI.fetchAllUndoneTasks(projects: p)
+                return (p, t)
+            }
+            WidgetCache.save(tasks: tasks, projects: projects)
+            return entry(tasks: tasks, projects: projects, family: family)
+        } catch {
+            // 3. Stale cache beats a blank widget.
+            if let cached = WidgetCache.load() {
+                return entry(tasks: cached.tasks, projects: cached.projects, family: family)
+            }
+            return VikunjaEntry(date: Date(), taskGroups: [], error: error.localizedDescription, todayCount: 0)
+        }
+    }
+
+    private func entry(tasks: [VikunjaTask], projects: [VikunjaProject], family: WidgetFamily) -> VikunjaEntry {
+        let allItems = makeItems(tasks: tasks, projects: projects)
+        let grouped = group(allItems)
+        return VikunjaEntry(
+            date: Date(),
+            taskGroups: cap(grouped, max: maxTasks(family: family, sectionCount: grouped.count)),
+            error: nil,
+            todayCount: todayCount(allItems)
+        )
+    }
+
+    private func todayCount(_ items: [TaskEntryItem]) -> Int {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        return items.filter {
+            !$0.isPendingUndo && cal.startOfDay(for: $0.dueDate) <= today
+        }.count
     }
 
     // MARK: - Item mapping
@@ -127,5 +156,25 @@ struct VikunjaTimelineProvider: TimelineProvider {
         if family == .systemMedium { return sectionCount >= 2 ? 3 : 4 }
         // Reduce by one when there are 3 section headers — they consume ~1 task-row each.
         return sectionCount >= 3 ? 7 : 8
+    }
+}
+
+// MARK: - Timeout helper
+
+private struct WidgetTimeoutError: Error {}
+
+private func withTimeout<T: Sendable>(
+    seconds: TimeInterval,
+    _ op: @escaping @Sendable () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        group.addTask { try await op() }
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw WidgetTimeoutError()
+        }
+        let result = try await group.next()!
+        group.cancelAll()
+        return result
     }
 }

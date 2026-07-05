@@ -41,6 +41,13 @@ struct VikunjaTask: Codable {
         relatedTasks?["subtask"] ?? []
     }
 
+    /// True when this task is itself a subtask of another task (has a "parenttask" relation).
+    /// Used to hide subtasks from top-level lists (Inbox/Project/Today), where they'd
+    /// otherwise show up as duplicate-looking standalone tasks alongside their parent.
+    var isSubtask: Bool {
+        !(relatedTasks?["parenttask"] ?? []).isEmpty
+    }
+
     var subtaskProgress: (done: Int, total: Int) {
         let all = subtasks
         return (all.filter { $0.done }.count, all.count)

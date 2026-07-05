@@ -40,16 +40,16 @@ final class TaskStore {
     }
 
     func tasks(for project: VikunjaProject) -> [VikunjaTask] {
-        undoneTasks.filter { $0.projectId == project.id }
+        undoneTasks.filter { $0.projectId == project.id && !$0.isSubtask }
     }
 
     func inboxTasks() -> [VikunjaTask] {
         guard let inbox = inboxProject else { return [] }
-        return undoneTasks.filter { $0.projectId == inbox.id }
+        return undoneTasks.filter { $0.projectId == inbox.id && !$0.isSubtask }
     }
 
     func upcomingTasks() -> [VikunjaTask] {
-        undoneTasks.filter { $0.effectiveDueDate != nil }
+        undoneTasks.filter { $0.effectiveDueDate != nil && !$0.isSubtask }
     }
 
     // MARK: - Refresh

@@ -22,7 +22,7 @@ struct WatchWidgetEntry: TimelineEntry {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
         return tasks.filter {
-            guard let d = $0.effectiveDueDate else { return false }
+            guard !$0.isSubtask, let d = $0.effectiveDueDate else { return false }
             return cal.startOfDay(for: d) <= today
         }.count
     }
@@ -30,7 +30,7 @@ struct WatchWidgetEntry: TimelineEntry {
     var nextTask: VikunjaTask? {
         tasks
             .compactMap { task -> (Date, VikunjaTask)? in
-                guard let d = task.effectiveDueDate else { return nil }
+                guard !task.isSubtask, let d = task.effectiveDueDate else { return nil }
                 return (d, task)
             }
             .sorted { $0.0 < $1.0 }

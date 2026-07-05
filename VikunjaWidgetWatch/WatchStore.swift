@@ -54,7 +54,7 @@ final class WatchStore {
         let today = cal.startOfDay(for: now)
         guard let end = cal.date(byAdding: .day, value: 7, to: today) else { return [] }
         let dated = tasks.compactMap { task -> (Date, VikunjaTask)? in
-            guard let due = task.effectiveDueDate else { return nil }
+            guard !task.isSubtask, let due = task.effectiveDueDate else { return nil }
             let day = cal.startOfDay(for: due)
             let bucket = day < today ? today : day
             guard bucket < end else { return nil }
@@ -79,7 +79,7 @@ final class WatchStore {
 
     func inboxTasks() -> [VikunjaTask] {
         guard let inbox = inboxProject else { return [] }
-        return tasks.filter { $0.projectId == inbox.id }
+        return tasks.filter { $0.projectId == inbox.id && !$0.isSubtask }
     }
 
     // MARK: - Mutations (optimistic)

@@ -877,7 +877,7 @@ struct RepeatPickerSheet: View {
 
     private func loadFromBindings() {
         if repeatMode == 1 { hasRepeat = true; unit = .months; count = 1; fromCompletion = false; return }
-        guard let ra = repeatAfter, ra > 0 else { hasRepeat = false; return }
+        guard let ra = repeatAfter, ra > 0 else { hasRepeat = true; return }
         hasRepeat = true
         fromCompletion = (repeatMode == 2)
         let days = ra / 86_400

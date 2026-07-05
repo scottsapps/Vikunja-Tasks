@@ -95,7 +95,7 @@ struct VikunjaTimelineProvider: TimelineProvider {
         let pendingIds = Set(pendingUndos.map(\.taskId))
 
         var allItems: [TaskEntryItem] = tasks.compactMap { task -> TaskEntryItem? in
-            guard !pendingIds.contains(task.id), let dueDate = task.effectiveDueDate else { return nil }
+            guard !pendingIds.contains(task.id), !task.isSubtask, let dueDate = task.effectiveDueDate else { return nil }
             return TaskEntryItem(
                 id: task.id,
                 title: task.title,

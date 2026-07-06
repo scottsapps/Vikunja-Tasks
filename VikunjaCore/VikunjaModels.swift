@@ -114,34 +114,4 @@ struct TaskUpdate: Codable {
     var repeatAfter: Int?       // nil = no change
     var clearRepeat: Bool = false
     var repeatMode: Int?
-
-    var jsonBody: [String: Any] {
-        var body: [String: Any] = [:]
-        if let title { body["title"] = title }
-        if let description { body["description"] = description }
-        if clearDueDate {
-            body["due_date"] = "0001-01-01T00:00:00Z"
-        } else if let dueDate {
-            body["due_date"] = ISO8601DateFormatter().string(from: dueDate)
-        }
-        if clearPriority {
-            body["priority"] = 0
-        } else if let priority {
-            body["priority"] = priority
-        }
-        if let labelIds {
-            body["labels"] = labelIds.map { ["id": $0] }
-        }
-        if let projectId { body["project_id"] = projectId }
-        if let reminders {
-            body["reminders"] = reminders.map { ["reminder": ISO8601DateFormatter().string(from: $0)] }
-        }
-        if clearRepeat {
-            body["repeat_after"] = 0
-        } else if let repeatAfter {
-            body["repeat_after"] = repeatAfter
-            body["repeat_mode"] = repeatMode ?? 0
-        }
-        return body
-    }
 }

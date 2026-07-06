@@ -221,7 +221,52 @@ enum VikunjaAPI {
     // MARK: - Task update
 
     static func updateTask(id: Int, update: TaskUpdate) async throws -> VikunjaTask {
-        let body = try JSONSerialization.data(withJSONObject: update.jsonBody)
+        // Vikunja's Go server treats every field omitted from the JSON body as
+        // zero-valued, so a partial update silently wipes unrelated fields — e.g.
+        // adding a reminder (body has `reminders` but no `due_date`) clears the
+        // due date, and adding a due date clears existing reminders. Mirror the
+        // web client / `setDone`: fetch the current task, overlay only the changed
+        // fields, and re-post the full object so nothing gets clobbered.
+        let iso = ISO8601DateFormatter()
+        var task = try await fetchTask(id: id)
+
+        if let title = update.title { task.title = title }
+        if let description = update.description { task.description = description }
+        if let projectId = update.projectId { task.projectId = projectId }
+
+        if update.clearDueDate {
+            task.dueDate = "0001-01-01T00:00:00Z"
+        } else if let due = update.dueDate {
+            task.dueDate = iso.string(from: due)
+        }
+
+        if update.clearPriority {
+            task.priority = 0
+        } else if let priority = update.priority {
+            task.priority = priority
+        }
+
+        if let reminders = update.reminders {
+            task.reminders = reminders.map { VikunjaReminder(reminder: iso.string(from: $0)) }
+        }
+
+        if update.clearRepeat {
+            task.repeatAfter = 0
+            task.repeatMode = 0
+        } else if let repeatAfter = update.repeatAfter {
+            task.repeatAfter = repeatAfter
+            task.repeatMode = update.repeatMode ?? 0
+        }
+
+        if let labelIds = update.labelIds {
+            // Resolve against the labels already on the task; unknown ids fall back
+            // to an id-only stub (Vikunja keys labels by id on update).
+            var lookup: [Int: VikunjaLabel] = [:]
+            for label in task.labels ?? [] { lookup[label.id] = label }
+            task.labels = labelIds.map { lookup[$0] ?? VikunjaLabel(id: $0, title: "", hexColor: nil) }
+        }
+
+        let body = try JSONEncoder().encode(task)
         _ = try await post("/tasks/\(id)", body: body, as: VikunjaTask.self)
         // Re-fetch so the returned task includes updated labels.
         // Vikunja's POST /tasks/{id} response doesn't reliably embed label objects.

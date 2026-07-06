@@ -30,7 +30,12 @@ struct VikunjaTimelineProvider: TimelineProvider {
                 entries.append(VikunjaEntry(date: cleanAt, taskGroups: entry.taskGroups, error: nil, todayCount: entry.todayCount))
                 policy = .after(cleanAt)
             } else {
-                let refreshAt = Calendar.current.date(byAdding: .minute, value: 5, to: Date())!
+                // The app explicitly reloads timelines whenever data changes, so
+                // this self-reload only covers changes made on other devices and
+                // the midnight rollover. 15 min keeps the extension's WidgetKit
+                // budget usage low — heavy reload churn is what gets a macOS
+                // widget parked as a blank placeholder.
+                let refreshAt = Calendar.current.date(byAdding: .minute, value: 15, to: Date())!
                 policy = .after(refreshAt)
             }
 
@@ -44,10 +49,12 @@ struct VikunjaTimelineProvider: TimelineProvider {
         // 1. Fresh cache → no network at all. The app writes the cache on
         //    every refresh (and iOS background refresh does too), so this is
         //    the common path and keeps the extension well inside WidgetKit's
-        //    time budget.
+        //    time budget. 15 min (not 5) so that while the app is running its
+        //    ~5-min poll always beats the window — the widget should only pay
+        //    for a network fetch when nothing else is keeping the cache warm.
         if let cached = WidgetCache.load(),
            let savedAt = WidgetCache.savedAt,
-           Date().timeIntervalSince(savedAt) < 5 * 60 {
+           Date().timeIntervalSince(savedAt) < 15 * 60 {
             return entry(tasks: cached.tasks, projects: cached.projects, family: family)
         }
         // 2. Network, hard-capped at 10 s so the system never kills us mid-fetch.
@@ -73,7 +80,7 @@ struct VikunjaTimelineProvider: TimelineProvider {
         let grouped = group(allItems)
         return VikunjaEntry(
             date: Date(),
-            taskGroups: cap(grouped, max: maxTasks(family: family, sectionCount: grouped.count)),
+            taskGroups: fit(grouped, family: family),
             error: nil,
             todayCount: todayCount(allItems)
         )
@@ -140,22 +147,42 @@ struct VikunjaTimelineProvider: TimelineProvider {
         }
     }
 
-    private func cap(_ groups: [TaskGroup], max: Int) -> [TaskGroup] {
-        var budget = max
+    // The widget canvas is a fixed height, so cap by estimated points, not a
+    // flat task count: every section header costs ~a row and every wrapped
+    // (2-line) title costs ~1.5 rows. A flat cap overflowed the canvas
+    // whenever tasks spread across many date sections, blowing through the
+    // top/bottom margins (and an oversized layout can fail to render at all).
+    private func fit(_ groups: [TaskGroup], family: WidgetFamily) -> [TaskGroup] {
+        let budget: CGFloat
+        switch family {
+        case .systemSmall: budget = 108
+        case .systemMedium: budget = 118
+        default: budget = 296
+        }
+        // Rough chars-per-line for the 12pt title before it wraps to 2 lines.
+        let wrapThreshold = family == .systemSmall ? 14 : 40
+
+        var used: CGFloat = 0
         var result: [TaskGroup] = []
         for group in groups {
-            guard budget > 0 else { break }
-            let visible = Array(group.tasks.prefix(budget))
+            let headerHeight: CGFloat = result.isEmpty ? 15 : 23
+            var visible: [TaskEntryItem] = []
+            for task in group.tasks {
+                let titleLines: CGFloat = task.title.count > wrapThreshold ? 2 : 1
+                let rowHeight = titleLines * 15 + 17  // title + spacing + project/tag line + row padding
+                let cost = visible.isEmpty ? headerHeight + rowHeight : rowHeight
+                if used + cost > budget {
+                    if !visible.isEmpty {
+                        result.append(TaskGroup(label: group.label, tasks: visible))
+                    }
+                    return result
+                }
+                used += cost
+                visible.append(task)
+            }
             result.append(TaskGroup(label: group.label, tasks: visible))
-            budget -= visible.count
         }
         return result
-    }
-
-    private func maxTasks(family: WidgetFamily, sectionCount: Int = 0) -> Int {
-        if family == .systemMedium { return sectionCount >= 2 ? 3 : 4 }
-        // Reduce by one when there are 3 section headers — they consume ~1 task-row each.
-        return sectionCount >= 3 ? 7 : 8
     }
 }
 

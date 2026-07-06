@@ -8,6 +8,7 @@ struct VikunjaWidgetEntryView: View {
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .clipped()  // estimate error trims the last row, never the margins
             .padding(contentPadding)
             .containerBackground(.background, for: .widget)
     }

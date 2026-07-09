@@ -3,6 +3,7 @@
 A Things 3-style task management app for macOS and iOS that connects to a self-hosted [Vikunja](https://vikunja.io) instance.
 
 Latest Release Available on the [App Store](https://apps.apple.com/us/app/veyrn/id6764057920).
+
 Beta Builds Available on [TestFlight](https://testflight.apple.com/join/q8GhTkFz) 
 
 <p>

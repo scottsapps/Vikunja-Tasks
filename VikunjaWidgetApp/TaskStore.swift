@@ -191,6 +191,7 @@ final class TaskStore {
         if task.id > 0 {
             try? await VikunjaAPI.deleteTask(id: task.id)
         }
+        await ReminderScheduler.cancel(taskId: task.id)
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -254,6 +255,7 @@ final class TaskStore {
             kind: .complete
         )
         outbox.append(op)
+        await ReminderScheduler.cancel(taskId: task.id)
         WidgetCenter.shared.reloadAllTimelines()
         await drainOutbox()
     }

@@ -97,6 +97,23 @@ enum ReminderScheduler {
         }
     }
 
+    /// Cancel every pending reminder for a single task (e.g. when it is
+    /// completed or deleted). A completed task is dropped from the `undoneTasks`
+    /// set that `sync` diffs against, but `sync` only runs on a full network
+    /// refresh — so without this the OS keeps the already-scheduled local
+    /// notification and fires it before the next refresh reconciles.
+    static func cancel(taskId: Int) async {
+        let center = UNUserNotificationCenter.current()
+        let prefix = "vikunja.reminder.\(taskId)."
+        let pending = await center.pendingNotificationRequests()
+        let ids = pending
+            .filter { $0.identifier.hasPrefix(prefix) }
+            .map(\.identifier)
+        if !ids.isEmpty {
+            center.removePendingNotificationRequests(withIdentifiers: ids)
+        }
+    }
+
     /// Cancel all vikunja reminders (e.g. on sign-out).
     static func cancelAll() async {
         let center = UNUserNotificationCenter.current()

@@ -71,6 +71,14 @@ enum VikunjaAPI {
         return try await get("/tasks/\(id)", as: VikunjaTask.self)
     }
 
+    // MARK: - Server info
+
+    /// Fetches server metadata. Unauthenticated on the server side, but goes
+    /// through the normal request path (the bearer header is harmless here).
+    static func fetchServerInfo() async throws -> VikunjaServerInfo {
+        try await get("/info", as: VikunjaServerInfo.self)
+    }
+
     // MARK: - Mutations
 
     static func deleteTask(id: Int) async throws {

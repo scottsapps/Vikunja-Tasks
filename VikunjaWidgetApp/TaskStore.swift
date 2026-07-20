@@ -77,6 +77,7 @@ final class TaskStore {
             #endif
             await ReminderScheduler.sync(tasks: undoneTasks)
             lastRefreshAt = Date()
+            Task { await VeyrnTelemetry.reportServerInfoIfNeeded() }
         } catch {
             self.error = error.localizedDescription
         }

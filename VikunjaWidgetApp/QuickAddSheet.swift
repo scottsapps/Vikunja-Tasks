@@ -23,6 +23,9 @@ struct QuickAddSheet: View {
     @State private var expandedNotes = ""
     @State private var expandedRepeatAfter: Int? = nil
     @State private var expandedRepeatMode: Int? = nil
+    @State private var expandedHasReminder = false
+    @State private var expandedReminderDate = Date()
+    @State private var showExpandedReminderPicker = false
 
     // Subtasks
     @State private var subtaskTitles: [String] = []
@@ -37,6 +40,17 @@ struct QuickAddSheet: View {
         QuickAddParser.parse(inputText, knownProjects: store.projects, knownLabels: store.labels)
     }
 
+    /// True when the parsed input would actually render at least one preview chip.
+    /// Keeps the footer from shifting for input that parses to nothing.
+    private var hasPreviewContent: Bool {
+        let p = parsed
+        return p.dueDate != nil
+            || p.priority != nil
+            || !p.labelTitles.isEmpty
+            || p.projectName != nil
+            || p.repeatAfter != nil
+    }
+
     // MARK: - Design tokens
 
     private var insetBg: Color { cs == .dark ? Color(red: 42/255, green: 42/255, blue: 45/255) : Color(red: 245/255, green: 245/255, blue: 247/255) }
@@ -49,6 +63,8 @@ struct QuickAddSheet: View {
     // Chip palette
     private var dueBg: Color    { cs == .dark ? Color(red: 10/255,  green: 132/255, blue: 255/255).opacity(0.18) : Color(red: 231/255, green: 240/255, blue: 255/255) }
     private var dueFg: Color    { cs == .dark ? Color(red: 90/255,  green: 169/255, blue: 255/255) : Color(red: 31/255,  green: 111/255, blue: 224/255) }
+    private var remBg: Color    { cs == .dark ? Color(red: 255/255, green: 159/255, blue: 10/255 ).opacity(0.18) : Color(red: 255/255, green: 241/255, blue: 221/255) }
+    private var remFg: Color    { cs == .dark ? Color(red: 242/255, green: 169/255, blue: 59/255 ) : Color(red: 185/255, green: 107/255, blue: 0) }
     private var repBg: Color    { cs == .dark ? Color(red: 48/255,  green: 209/255, blue: 88/255 ).opacity(0.18) : Color(red: 226/255, green: 246/255, blue: 232/255) }
     private var repFg: Color    { cs == .dark ? Color(red: 79/255,  green: 208/255, blue: 106/255) : Color(red: 30/255,  green: 142/255, blue: 64/255 ) }
     private var priNeutralBg: Color { cs == .dark ? Color(red: 120/255, green: 120/255, blue: 128/255).opacity(0.24) : Color(red: 239/255, green: 239/255, blue: 242/255) }
@@ -90,7 +106,7 @@ struct QuickAddSheet: View {
                     .onSubmit { submit() }
 
                 // Live preview chips (collapsed only)
-                if !inputText.isEmpty && !isExpanded {
+                if hasPreviewContent && !isExpanded {
                     previewRow
                 }
 
@@ -114,7 +130,9 @@ struct QuickAddSheet: View {
         }
         .onAppear { fieldFocused = true }
         .animation(.easeInOut(duration: 0.18), value: isExpanded)
+        .animation(.easeInOut(duration: 0.18), value: hasPreviewContent)
         .animation(.easeInOut(duration: 0.2), value: showExpandedDatePicker)
+        .animation(.easeInOut(duration: 0.2), value: showExpandedReminderPicker)
         .sheet(isPresented: $showingRepeatSheet) {
             RepeatPickerSheet(repeatAfter: $expandedRepeatAfter, repeatMode: $expandedRepeatMode)
         }
@@ -185,12 +203,24 @@ struct QuickAddSheet: View {
 
                 if expandedHasDueDate, let d = expandedDueDate {
                     chip(icon: "calendar", label: dateChipLabel(d), bg: dueBg, fg: dueFg) {
-                        withAnimation { showExpandedDatePicker.toggle() }
+                        withAnimation { showExpandedDatePicker.toggle(); showExpandedReminderPicker = false }
                     }
                     .contextMenu {
                         Button("Clear due date", role: .destructive) {
                             expandedHasDueDate = false; expandedDueDate = nil
                             withAnimation { showExpandedDatePicker = false }
+                        }
+                    }
+                }
+
+                if expandedHasReminder {
+                    chip(icon: "bell", label: reminderChipLabel(), bg: remBg, fg: remFg) {
+                        withAnimation { showExpandedReminderPicker.toggle(); showExpandedDatePicker = false }
+                    }
+                    .contextMenu {
+                        Button("Clear reminder", role: .destructive) {
+                            expandedHasReminder = false
+                            withAnimation { showExpandedReminderPicker = false }
                         }
                     }
                 }
@@ -246,6 +276,14 @@ struct QuickAddSheet: View {
                 .datePickerStyle(.graphical)
                 .padding(.horizontal, 4)
                 .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            if showExpandedReminderPicker {
+                DatePicker("", selection: $expandedReminderDate,
+                           displayedComponents: [.date, .hourAndMinute])
+                    .datePickerStyle(.graphical)
+                    .padding(.horizontal, 4)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
     }
@@ -398,6 +436,13 @@ struct QuickAddSheet: View {
                     withAnimation { showExpandedDatePicker = true }
                 }
             }
+            if !expandedHasReminder {
+                Button("Reminder") {
+                    expandedHasReminder = true
+                    expandedReminderDate = defaultReminderDate()
+                    withAnimation { showExpandedReminderPicker = true; showExpandedDatePicker = false }
+                }
+            }
             if expandedRepeatAfter == nil && expandedRepeatMode != 1 {
                 Button("Repeat") { showingRepeatSheet = true }
             }
@@ -438,6 +483,28 @@ struct QuickAddSheet: View {
         switch days {
         case 1: return "Daily"; case 7: return "Weekly"; case 365: return "Yearly"
         default: return days % 7 == 0 ? "Every \(days / 7)w" : "Every \(days)d"
+        }
+    }
+
+    private func reminderChipLabel() -> String {
+        let fmt = DateFormatter(); fmt.dateStyle = .short; fmt.timeStyle = .short
+        return fmt.string(from: expandedReminderDate)
+    }
+
+    private func defaultReminderDate() -> Date {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone.current
+        if let due = expandedDueDate {
+            var comps = cal.dateComponents([.year, .month, .day], from: due)
+            comps.hour = 8; comps.minute = 0; comps.second = 0
+            comps.timeZone = cal.timeZone
+            return cal.date(from: comps) ?? due
+        } else {
+            var comps = cal.dateComponents([.year, .month, .day], from: Date())
+            comps.day = (comps.day ?? 0) + 1
+            comps.hour = 9; comps.minute = 0; comps.second = 0
+            comps.timeZone = cal.timeZone
+            return cal.date(from: comps) ?? Date()
         }
     }
 
@@ -610,6 +677,8 @@ struct QuickAddSheet: View {
             let notes: String? = isExpanded && !expandedNotes.isEmpty ? expandedNotes : nil
             let effectiveRepeatAfter = isExpanded ? expandedRepeatAfter : p.repeatAfter
             let effectiveRepeatMode = isExpanded ? expandedRepeatMode : p.repeatMode
+            let effectiveReminders: [Date] =
+                (isExpanded && expandedHasReminder) ? [expandedReminderDate] : []
 
             let pendingSubtasks = subtaskTitles.filter { !$0.isEmpty }
 
@@ -621,6 +690,7 @@ struct QuickAddSheet: View {
                     dueDate: effectiveDueDate,
                     priority: effectivePriority,
                     labels: resolvedLabels,
+                    reminders: effectiveReminders,
                     repeatAfter: effectiveRepeatAfter,
                     repeatMode: effectiveRepeatMode
                 )
@@ -638,6 +708,7 @@ struct QuickAddSheet: View {
                         dueDate: effectiveDueDate,
                         priority: effectivePriority,
                         labelIds: resolvedLabels.map(\.id),
+                        reminders: effectiveReminders,
                         repeatAfter: effectiveRepeatAfter,
                         repeatMode: effectiveRepeatMode
                     )

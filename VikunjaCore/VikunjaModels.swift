@@ -88,6 +88,11 @@ struct VikunjaReminder: Codable {
     }
 }
 
+/// Response of GET /api/v1/info. Only the fields Veyrn uses are decoded.
+struct VikunjaServerInfo: Codable {
+    let version: String
+}
+
 struct VikunjaUser: Codable {
     let id: Int
     let username: String

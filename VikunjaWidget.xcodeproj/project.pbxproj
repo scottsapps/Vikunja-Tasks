@@ -17,6 +17,7 @@
 		0D05C8A2A2215D665C51970A /* RichTextUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E14A86ED969A63033CECCD3 /* RichTextUtils.swift */; };
 		0D11C0D3CF3FAEA401E14587 /* VikunjaAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */; };
 		0DE91F897CC393857D83DEFC /* CompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56EB3BD825210E0BC7DDD877 /* CompleteTaskIntent.swift */; };
+		0EB1B7DE0E9259C5FC459EB4 /* ErrorMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7331DC244DE0910F695C4 /* ErrorMessages.swift */; };
 		0F2F790894D97DA6E0E52026 /* ProjectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BB9C870B4EF39EC432A03D /* ProjectView.swift */; };
 		0FEF59179333D4BD9FEB1F5B /* VeyrnTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55A53B67DF4D3C4E9B1789F8 /* VeyrnTelemetry.swift */; };
 		13432CFDA3F3F4FEAC708519 /* BulkImportParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4CA3A47F03EBF7AE5424D07 /* BulkImportParser.swift */; };
@@ -65,6 +66,7 @@
 		557C43CFE255EBCE5CCB0D5B /* BulkImportParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4CA3A47F03EBF7AE5424D07 /* BulkImportParser.swift */; };
 		5697B9BF68F3C53AD38D84D1 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
 		56FE7A9BF4B07565205949DF /* QuickAddPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A419351B8B970957D829770C /* QuickAddPanelController.swift */; };
+		5B2D2D4F2E6D3D858F13A078 /* ErrorMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7331DC244DE0910F695C4 /* ErrorMessages.swift */; };
 		6345DDA30EF587C5BF734506 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */; };
 		641CD4F1D55148493E046E6C /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
 		6430B665E4290AADDF65373D /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
@@ -91,7 +93,9 @@
 		814CA279B7E092879D42A777 /* Sidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32CFE246FC70A61041EF6E4C /* Sidebar.swift */; };
 		8539E404CFA5AED9E7EE80C6 /* WatchSessionProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA24B83963A30DBD2EBED4CA /* WatchSessionProvider.swift */; };
 		862CF3B1755C0FAA540F10F1 /* VikunjaAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */; };
+		86353261F9AF502792FDCEEA /* ErrorMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7331DC244DE0910F695C4 /* ErrorMessages.swift */; };
 		871D4007BB0F55B7D01D2A0D /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3500B5442B30927185C99FA /* SwiftUI.framework */; };
+		8820551B64E9828354D42648 /* ErrorMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7331DC244DE0910F695C4 /* ErrorMessages.swift */; };
 		8925F878F954BE54EEF55BA9 /* VikunjaConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */; };
 		89EBCE16EFFEFDB7F95BEA06 /* TaskRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0EC5DA80C84EAC14606DF3 /* TaskRowView.swift */; };
 		8B46C4D21A7CC007CAC2B65A /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
@@ -136,6 +140,7 @@
 		BD84DD49E895AD80BAE68C4A /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F88B5A5977A4665065232F /* FlowLayout.swift */; };
 		BE9D7675A68505B3AF04B593 /* VikunjaWidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */; };
 		C26CA5E4DCCA235E2D67AB5E /* VikunjaConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */; };
+		C326827ADB0A2D34A50C5BC7 /* ErrorMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7331DC244DE0910F695C4 /* ErrorMessages.swift */; };
 		C7F3CF11A3B0EA2ABA694A2E /* RichTextContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C19966D06DD9CB26072478 /* RichTextContext.swift */; };
 		C96638BF7E98A75F67737365 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CC7FD8E2C9A6337A5A52D003 /* Assets.xcassets */; };
 		CE90B20C7552361D2D6F9B3A /* ParsedChips.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21FA382DDD241D0564F5BDF4 /* ParsedChips.swift */; };
@@ -260,6 +265,7 @@
 		166859B301206500B9AE0420 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		17FB9B7A7E78E0BB11D08286 /* InboxListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxListView.swift; sourceTree = "<group>"; };
 		18DB545AFCB997139C49B6CE /* DictationNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationNormalizer.swift; sourceTree = "<group>"; };
+		19B7331DC244DE0910F695C4 /* ErrorMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorMessages.swift; sourceTree = "<group>"; };
 		21FA382DDD241D0564F5BDF4 /* ParsedChips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParsedChips.swift; sourceTree = "<group>"; };
 		27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaConfig.swift; sourceTree = "<group>"; };
 		29F335043FC5DF87CC85EE67 /* WidgetModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetModels.swift; sourceTree = "<group>"; };
@@ -508,6 +514,7 @@
 			children = (
 				A4CA3A47F03EBF7AE5424D07 /* BulkImportParser.swift */,
 				C1254289BB5BBCBD170DCACE /* ColorUtils.swift */,
+				19B7331DC244DE0910F695C4 /* ErrorMessages.swift */,
 				52749DF5C84EB8B6350FE276 /* Outbox.swift */,
 				575C0A574F52F869DB4CA643 /* QuickAddParser.swift */,
 				6310D2E398EF259266307AA4 /* Reachability.swift */,
@@ -795,6 +802,7 @@
 				13432CFDA3F3F4FEAC708519 /* BulkImportParser.swift in Sources */,
 				BBDAED74A2CE38A0D6CB6B3D /* BulkImportSheet.swift in Sources */,
 				95081F050067C8886AB0A59D /* ColorUtils.swift in Sources */,
+				86353261F9AF502792FDCEEA /* ErrorMessages.swift in Sources */,
 				BD84DD49E895AD80BAE68C4A /* FlowLayout.swift in Sources */,
 				BD3AF313630DB83383D30C77 /* FontSizeEnvironment.swift in Sources */,
 				47110862A580A698D5DCC51E /* HotkeyRecorderView.swift in Sources */,
@@ -839,6 +847,7 @@
 				6C460691B5F9E205B40CD447 /* BulkImportParser.swift in Sources */,
 				D9C7AEAE0B2FD6278C09B73B /* ColorUtils.swift in Sources */,
 				0DE91F897CC393857D83DEFC /* CompleteTaskIntent.swift in Sources */,
+				C326827ADB0A2D34A50C5BC7 /* ErrorMessages.swift in Sources */,
 				ABE10E84629633EDBEDCE5AF /* Outbox.swift in Sources */,
 				7A7C13B41F052C0A061CD460 /* QuickAddParser.swift in Sources */,
 				6848CC6B84948D92D155FE3A /* Reachability.swift in Sources */,
@@ -867,6 +876,7 @@
 				557C43CFE255EBCE5CCB0D5B /* BulkImportParser.swift in Sources */,
 				F7A9AEBEDFC251D941B03C72 /* BulkImportSheet.swift in Sources */,
 				E553C0F4C22FDFE41056EFF1 /* ColorUtils.swift in Sources */,
+				0EB1B7DE0E9259C5FC459EB4 /* ErrorMessages.swift in Sources */,
 				34BE0CEDD53EE2181A01F21A /* FlowLayout.swift in Sources */,
 				06EC0B89C05871F841685153 /* FontSizeEnvironment.swift in Sources */,
 				1EDD136852120DECD2DA7518 /* HotkeyRecorderView.swift in Sources */,
@@ -911,6 +921,7 @@
 				D8E1118DB723757837DD84BC /* BulkImportParser.swift in Sources */,
 				CED785F3FA61459AF4C180BC /* ColorUtils.swift in Sources */,
 				06026FB1769E4DFB3D3207A1 /* CompleteTaskIntent.swift in Sources */,
+				5B2D2D4F2E6D3D858F13A078 /* ErrorMessages.swift in Sources */,
 				13859958B79E16B366B865E8 /* Outbox.swift in Sources */,
 				1F9113E75413F38F0F123ABA /* QuickAddParser.swift in Sources */,
 				641CD4F1D55148493E046E6C /* Reachability.swift in Sources */,
@@ -937,6 +948,7 @@
 				FBB2CBB1BB9E7F1F874BD5D9 /* AddTaskView.swift in Sources */,
 				992A9E0CAEE76F2BA5F3F56D /* ColorUtils.swift in Sources */,
 				D739D4C309FD43AD274A3214 /* DictationNormalizer.swift in Sources */,
+				8820551B64E9828354D42648 /* ErrorMessages.swift in Sources */,
 				50B098CF49F155E54355E5EF /* InboxListView.swift in Sources */,
 				019D59D918213D3F9145465E /* NeedsSetupView.swift in Sources */,
 				CE90B20C7552361D2D6F9B3A /* ParsedChips.swift in Sources */,

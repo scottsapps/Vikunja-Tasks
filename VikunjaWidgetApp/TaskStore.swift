@@ -20,6 +20,14 @@ final class TaskStore {
     /// cached list is still on screen.
     private(set) var transientRefreshFailure = false
 
+    /// The failure from the most recent `refresh()`, so `refreshWithRetry`
+    /// can report it once the retries are exhausted.
+    private var lastRefreshError: Error?
+
+    /// Message currently being shown, so a repeating failure (the poll loop
+    /// hitting the same dead server every 60s) doesn't re-alert.
+    private var lastReportedFailure: String?
+
     // MARK: - Offline infrastructure
 
     let outbox = Outbox()
@@ -62,11 +70,12 @@ final class TaskStore {
 
     private var lastRefreshAt: Date?
 
-    func refresh() async {
+    func refresh(deferAlert: Bool = false) async {
         guard VikunjaConfig.isConfigured else { return }
         isLoading = true
         error = nil
         transientRefreshFailure = false
+        lastRefreshError = nil
         do {
             let fetchedProjects = try await VikunjaAPI.fetchAllProjects()
             let fetchedTasks = try await VikunjaAPI.fetchAllUndoneTasks(projects: fetchedProjects)
@@ -84,14 +93,21 @@ final class TaskStore {
             #endif
             await ReminderScheduler.sync(tasks: undoneTasks)
             lastRefreshAt = Date()
+            lastReportedFailure = nil
             Task { await VeyrnTelemetry.reportServerInfoIfNeeded() }
         } catch {
-            if Self.isTransientNetwork(error) {
-                // Keep the cached data we're already showing; the retry on
-                // launch and the poll loop will pick it up.
+            lastRefreshError = error
+            if VeyrnError.isConnectivityOnly(error) {
+                // Nothing for the user to fix and the cached list is still on
+                // screen — show it in the pill, let the poll loop recover.
+                transientRefreshFailure = true
+            } else if deferAlert && VeyrnError.isRetryable(error) {
+                // Launch path: a name-resolution/connection failure while
+                // Wi-Fi or a VPN is still coming up. Stay quiet; the caller
+                // reports it if the retries run out.
                 transientRefreshFailure = true
             } else {
-                self.error = error.localizedDescription
+                report(error)
             }
         }
         isLoading = false
@@ -99,33 +115,28 @@ final class TaskStore {
 
     /// Launch-path refresh: retries with backoff so a network stack that isn't
     /// ready yet (Wi-Fi reassociating, VPN handshaking) doesn't surface as a
-    /// failure at all.
+    /// failure at all. If the retries run out on something the user can
+    /// actually fix — a wrong address, a dead server — it's reported then.
     func refreshWithRetry(attempts: Int = 3) async {
         for attempt in 0..<attempts {
-            await refresh()
+            await refresh(deferAlert: true)
             if !transientRefreshFailure { return }
             if attempt < attempts - 1 {
                 try? await Task.sleep(for: .seconds(Double(attempt + 1) * 2))
             }
         }
+        if let error = lastRefreshError, !VeyrnError.isConnectivityOnly(error) {
+            report(error)
+        }
     }
 
-    /// Network conditions that resolve on their own. Anything else — notably
-    /// `APIError.badStatus` for a bad token — stays an actionable alert.
-    private static func isTransientNetwork(_ error: Error) -> Bool {
-        let ns = error as NSError
-        guard ns.domain == NSURLErrorDomain else { return false }
-        return [
-            NSURLErrorTimedOut,
-            NSURLErrorCannotConnectToHost,
-            NSURLErrorCannotFindHost,
-            NSURLErrorNetworkConnectionLost,
-            NSURLErrorNotConnectedToInternet,
-            NSURLErrorDNSLookupFailed,
-            NSURLErrorInternationalRoamingOff,
-            NSURLErrorDataNotAllowed,
-            NSURLErrorSecureConnectionFailed
-        ].contains(ns.code)
+    /// Raises a plain-English alert, skipping a failure we're already showing
+    /// so the 60s poll loop can't re-raise the same alert over and over.
+    private func report(_ error: Error) {
+        let message = VeyrnError.message(for: error)
+        guard message != lastReportedFailure else { return }
+        lastReportedFailure = message
+        self.error = message
     }
 
     /// Refreshes only if the last successful refresh is older than `maxAge`.
@@ -212,7 +223,7 @@ final class TaskStore {
             projects.sort { $0.title.localizedCompare($1.title) == .orderedAscending }
             await refresh()
         } catch {
-            self.error = error.localizedDescription
+            report(error)
         }
     }
 
@@ -224,7 +235,7 @@ final class TaskStore {
             rebuildMergedTasks()
             await refresh()
         } catch {
-            self.error = error.localizedDescription
+            report(error)
         }
     }
 

@@ -720,7 +720,7 @@ struct QuickAddSheet: View {
                     VeyrnTelemetry.signal("TaskCreated")
                     await store.refresh()
                 } catch {
-                    errorMessage = error.localizedDescription
+                    errorMessage = VeyrnError.message(for: error)
                     isSubmitting = false
                     return
                 }

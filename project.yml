@@ -188,6 +188,7 @@ targets:
           - QuickAddParser.swift
           - WidgetCache.swift
           - ColorUtils.swift
+          - ErrorMessages.swift
     entitlements:
       path: VikunjaWidgetWatch/VikunjaWidgetWatch.entitlements
     settings:

@@ -36,7 +36,7 @@ final class WatchStore {
             WidgetCache.save(tasks: t, projects: p)
             WidgetCenter.shared.reloadAllTimelines()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = VeyrnError.message(for: error)
         }
         isLoading = false
     }

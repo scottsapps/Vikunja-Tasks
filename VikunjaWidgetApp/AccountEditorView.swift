@@ -165,7 +165,7 @@ struct AccountEditorView: View {
         guard let account = editingAccount else { return }
         name = account.name
         host = account.host
-        token = account.token
+        token = VikunjaConfig.token(for: account.id)
         serverKind = account.host == VikunjaConfig.vikunjaCloudHost ? .cloud : .custom
     }
 
@@ -178,9 +178,9 @@ struct AccountEditorView: View {
         errorMessage = nil
 
         if let original = editingAccount {
-            let updated = VeyrnAccount(id: original.id, name: trimmedName, host: trimmedHost, token: trimmedToken)
+            let updated = VeyrnAccount(id: original.id, name: trimmedName, host: trimmedHost)
             do {
-                try VikunjaConfig.updateAccount(updated)
+                try VikunjaConfig.updateAccount(updated, token: trimmedToken)
             } catch VikunjaConfig.AccountError.duplicateName {
                 errorMessage = "An account is already named \"\(trimmedName)\"."
                 return
@@ -202,9 +202,9 @@ struct AccountEditorView: View {
             }
             dismiss()
         } else {
-            let account = VeyrnAccount(id: UUID(), name: trimmedName, host: trimmedHost, token: trimmedToken)
+            let account = VeyrnAccount(id: UUID(), name: trimmedName, host: trimmedHost)
             do {
-                try VikunjaConfig.addAccount(account)
+                try VikunjaConfig.addAccount(account, token: trimmedToken)
             } catch VikunjaConfig.AccountError.limitReached {
                 errorMessage = "Maximum of 5 accounts."
                 return

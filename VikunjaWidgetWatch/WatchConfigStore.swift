@@ -16,7 +16,13 @@ final class WatchConfigStore: NSObject, ObservableObject, WCSessionDelegate {
     private func store(_ ctx: [String: Any]) {
         let defaults = UserDefaults(suiteName: VikunjaConfig.appGroupSuite)
         if let host = ctx["vikunja_host"] as? String { defaults?.set(host, forKey: "vikunja_host") }
-        if let token = ctx["vikunja_api_token"] as? String { defaults?.set(token, forKey: "vikunja_api_token") }
+        if let token = ctx["vikunja_api_token"] as? String {
+            // The Watch has its own separate Keychain (a separate device) —
+            // WatchConnectivity is unchanged, only where the received token
+            // lands locally changes.
+            TokenStore.setToken(token, for: VikunjaConfig.watchTokenAccountId)
+            VikunjaConfig.invalidateTokenCache()
+        }
         if let tasksData = ctx["tasks_snapshot"] as? Data,
            let projectsData = ctx["projects_snapshot"] as? Data,
            let tasks = try? JSONDecoder().decode([VikunjaTask].self, from: tasksData),

@@ -1,0 +1,67 @@
+import Foundation
+import Security
+
+/// Thin SecItem wrapper storing Vikunja API tokens in the Keychain, keyed by
+/// account UUID. Shared across all six targets via the `keychain-access-groups`
+/// entitlement (see the Makefile) so the app, both widget extensions, and (on
+/// their own device) the Watch app and Watch widget extension can all read
+/// the active account's token — no `kSecAttrAccessGroup` needed in the
+/// queries below, since each target has exactly one keychain access group in
+/// its entitlements and the OS resolves it automatically.
+enum TokenStore {
+    private static let service = "net.angstreich.VikunjaWidgetApp.token"
+
+    private static func query(account id: UUID) -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: id.uuidString,
+        ]
+    }
+
+    static func token(for id: UUID) -> String? {
+        var q = query(account: id)
+        q[kSecReturnData as String] = true
+        q[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var result: AnyObject?
+        let status = SecItemCopyMatching(q as CFDictionary, &result)
+        guard status == errSecSuccess, let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    /// Accessible after first unlock — not the default (`whenUnlocked`).
+    /// Widget timeline refreshes and `BackgroundRefresh` can fire before the
+    /// device is first unlocked after a reboot; with the default class those
+    /// refreshes would silently fail to read the token until the user
+    /// unlocks the device once.
+    static func setToken(_ token: String, for id: UUID) {
+        guard let data = token.data(using: .utf8) else { return }
+        let q = query(account: id)
+
+        var addAttributes = q
+        addAttributes[kSecValueData as String] = data
+        addAttributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+
+        let addStatus = SecItemAdd(addAttributes as CFDictionary, nil)
+        if addStatus == errSecDuplicateItem {
+            SecItemUpdate(q as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        }
+    }
+
+    static func deleteToken(for id: UUID) {
+        SecItemDelete(query(account: id) as CFDictionary)
+    }
+
+    /// Deletes every token under this service, regardless of account.
+    /// Keychain items survive app deletion — used at launch when there are
+    /// no accounts left but items still exist, which means they're residue
+    /// from a previous install.
+    static func deleteAll() {
+        let q: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+        ]
+        SecItemDelete(q as CFDictionary)
+    }
+}

@@ -29,6 +29,7 @@
 		18E90D65263C3AAEDD4A89C1 /* VikunjaTimelineProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5AA1613FD9623F81CF2764F /* VikunjaTimelineProvider.swift */; };
 		19869DC7FA0480C06F4BDC02 /* TaskRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0EC5DA80C84EAC14606DF3 /* TaskRowView.swift */; };
 		1CF0C1FDEB04527CA786B784 /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E38CA1B0723B492B073EAE3 /* SharedState.swift */; };
+		1D29C04ABAB4F2D8232E9B45 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FF9B209536157736A98A9B /* TokenStore.swift */; };
 		1D2EBBE25833CA492EA4ED14 /* QuickAddParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 575C0A574F52F869DB4CA643 /* QuickAddParser.swift */; };
 		1EDD136852120DECD2DA7518 /* HotkeyRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7656B4E05FA981BC6A515B75 /* HotkeyRecorderView.swift */; };
 		1F9113E75413F38F0F123ABA /* QuickAddParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 575C0A574F52F869DB4CA643 /* QuickAddParser.swift */; };
@@ -69,6 +70,7 @@
 		56FE7A9BF4B07565205949DF /* QuickAddPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A419351B8B970957D829770C /* QuickAddPanelController.swift */; };
 		5846187C648674E9EC5F9EA2 /* AccountListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D1C8F0A7257D6E7B0C47ED9 /* AccountListView.swift */; };
 		5B2D2D4F2E6D3D858F13A078 /* ErrorMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7331DC244DE0910F695C4 /* ErrorMessages.swift */; };
+		6155C1270C5CA6F128D0515B /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FF9B209536157736A98A9B /* TokenStore.swift */; };
 		6345DDA30EF587C5BF734506 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */; };
 		641CD4F1D55148493E046E6C /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
 		6430B665E4290AADDF65373D /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
@@ -81,6 +83,7 @@
 		6C90BEE587E7CFB8FFE0CD54 /* WatchStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 998AAA7B2B1A9033C9973A79 /* WatchStore.swift */; };
 		6DB17204AFD0DBEC7C3FDA3D /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A112CB4533D5AB9D9D4361D /* ReminderScheduler.swift */; };
 		6DCD794156056ABC0B0ED673 /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
+		6DF6675026F90FB69C086C79 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FF9B209536157736A98A9B /* TokenStore.swift */; };
 		6F03EC65CB9B61738FA4D04D /* WatchTaskRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F649163D6741E497E12DA87 /* WatchTaskRow.swift */; };
 		718E10F7317C56D4E583A48D /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E38CA1B0723B492B073EAE3 /* SharedState.swift */; };
 		72226A5E79207AE181B16849 /* VikunjaWidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */; };
@@ -96,6 +99,7 @@
 		8539E404CFA5AED9E7EE80C6 /* WatchSessionProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA24B83963A30DBD2EBED4CA /* WatchSessionProvider.swift */; };
 		862CF3B1755C0FAA540F10F1 /* VikunjaAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */; };
 		86353261F9AF502792FDCEEA /* ErrorMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7331DC244DE0910F695C4 /* ErrorMessages.swift */; };
+		869F2E0889E882F50F4B5BC7 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FF9B209536157736A98A9B /* TokenStore.swift */; };
 		871D4007BB0F55B7D01D2A0D /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3500B5442B30927185C99FA /* SwiftUI.framework */; };
 		8820551B64E9828354D42648 /* ErrorMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7331DC244DE0910F695C4 /* ErrorMessages.swift */; };
 		8925F878F954BE54EEF55BA9 /* VikunjaConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */; };
@@ -104,6 +108,7 @@
 		8C6BA528CCB5784AB0ABCC1B /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
 		904A879D801FBCD4B08DB1C9 /* AccountListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D1C8F0A7257D6E7B0C47ED9 /* AccountListView.swift */; };
 		90B52EB586EE116D8BCD2FD2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */; };
+		91EF38FBFF43A558C0D9260A /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FF9B209536157736A98A9B /* TokenStore.swift */; };
 		9330540D44718F06F90D08C3 /* AccountEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59CE9102E8DBF8AF63CD0CB4 /* AccountEditorView.swift */; };
 		944CF132112852C4C6EF42DB /* QuickAddSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E801F43454C29A23CC09D2B3 /* QuickAddSheet.swift */; };
 		95081F050067C8886AB0A59D /* ColorUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1254289BB5BBCBD170DCACE /* ColorUtils.swift */; };
@@ -131,7 +136,7 @@
 		ACD4CAD1F490956471E7D203 /* Outbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52749DF5C84EB8B6350FE276 /* Outbox.swift */; };
 		ACF8DF55D2DDE7B9C5E38FCF /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
 		AE684B56885C43B0D213C045 /* VikunjaAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */; };
-		B1636EA123C74E6725878B48 /* Veyrn.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 79B09FCA9032E9C475309927 /* Veyrn.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B1636EA123C74E6725878B48 /* VikunjaWidgetWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 79B09FCA9032E9C475309927 /* VikunjaWidgetWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B6247D5D27C33F89D9D6DC91 /* WatchWidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AE9081EC5C412593ED6D117 /* WatchWidgetEntryView.swift */; };
 		B73FB8EBDF00BB4796B8F614 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E8B866134A71528ACC14C76 /* TodayView.swift */; };
 		B76A35BE7E972B5E11E78B2D /* VikunjaWidgetWatchExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6C10DDD003EFBE283E6DE288 /* VikunjaWidgetWatchExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -163,6 +168,7 @@
 		DB4E68283C15B3EA5F1DAB07 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77E4BA4BD463D4E6942E3495 /* WidgetKit.framework */; };
 		E14BBE3DEA30D6706DC1A4EC /* TaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E16AE11103FB52473BC36206 /* TaskListView.swift */; };
 		E36FD9BD668FEB2FB9A80502 /* ScheduledListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7D21D4D1B2DD40A42437DAB /* ScheduledListView.swift */; };
+		E470C59271E6BC68F2EC6B1A /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FF9B209536157736A98A9B /* TokenStore.swift */; };
 		E553C0F4C22FDFE41056EFF1 /* ColorUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1254289BB5BBCBD170DCACE /* ColorUtils.swift */; };
 		E564F6DAB482EF7BE88FD653 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
 		E83930CD5B9016B8B53C5946 /* ShortcutRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6413699055632BF2AF310ADC /* ShortcutRouter.swift */; };
@@ -241,7 +247,7 @@
 			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
 			dstSubfolderSpec = 16;
 			files = (
-				B1636EA123C74E6725878B48 /* Veyrn.app in Embed Watch Content */,
+				B1636EA123C74E6725878B48 /* VikunjaWidgetWatch.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -276,7 +282,7 @@
 		2E14A86ED969A63033CECCD3 /* RichTextUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextUtils.swift; sourceTree = "<group>"; };
 		2E8B866134A71528ACC14C76 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		30D8862B6CFF3E3E06B26ACA /* VikunjaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = VikunjaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		31047F6BFB8F2F00A7627426 /* VikunjaWidgetExtensionIOS.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = VikunjaWidgetExtensionIOS.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		31047F6BFB8F2F00A7627426 /* VikunjaWidgetExtensionIOS.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = VikunjaWidgetExtensionIOS.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		32C19966D06DD9CB26072478 /* RichTextContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextContext.swift; sourceTree = "<group>"; };
 		32CFE246FC70A61041EF6E4C /* Sidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sidebar.swift; sourceTree = "<group>"; };
 		3D2233282108571CCBCFADE2 /* FontSizeEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontSizeEnvironment.swift; sourceTree = "<group>"; };
@@ -302,11 +308,11 @@
 		7656B4E05FA981BC6A515B75 /* HotkeyRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyRecorderView.swift; sourceTree = "<group>"; };
 		775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskMerger.swift; sourceTree = "<group>"; };
 		77E4BA4BD463D4E6942E3495 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
-		79B09FCA9032E9C475309927 /* Veyrn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Veyrn.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		79B09FCA9032E9C475309927 /* VikunjaWidgetWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VikunjaWidgetWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7E2A53ED8DB6BC3CCBC225B2 /* InfoIOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = InfoIOS.plist; sourceTree = "<group>"; };
 		7EAD0BC89662C3B29128BFEC /* InfoIOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = InfoIOS.plist; sourceTree = "<group>"; };
 		87BF624222F4F03626A5979F /* NeedsSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedsSetupView.swift; sourceTree = "<group>"; };
-		94A79F734B4FA3F1B7F71059 /* Veyrn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Veyrn.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		94A79F734B4FA3F1B7F71059 /* VikunjaWidgetAppIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = VikunjaWidgetAppIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9646D37E52F94B16B7960FD4 /* WidgetCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCache.swift; sourceTree = "<group>"; };
 		998AAA7B2B1A9033C9973A79 /* WatchStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchStore.swift; sourceTree = "<group>"; };
 		9AE51A55FABBD4A8AB5E856A /* WatchWidgetEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidgetEntry.swift; sourceTree = "<group>"; };
@@ -324,7 +330,8 @@
 		B3DA4F4CFBB26B3E8AB8F9F4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B63219D6BDD41CF316F5617F /* AddTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTaskView.swift; sourceTree = "<group>"; };
 		BBB0B0D0A0BF988D3D00D46A /* WatchWidgetProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidgetProvider.swift; sourceTree = "<group>"; };
-		BDB2CBC26BADD19ED549207B /* Veyrn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Veyrn.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BDB2CBC26BADD19ED549207B /* VikunjaWidgetApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VikunjaWidgetApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0FF9B209536157736A98A9B /* TokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStore.swift; sourceTree = "<group>"; };
 		C1254289BB5BBCBD170DCACE /* ColorUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorUtils.swift; sourceTree = "<group>"; };
 		C1938B254B547B170A850D02 /* WatchWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidget.swift; sourceTree = "<group>"; };
 		C19BA8BB693A0D3B77D8FD25 /* AppRoot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoot.swift; sourceTree = "<group>"; };
@@ -489,11 +496,11 @@
 		43E0FD09DB5D1963EACC6D09 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				BDB2CBC26BADD19ED549207B /* Veyrn.app */,
-				94A79F734B4FA3F1B7F71059 /* Veyrn.app */,
+				BDB2CBC26BADD19ED549207B /* VikunjaWidgetApp.app */,
+				94A79F734B4FA3F1B7F71059 /* VikunjaWidgetAppIOS.app */,
 				30D8862B6CFF3E3E06B26ACA /* VikunjaWidgetExtension.appex */,
 				31047F6BFB8F2F00A7627426 /* VikunjaWidgetExtensionIOS.appex */,
-				79B09FCA9032E9C475309927 /* Veyrn.app */,
+				79B09FCA9032E9C475309927 /* VikunjaWidgetWatch.app */,
 				6C10DDD003EFBE283E6DE288 /* VikunjaWidgetWatchExtension.appex */,
 			);
 			name = Products;
@@ -529,6 +536,7 @@
 				2E14A86ED969A63033CECCD3 /* RichTextUtils.swift */,
 				9E38CA1B0723B492B073EAE3 /* SharedState.swift */,
 				775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */,
+				C0FF9B209536157736A98A9B /* TokenStore.swift */,
 				EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */,
 				27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */,
 				F8050180A5CB81868E0837EA /* VikunjaModels.swift */,
@@ -627,7 +635,7 @@
 				492A5C2F14D15C60B3380285 /* TelemetryDeck */,
 			);
 			productName = VikunjaWidgetApp;
-			productReference = BDB2CBC26BADD19ED549207B /* Veyrn.app */;
+			productReference = BDB2CBC26BADD19ED549207B /* VikunjaWidgetApp.app */;
 			productType = "com.apple.product-type.application";
 		};
 		5089A31E80CF606C44D1424F /* VikunjaWidgetAppIOS */ = {
@@ -651,7 +659,7 @@
 				A3974D558323FBA6B087B47D /* TelemetryDeck */,
 			);
 			productName = VikunjaWidgetAppIOS;
-			productReference = 94A79F734B4FA3F1B7F71059 /* Veyrn.app */;
+			productReference = 94A79F734B4FA3F1B7F71059 /* VikunjaWidgetAppIOS.app */;
 			productType = "com.apple.product-type.application";
 		};
 		93A8A8EF93CAD82843BD97D9 /* VikunjaWidgetWatch */ = {
@@ -673,7 +681,7 @@
 				14AE83598AFB61939E4E4BF8 /* TelemetryDeck */,
 			);
 			productName = VikunjaWidgetWatch;
-			productReference = 79B09FCA9032E9C475309927 /* Veyrn.app */;
+			productReference = 79B09FCA9032E9C475309927 /* VikunjaWidgetWatch.app */;
 			productType = "com.apple.product-type.application";
 		};
 		A0698B744356C9C9BF163D6D /* VikunjaWidgetExtensionIOS */ = {
@@ -840,6 +848,7 @@
 				CEF7A6817B639A02C19E842A /* TaskRow.swift in Sources */,
 				22EFFF073CD996D7953DDC2F /* TaskStore.swift in Sources */,
 				A63E777EDE70A2D04544AABA /* TodayView.swift in Sources */,
+				91EF38FBFF43A558C0D9260A /* TokenStore.swift in Sources */,
 				371D2987193288C64379051C /* VeyrnTelemetry.swift in Sources */,
 				304CB3A270DB5C3643212C06 /* VikunjaAPI.swift in Sources */,
 				9B95835E2ED20F48D7BFF275 /* VikunjaConfig.swift in Sources */,
@@ -865,6 +874,7 @@
 				718E10F7317C56D4E583A48D /* SharedState.swift in Sources */,
 				97AAC28FA52B79FBC01E7E6B /* TaskMerger.swift in Sources */,
 				89EBCE16EFFEFDB7F95BEA06 /* TaskRowView.swift in Sources */,
+				6DF6675026F90FB69C086C79 /* TokenStore.swift in Sources */,
 				9760739F1921EFE07139E83C /* UndoCompleteTaskIntent.swift in Sources */,
 				CF9A0B3D456076A0A657DF26 /* VikunjaAPI.swift in Sources */,
 				C26CA5E4DCCA235E2D67AB5E /* VikunjaConfig.swift in Sources */,
@@ -916,6 +926,7 @@
 				308235EBA3ADB547172A1689 /* TaskRow.swift in Sources */,
 				18E754A4A0A728C787B384CA /* TaskStore.swift in Sources */,
 				B73FB8EBDF00BB4796B8F614 /* TodayView.swift in Sources */,
+				869F2E0889E882F50F4B5BC7 /* TokenStore.swift in Sources */,
 				0FEF59179333D4BD9FEB1F5B /* VeyrnTelemetry.swift in Sources */,
 				0D11C0D3CF3FAEA401E14587 /* VikunjaAPI.swift in Sources */,
 				F3DF47A1A039E3D66410D7D3 /* VikunjaConfig.swift in Sources */,
@@ -941,6 +952,7 @@
 				6AE4426F1C4EA1A3091BDFCD /* SharedState.swift in Sources */,
 				088C68EEFC872A273BE81EF9 /* TaskMerger.swift in Sources */,
 				19869DC7FA0480C06F4BDC02 /* TaskRowView.swift in Sources */,
+				6155C1270C5CA6F128D0515B /* TokenStore.swift in Sources */,
 				7C1C97B0D5E7933FDEE49667 /* UndoCompleteTaskIntent.swift in Sources */,
 				862CF3B1755C0FAA540F10F1 /* VikunjaAPI.swift in Sources */,
 				162A0A2DA16149AD841EFFE7 /* VikunjaConfig.swift in Sources */,
@@ -966,6 +978,7 @@
 				CE90B20C7552361D2D6F9B3A /* ParsedChips.swift in Sources */,
 				457266CB482DFBEED7F47C60 /* QuickAddParser.swift in Sources */,
 				E36FD9BD668FEB2FB9A80502 /* ScheduledListView.swift in Sources */,
+				1D29C04ABAB4F2D8232E9B45 /* TokenStore.swift in Sources */,
 				310718550B72AF290231DFB1 /* VeyrnWatchApp.swift in Sources */,
 				AE684B56885C43B0D213C045 /* VikunjaAPI.swift in Sources */,
 				8925F878F954BE54EEF55BA9 /* VikunjaConfig.swift in Sources */,
@@ -983,6 +996,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FCBEF1F749FDE83E425B07CE /* ColorUtils.swift in Sources */,
+				E470C59271E6BC68F2EC6B1A /* TokenStore.swift in Sources */,
 				2D49DEE37080B6FC91475652 /* VikunjaAPI.swift in Sources */,
 				142533694A5C10A6FF160C31 /* VikunjaConfig.swift in Sources */,
 				8B46C4D21A7CC007CAC2B65A /* VikunjaModels.swift in Sources */,
@@ -1025,7 +1039,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetExtension/VikunjaWidgetExtensionIOS.entitlements;
-				CURRENT_PROJECT_VERSION = 57;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1047,7 +1060,6 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetExtension/VikunjaWidgetExtension.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 57;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetExtension/Info.plist;
@@ -1070,7 +1082,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetApp/VikunjaWidgetApp.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 57;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetApp/Info.plist;
@@ -1090,7 +1101,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetWatchExtension/VikunjaWidgetWatchExtension.entitlements;
-				CURRENT_PROJECT_VERSION = 57;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetWatchExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1144,7 +1154,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 56;
+				CURRENT_PROJECT_VERSION = 58;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1185,7 +1195,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetApp/VikunjaWidgetApp.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 57;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetApp/Info.plist;
@@ -1206,7 +1215,6 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetExtension/VikunjaWidgetExtension.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 57;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetExtension/Info.plist;
@@ -1229,7 +1237,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetApp/VikunjaWidgetAppIOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 57;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetApp/InfoIOS.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1250,7 +1257,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetWatch/VikunjaWidgetWatch.entitlements;
-				CURRENT_PROJECT_VERSION = 57;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetWatch/Info.plist;
 				MARKETING_VERSION = 2.7.4;
@@ -1267,7 +1273,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetWatchExtension/VikunjaWidgetWatchExtension.entitlements;
-				CURRENT_PROJECT_VERSION = 57;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetWatchExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1289,7 +1294,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetWatch/VikunjaWidgetWatch.entitlements;
-				CURRENT_PROJECT_VERSION = 57;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetWatch/Info.plist;
 				MARKETING_VERSION = 2.7.4;
@@ -1308,7 +1312,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetApp/VikunjaWidgetAppIOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 57;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetApp/InfoIOS.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1328,7 +1331,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetExtension/VikunjaWidgetExtensionIOS.entitlements;
-				CURRENT_PROJECT_VERSION = 57;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1382,7 +1384,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 56;
+				CURRENT_PROJECT_VERSION = 58;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;

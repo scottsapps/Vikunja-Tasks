@@ -65,6 +65,7 @@ struct VikunjaWidgetAppEntry: App {
 
     init() {
         VeyrnTelemetry.initialize()
+        VikunjaConfig.cleanupOrphanedKeychainItemsIfNeeded()
         #if os(macOS)
         VikunjaConfig.registerHotkeyDefaults()
         #endif

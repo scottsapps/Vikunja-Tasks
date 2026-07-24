@@ -22,7 +22,7 @@ settings:
     REGISTER_APP_GROUPS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
-    CURRENT_PROJECT_VERSION: 57
+    CURRENT_PROJECT_VERSION: 58
 
 configFiles:
   Debug: Signing.xcconfig
@@ -185,6 +185,7 @@ targets:
           - VikunjaModels.swift
           - VikunjaAPI.swift
           - VikunjaConfig.swift
+          - TokenStore.swift
           - QuickAddParser.swift
           - WidgetCache.swift
           - ColorUtils.swift
@@ -213,6 +214,7 @@ targets:
         includes:
           - VikunjaModels.swift
           - VikunjaConfig.swift
+          - TokenStore.swift
           - WidgetCache.swift
           - ColorUtils.swift
           - VikunjaAPI.swift

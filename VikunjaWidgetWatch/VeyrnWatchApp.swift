@@ -6,7 +6,10 @@ struct VeyrnWatchApp: App {
     @State private var store = WatchStore()
     @Environment(\.scenePhase) private var scenePhase
 
-    init() { WatchConfigStore.shared.activate() }
+    init() {
+        VikunjaConfig.cleanupOrphanedKeychainItemsIfNeeded()
+        WatchConfigStore.shared.activate()
+    }
 
     var body: some Scene {
         WindowGroup {

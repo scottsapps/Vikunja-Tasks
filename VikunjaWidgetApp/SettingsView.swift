@@ -220,10 +220,10 @@ struct SettingsView: View {
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let trimmedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let account = VeyrnAccount(id: UUID(), name: trimmedName, host: trimmedHost, token: trimmedToken)
+        let account = VeyrnAccount(id: UUID(), name: trimmedName, host: trimmedHost)
         errorMessage = nil
         do {
-            try VikunjaConfig.addAccount(account)
+            try VikunjaConfig.addAccount(account, token: trimmedToken)
         } catch VikunjaConfig.AccountError.duplicateName {
             errorMessage = "An account is already named \"\(trimmedName)\"."
             return

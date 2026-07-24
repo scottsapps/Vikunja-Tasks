@@ -17,7 +17,7 @@ Beta Builds Available on [TestFlight](https://testflight.apple.com/join/q8GhTkFz
 - **Inbox, Scheduled, Logbook, and Projects** sidebar, similar to Things 3
 - **Project and label colors** — hex color tinting throughout the UI for projects and label chips
 - **WidgetKit extension** for macOS and iOS showing upcoming tasks grouped by date, including Lock Screen and StandBy widgets (accessory families: rectangular, circular, inline)
-- **Quick Add** with a natural-language parser: `*tag`, `+project`, `!priority`, dates like `tomorrow`, `next monday`, `in 3 days`, and recurrence like `every week`
+- **Quick Add** with a natural-language parser: `*tag`, `+project`, `!priority`, dates like `tomorrow`, `next monday`, `in 3 days`, and recurrence like `every week` — with a reminder chip to set a reminder right at creation time
 - **Bulk import** — paste or drag in a plain-text list of tasks
 - **Rich text notes** — Vikunja's HTML task descriptions, with bold/italic/links/bullets
 - **Offline mode** — an outbox queues changes and drains when you're back online
@@ -162,6 +162,14 @@ xcodebuild -project VikunjaWidget.xcodeproj -scheme VikunjaWidgetWatch \
 - macOS 14.0+
 - iOS 17.0+
 - watchOS 10.0+
+
+## Bugs & Feedback
+
+Found a bug or have feedback? Email scottsapps at protonmail dot com.
+
+## Support
+
+If you find Veyrn useful, you can buy me a [coffee](https://ko-fi.com/scott63157).
 
 ## License
 

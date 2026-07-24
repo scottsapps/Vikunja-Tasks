@@ -21,6 +21,7 @@ Beta Builds Available on [TestFlight](https://testflight.apple.com/join/q8GhTkFz
 - **Bulk import** — paste or drag in a plain-text list of tasks
 - **Rich text notes** — Vikunja's HTML task descriptions, with bold/italic/links/bullets
 - **Offline mode** — an outbox queues changes and drains when you're back online
+- **Multiple accounts** — switch between multiple Vikunja accounts (same server or different ones)
 - **macOS global hotkey** — system-wide Quick Add panel
 - **iOS Home Screen Quick Actions** — jump straight to New Task or Scheduled
 - **Reminders** — synced to the system notification center

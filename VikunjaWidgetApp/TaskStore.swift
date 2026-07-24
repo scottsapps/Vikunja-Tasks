@@ -14,6 +14,12 @@ final class TaskStore {
     var isLoading = false
     var error: String?
 
+    /// True while the most recent refresh failed for a transient network
+    /// reason (timeout, host unreachable, radio not up yet). Drives the
+    /// offline pill — never an alert, since there's nothing to act on and the
+    /// cached list is still on screen.
+    private(set) var transientRefreshFailure = false
+
     // MARK: - Offline infrastructure
 
     let outbox = Outbox()
@@ -60,6 +66,7 @@ final class TaskStore {
         guard VikunjaConfig.isConfigured else { return }
         isLoading = true
         error = nil
+        transientRefreshFailure = false
         do {
             let fetchedProjects = try await VikunjaAPI.fetchAllProjects()
             let fetchedTasks = try await VikunjaAPI.fetchAllUndoneTasks(projects: fetchedProjects)
@@ -79,9 +86,46 @@ final class TaskStore {
             lastRefreshAt = Date()
             Task { await VeyrnTelemetry.reportServerInfoIfNeeded() }
         } catch {
-            self.error = error.localizedDescription
+            if Self.isTransientNetwork(error) {
+                // Keep the cached data we're already showing; the retry on
+                // launch and the poll loop will pick it up.
+                transientRefreshFailure = true
+            } else {
+                self.error = error.localizedDescription
+            }
         }
         isLoading = false
+    }
+
+    /// Launch-path refresh: retries with backoff so a network stack that isn't
+    /// ready yet (Wi-Fi reassociating, VPN handshaking) doesn't surface as a
+    /// failure at all.
+    func refreshWithRetry(attempts: Int = 3) async {
+        for attempt in 0..<attempts {
+            await refresh()
+            if !transientRefreshFailure { return }
+            if attempt < attempts - 1 {
+                try? await Task.sleep(for: .seconds(Double(attempt + 1) * 2))
+            }
+        }
+    }
+
+    /// Network conditions that resolve on their own. Anything else — notably
+    /// `APIError.badStatus` for a bad token — stays an actionable alert.
+    private static func isTransientNetwork(_ error: Error) -> Bool {
+        let ns = error as NSError
+        guard ns.domain == NSURLErrorDomain else { return false }
+        return [
+            NSURLErrorTimedOut,
+            NSURLErrorCannotConnectToHost,
+            NSURLErrorCannotFindHost,
+            NSURLErrorNetworkConnectionLost,
+            NSURLErrorNotConnectedToInternet,
+            NSURLErrorDNSLookupFailed,
+            NSURLErrorInternationalRoamingOff,
+            NSURLErrorDataNotAllowed,
+            NSURLErrorSecureConnectionFailed
+        ].contains(ns.code)
     }
 
     /// Refreshes only if the last successful refresh is older than `maxAge`.

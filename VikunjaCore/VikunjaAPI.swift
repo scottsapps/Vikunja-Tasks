@@ -3,6 +3,19 @@ import Foundation
 enum VikunjaAPI {
     private static var baseURL: String { VikunjaConfig.baseURL }
 
+    /// Own session rather than `URLSession.shared` so `waitsForConnectivity`
+    /// can be set: a cold radio then waits for a route instead of failing
+    /// instantly with "The request timed out." The widget extension stays
+    /// bounded regardless — `VikunjaTimelineProvider` races its fetch against
+    /// its own 10s `withTimeout`.
+    private static let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.waitsForConnectivity = true
+        config.timeoutIntervalForRequest = 20
+        config.timeoutIntervalForResource = 45
+        return URLSession(configuration: config)
+    }()
+
     // MARK: - Projects
 
     static func createProject(title: String) async throws -> VikunjaProject {
@@ -12,7 +25,7 @@ enum VikunjaAPI {
 
     static func deleteProject(id: Int) async throws {
         let request = makeRequest("/projects/\(id)", method: "DELETE")
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await session.data(for: request)
         let http = response as? HTTPURLResponse
         guard let http, (200...299).contains(http.statusCode) else {
             throw APIError.badStatus(http?.statusCode ?? -1)
@@ -83,7 +96,7 @@ enum VikunjaAPI {
 
     static func deleteTask(id: Int) async throws {
         let request = makeRequest("/tasks/\(id)", method: "DELETE")
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await session.data(for: request)
         let http = response as? HTTPURLResponse
         guard let http, (200...299).contains(http.statusCode) else {
             throw APIError.badStatus(http?.statusCode ?? -1)
@@ -108,7 +121,7 @@ enum VikunjaAPI {
         task.done = done
         let body = try JSONEncoder().encode(task)
         let request = makeRequest("/tasks/\(id)", method: "POST", body: body)
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await session.data(for: request)
         let http = response as? HTTPURLResponse
         guard let http, (200...299).contains(http.statusCode) else {
             throw APIError.badStatus(http?.statusCode ?? -1)
@@ -183,7 +196,7 @@ enum VikunjaAPI {
     static func addLabelToTask(taskId: Int, labelId: Int) async throws {
         let body = try JSONSerialization.data(withJSONObject: ["label_id": labelId])
         let request = makeRequest("/tasks/\(taskId)/labels", method: "PUT", body: body)
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw APIError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
         }
@@ -197,7 +210,7 @@ enum VikunjaAPI {
             "relation_kind": kind,
         ])
         let request = makeRequest("/tasks/\(taskId)/relations", method: "PUT", body: body)
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw APIError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
         }
@@ -205,7 +218,7 @@ enum VikunjaAPI {
 
     static func removeRelation(taskId: Int, otherTaskId: Int, kind: String = "subtask") async throws {
         let request = makeRequest("/tasks/\(taskId)/relations/\(kind)/\(otherTaskId)", method: "DELETE")
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw APIError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
         }
@@ -299,7 +312,7 @@ enum VikunjaAPI {
 
     private static func get<T: Decodable>(_ path: String, as type: T.Type) async throws -> T {
         let request = makeRequest(path)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         let http = response as? HTTPURLResponse
         guard let http, (200...299).contains(http.statusCode) else {
             throw APIError.badStatus(http?.statusCode ?? -1)
@@ -309,7 +322,7 @@ enum VikunjaAPI {
 
     private static func put<T: Decodable>(_ path: String, body: Data, as type: T.Type) async throws -> T {
         let request = makeRequest(path, method: "PUT", body: body)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         let http = response as? HTTPURLResponse
         guard let http, (200...299).contains(http.statusCode) else {
             throw APIError.badStatus(http?.statusCode ?? -1)
@@ -319,7 +332,7 @@ enum VikunjaAPI {
 
     private static func post<T: Decodable>(_ path: String, body: Data, as type: T.Type) async throws -> T {
         let request = makeRequest(path, method: "POST", body: body)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         let http = response as? HTTPURLResponse
         guard let http, (200...299).contains(http.statusCode) else {
             throw APIError.badStatus(http?.statusCode ?? -1)

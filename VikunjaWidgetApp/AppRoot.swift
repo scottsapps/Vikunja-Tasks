@@ -5,22 +5,57 @@ import SwiftUI
 private struct OfflinePill: View {
     let isOnline: Bool
     let pendingCount: Int
+    /// The network says we're online but the last refresh timed out — show it
+    /// here rather than as an alert; the cached list is still valid.
+    var isReconnecting: Bool = false
+
+    private enum State {
+        case offline, reconnecting, pending
+    }
 
     var body: some View {
-        let offline = !isOnline
-        let hasPending = pendingCount > 0
-        if offline || hasPending {
+        let state: State? = {
+            if !isOnline { return .offline }
+            if isReconnecting { return .reconnecting }
+            if pendingCount > 0 { return .pending }
+            return nil
+        }()
+
+        if let state {
             HStack(spacing: 4) {
-                Image(systemName: offline ? "wifi.slash" : "arrow.up.circle")
+                Image(systemName: icon(state))
                     .font(.system(size: 11, weight: .semibold))
-                Text(offline ? "Offline" : "\(pendingCount) pending")
+                Text(title(state))
                     .font(.system(size: 11, weight: .semibold))
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(offline ? Color.secondary.opacity(0.18) : Color.orange.opacity(0.18))
-            .foregroundStyle(offline ? Color.secondary : Color.orange)
+            .background(tint(state).opacity(0.18))
+            .foregroundStyle(tint(state))
             .clipShape(Capsule())
+        }
+    }
+
+    private func icon(_ state: State) -> String {
+        switch state {
+        case .offline: return "wifi.slash"
+        case .reconnecting: return "arrow.triangle.2.circlepath"
+        case .pending: return "arrow.up.circle"
+        }
+    }
+
+    private func title(_ state: State) -> String {
+        switch state {
+        case .offline: return "Offline"
+        case .reconnecting: return "Reconnecting…"
+        case .pending: return "\(pendingCount) pending"
+        }
+    }
+
+    private func tint(_ state: State) -> Color {
+        switch state {
+        case .offline, .reconnecting: return .secondary
+        case .pending: return .orange
         }
     }
 }
@@ -81,7 +116,7 @@ struct AppRoot: View {
         .task {
             _ = await ReminderScheduler.requestPermission()
             guard VikunjaConfig.isConfigured else { return }
-            await store.refresh()
+            await store.refreshWithRetry()
             store.startPolling()
         }
         .onDisappear { store.stopPolling() }
@@ -202,7 +237,7 @@ struct AppRoot: View {
                     }
                 }
                 ToolbarItem(placement: .status) {
-                    OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count)
+                    OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count, isReconnecting: store.transientRefreshFailure)
                 }
             }
             .overlay {
@@ -274,7 +309,7 @@ struct AppRoot: View {
                 .help("Bulk Import Tasks")
             }
             ToolbarItem(placement: .status) {
-                OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count)
+                OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count, isReconnecting: store.transientRefreshFailure)
             }
         }
         #endif

@@ -8,6 +8,10 @@ import Security
 /// the active account's token — no `kSecAttrAccessGroup` needed in the
 /// queries below, since each target has exactly one keychain access group in
 /// its entitlements and the OS resolves it automatically.
+///
+/// Every query sets `kSecUseDataProtectionKeychain` — see `query(account:)`.
+/// That is what makes the entitlement-based sharing above actually apply on
+/// macOS; without it the whole scheme silently degrades to a per-app store.
 enum TokenStore {
     private static let service = "net.angstreich.VikunjaWidgetApp.token"
 
@@ -16,6 +20,16 @@ enum TokenStore {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: id.uuidString,
+            // Required on macOS, no-op on iOS/watchOS. Without it macOS uses
+            // the legacy file-based keychain (login.keychain-db), where the
+            // keychain-access-groups entitlement does NOT govern access —
+            // reads are gated by per-item ACLs tied to the creating binary.
+            // The widget extension is a different binary, so it couldn't read
+            // the token, isConfigured went false, and the widget silently fell
+            // back to stale cache: it kept showing the previous account's
+            // tasks (including already-completed ones) while the app was fine.
+            // kSecAttrAccessible is also ignored in the legacy keychain.
+            kSecUseDataProtectionKeychain as String: true,
         ]
     }
 
@@ -61,6 +75,7 @@ enum TokenStore {
         let q: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
+            kSecUseDataProtectionKeychain as String: true,
         ]
         SecItemDelete(q as CFDictionary)
     }

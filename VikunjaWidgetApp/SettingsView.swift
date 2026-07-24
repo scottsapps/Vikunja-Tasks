@@ -82,14 +82,21 @@ struct SettingsView: View {
             Spacer()
 
             HStack {
-                if !isOnboarding {
-                    Button("Cancel") { dismiss() }.buttonStyle(.bordered)
-                }
                 Spacer()
                 if isOnboarding {
                     Button("Get Started") { getStarted() }
                         .buttonStyle(.borderedProminent)
                         .disabled(!canSaveOnboarding)
+                } else {
+                    // "Done", not "Cancel": every setting on this screen
+                    // applies immediately (font size and analytics are
+                    // @AppStorage, the hotkey saves on change, accounts save
+                    // in their own editor), so there is nothing to cancel.
+                    // On macOS this is also the only way out — there's no
+                    // swipe-to-dismiss.
+                    Button("Done") { dismiss() }
+                        .buttonStyle(.borderedProminent)
+                        .keyboardShortcut(.defaultAction)
                 }
             }
         }

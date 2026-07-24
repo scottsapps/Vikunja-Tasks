@@ -30,7 +30,7 @@ final class TaskStore {
 
     // MARK: - Offline infrastructure
 
-    let outbox = Outbox()
+    private(set) var outbox: Outbox
     let reachability = Reachability.shared
 
     /// Last server-fetched undone tasks before merger is applied.
@@ -39,6 +39,7 @@ final class TaskStore {
     // MARK: - Init
 
     init() {
+        outbox = Outbox(accountId: VikunjaConfig.activeAccount?.id)
         loadCache()
         observeReachability()
     }
@@ -145,6 +146,74 @@ final class TaskStore {
     func refreshIfStale(maxAge: TimeInterval = 300) async {
         if let last = lastRefreshAt, Date().timeIntervalSince(last) < maxAge { return }
         await refresh()
+    }
+
+    // MARK: - Account switching
+
+    /// Switches the active account and refreshes every piece of state that
+    /// would otherwise leak across accounts: in-memory task state, the
+    /// outbox (per-account keyed), the widget cache, scheduled reminders,
+    /// and (iOS) the Watch's config snapshot. Order matters — see plan §2d.
+    @MainActor
+    func switchAccount(to id: UUID) async {
+        VikunjaConfig.setActive(id: id)
+        resetPerAccountState(accountId: id)
+
+        await ReminderScheduler.cancelAll()
+        #if os(iOS)
+        WatchSessionProvider.shared.syncConfig()
+        #endif
+        VeyrnTelemetry.resetServerInfoGuard()
+        VeyrnTelemetry.accountSwitched(accountCount: VikunjaConfig.accounts.count)
+
+        await refreshWithRetry()
+    }
+
+    /// The last account was deleted — same per-account cleanup as
+    /// `switchAccount`, but there's nothing to switch to or refresh; the app
+    /// falls back to onboarding.
+    @MainActor
+    func clearForNoAccounts() async {
+        resetPerAccountState(accountId: nil)
+
+        await ReminderScheduler.cancelAll()
+        #if os(iOS)
+        WatchSessionProvider.shared.syncConfig()
+        #endif
+    }
+
+    /// Call after `VikunjaConfig.deleteAccount(id:)` when the deleted account
+    /// was the active one — `VikunjaConfig` already reassigned (or cleared)
+    /// the active account; this reacts to that at the app layer.
+    @MainActor
+    func handleAccountDeleted() async {
+        if let newActive = VikunjaConfig.activeAccount {
+            await switchAccount(to: newActive.id)
+        } else {
+            await clearForNoAccounts()
+        }
+    }
+
+    private func resetPerAccountState(accountId: UUID?) {
+        undoneTasks = []
+        doneTasks = []
+        projects = []
+        labels = []
+        lastServerUndone = []
+        error = nil
+        lastReportedFailure = nil
+        lastRefreshError = nil
+        transientRefreshFailure = false
+        lastRefreshAt = nil
+
+        for timer in undoTimers.values { timer.cancel() }
+        undoTimers.removeAll()
+        pendingUndo.removeAll()
+
+        outbox = Outbox(accountId: accountId)
+
+        WidgetCache.clear()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     func refreshLogbook() async {

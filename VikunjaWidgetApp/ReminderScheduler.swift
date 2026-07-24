@@ -83,7 +83,10 @@ enum ReminderScheduler {
             content.title = "Reminder"
             content.body = info.title
             content.sound = .default
-            content.userInfo = ["taskId": info.taskId]
+            content.userInfo = [
+                "taskId": info.taskId,
+                "accountId": VikunjaConfig.activeAccount?.id.uuidString ?? "",
+            ]
             content.categoryIdentifier = categoryId
 
             let components = Calendar.current.dateComponents(

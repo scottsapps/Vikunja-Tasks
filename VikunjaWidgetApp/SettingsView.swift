@@ -2,13 +2,23 @@ import SwiftUI
 import WidgetKit
 
 struct SettingsView: View {
+    var store: TaskStore
     var onSave: (() -> Void)? = nil
 
     private enum ServerKind { case cloud, custom }
 
+    @State private var accounts: [VeyrnAccount] = []
+    @State private var showAccountList = false
+    @State private var showAddAccount = false
+
+    // Onboarding-only state — shown inline when there are no accounts yet,
+    // matching the pre-multi-account first-run flow (no navigating two
+    // levels deep just to type a token).
+    @State private var name = ""
     @State private var serverKind: ServerKind = .custom
     @State private var host = ""
     @State private var token = ""
+    @State private var errorMessage: String?
 
     @Environment(\.dismiss) private var dismiss
     @AppStorage("vikunja_font_size_offset") private var fontSizeOffset: Int = 0
@@ -19,59 +29,22 @@ struct SettingsView: View {
     @State private var hotkeyModifiers: UInt32 = VikunjaConfig.quickAddModifiers
     #endif
 
-    private var defaults: UserDefaults? { UserDefaults(suiteName: VikunjaConfig.appGroupSuite) }
+    private var isOnboarding: Bool { accounts.isEmpty }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            // Header
             VStack(alignment: .leading, spacing: 4) {
-                Text(VikunjaConfig.isConfigured ? "Settings" : "Welcome to Veyrn")
+                Text(isOnboarding ? "Welcome to Veyrn" : "Settings")
                     .font(.title2)
                     .fontWeight(.semibold)
                 Text("Connect to your Vikunja instance.")
                     .foregroundStyle(.secondary)
             }
 
-            // Server picker
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Server")
-                    .font(.headline)
-                Picker("Server", selection: $serverKind) {
-                    Text("Custom server").tag(ServerKind.custom)
-                    Text("Vikunja Cloud").tag(ServerKind.cloud)
-                }
-                .pickerStyle(.segmented)
-                .onChange(of: serverKind) { _, kind in
-                    if kind == .cloud { host = VikunjaConfig.vikunjaCloudHost }
-                }
-
-                if serverKind == .custom {
-                    TextField("https://tasks.example.com", text: $host)
-                        .textFieldStyle(.roundedBorder)
-                        #if os(iOS)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.URL)
-                        #endif
-                    Text("Your Vikunja server — without /api/v1")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }
-
-            // API token
-            VStack(alignment: .leading, spacing: 6) {
-                Text("API Token")
-                    .font(.headline)
-                SecureField("tk_…", text: $token)
-                    .textFieldStyle(.roundedBorder)
-                    #if os(iOS)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    #endif
-                Text("Vikunja → Profile → Settings → API Tokens")
-                    .font(.caption).foregroundStyle(.secondary)
-                Text("Recommended: set a long expiration (1 year or more) and grant all permissions.")
-                    .font(.caption).foregroundStyle(.secondary)
+            if isOnboarding {
+                onboardingForm
+            } else {
+                accountsSection
             }
 
             // Font size
@@ -109,56 +82,169 @@ struct SettingsView: View {
             Spacer()
 
             HStack {
-                if VikunjaConfig.isConfigured {
+                if !isOnboarding {
                     Button("Cancel") { dismiss() }.buttonStyle(.bordered)
                 }
                 Spacer()
-                Button(VikunjaConfig.isConfigured ? "Save" : "Get Started") {
-                    save()
+                if isOnboarding {
+                    Button("Get Started") { getStarted() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!canSaveOnboarding)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(!canSave)
             }
         }
         .padding(32)
-        .onAppear { loadSaved() }
+        .onAppear { reload() }
+        .sheet(isPresented: $showAccountList, onDismiss: reload) {
+            AccountListView(store: store)
+        }
+        .sheet(isPresented: $showAddAccount, onDismiss: { reload(); onSave?() }) {
+            AccountEditorView(mode: .create, store: store, onComplete: { reload(); onSave?() })
+        }
+    }
+
+    // MARK: - Accounts section (already configured)
+
+    private var accountsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Accounts")
+                .font(.headline)
+
+            Button {
+                showAccountList = true
+            } label: {
+                HStack {
+                    Text("Active Account")
+                    Spacer()
+                    Text(VikunjaConfig.activeAccount?.name ?? "")
+                        .foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                showAddAccount = true
+            } label: {
+                Label("Add Account", systemImage: "plus")
+            }
+            .disabled(accounts.count >= VikunjaConfig.maxAccounts)
+
+            if accounts.count >= VikunjaConfig.maxAccounts {
+                Text("Maximum of 5 accounts.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Onboarding form (no accounts yet)
+
+    private var onboardingForm: some View {
+        Group {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Name")
+                    .font(.headline)
+                TextField("e.g. Home", text: $name)
+                    .textFieldStyle(.roundedBorder)
+                    .onChange(of: name) { _, newValue in
+                        if newValue.count > VikunjaConfig.maxAccountNameLength {
+                            name = String(newValue.prefix(VikunjaConfig.maxAccountNameLength))
+                        }
+                    }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Server")
+                    .font(.headline)
+                Picker("Server", selection: $serverKind) {
+                    Text("Custom server").tag(ServerKind.custom)
+                    Text("Vikunja Cloud").tag(ServerKind.cloud)
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: serverKind) { _, kind in
+                    if kind == .cloud { host = VikunjaConfig.vikunjaCloudHost }
+                }
+
+                if serverKind == .custom {
+                    TextField("https://tasks.example.com", text: $host)
+                        .textFieldStyle(.roundedBorder)
+                        #if os(iOS)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.URL)
+                        #endif
+                    Text("Your Vikunja server — without /api/v1")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("API Token")
+                    .font(.headline)
+                SecureField("tk_…", text: $token)
+                    .textFieldStyle(.roundedBorder)
+                    #if os(iOS)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    #endif
+                Text("Vikunja → Profile → Settings → API Tokens")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text("Recommended: set a long expiration (1 year or more) and grant all permissions.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
     }
 
     // MARK: - Helpers
 
-    private var canSave: Bool {
+    private var canSaveOnboarding: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
         !host.trimmingCharacters(in: .whitespaces).isEmpty &&
         !token.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    private func save() {
+    private func getStarted() {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedHost = host
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let trimmedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        defaults?.set(trimmedHost, forKey: "vikunja_host")
-        VikunjaConfig.saveToken(trimmedToken)
-
-        host = trimmedHost
-        token = trimmedToken
+        let account = VeyrnAccount(id: UUID(), name: trimmedName, host: trimmedHost, token: trimmedToken)
+        errorMessage = nil
+        do {
+            try VikunjaConfig.addAccount(account)
+        } catch VikunjaConfig.AccountError.duplicateName {
+            errorMessage = "An account is already named \"\(trimmedName)\"."
+            return
+        } catch {
+            return
+        }
 
         VeyrnTelemetry.signal("SignedIn", parameters: [
             "serverKind": serverKind == .cloud ? "cloud" : "custom",
         ])
 
         WidgetCenter.shared.reloadAllTimelines()
-        #if os(iOS)
-        WatchSessionProvider.shared.syncConfig()
-        #endif
-        onSave?()
-        dismiss()
+        Task {
+            await store.switchAccount(to: account.id)
+            reload()
+            onSave?()
+        }
     }
 
-    private func loadSaved() {
-        host = defaults?.string(forKey: "vikunja_host") ?? ""
-        token = defaults?.string(forKey: "vikunja_api_token") ?? ""
-        serverKind = host == VikunjaConfig.vikunjaCloudHost ? .cloud : .custom
+    private func reload() {
+        accounts = VikunjaConfig.accounts
     }
 
     #if os(macOS)

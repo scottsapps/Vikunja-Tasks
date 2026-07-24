@@ -17,9 +17,23 @@ enum VeyrnTelemetry {
         TelemetryDeck.signal(name, parameters: parameters)
     }
 
+    // MARK: - Account switching
+
+    /// Bucketed count only — never account names or hosts.
+    static func accountSwitched(accountCount: Int) {
+        signal("AccountSwitched", parameters: ["accountCount": String(accountCount)])
+    }
+
     // MARK: - Server version reporting
 
     private static var hasReportedServerThisLaunch = false
+
+    /// Called on every account switch so the newly-active server's version
+    /// gets reported too — otherwise only the launch account's version is
+    /// ever seen, skewing the v1→v2 migration data.
+    static func resetServerInfoGuard() {
+        hasReportedServerThisLaunch = false
+    }
 
     /// Fetches the server version and reports it once per launch.
     /// Silent on network failure; safe to call from any refresh path.

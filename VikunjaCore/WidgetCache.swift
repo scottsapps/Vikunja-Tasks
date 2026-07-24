@@ -30,4 +30,14 @@ enum WidgetCache {
         else { return nil }
         return (tasks, projects)
     }
+
+    /// Wipes the cache on an account switch so a widget can't show the
+    /// previous account's tasks (or complete one of its tasks against the
+    /// new account's server) before the post-switch refresh repopulates it.
+    static func clear() {
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return }
+        defaults.removeObject(forKey: tasksKey)
+        defaults.removeObject(forKey: projectsKey)
+        defaults.removeObject(forKey: savedAtKey)
+    }
 }

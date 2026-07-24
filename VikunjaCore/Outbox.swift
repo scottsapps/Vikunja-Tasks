@@ -44,13 +44,43 @@ final class Outbox {
     private(set) var ops: [PendingOp] = []
     private var nextPlaceholder: Int = -1
 
-    private let opsKey = "vikunja.outbox.v1"
-    private let counterKey = "vikunja.outbox.placeholderCounter.v1"
+    private static let legacyOpsKey = "vikunja.outbox.v1"
+    private static let legacyCounterKey = "vikunja.outbox.placeholderCounter.v1"
+
+    private let opsKey: String
+    private let counterKey: String
     private let defaults: UserDefaults
 
-    init(defaults: UserDefaults = .standard) {
+    /// `accountId` nil = no account (fresh install) — falls back to the legacy
+    /// unsuffixed keys with nothing to migrate.
+    init(defaults: UserDefaults = .standard, accountId: UUID? = nil) {
         self.defaults = defaults
+        if let accountId {
+            self.opsKey = "\(Self.legacyOpsKey).\(accountId.uuidString)"
+            self.counterKey = "\(Self.legacyCounterKey).\(accountId.uuidString)"
+        } else {
+            self.opsKey = Self.legacyOpsKey
+            self.counterKey = Self.legacyCounterKey
+        }
+        migrateLegacyIfNeeded()
         load()
+    }
+
+    /// One-time migration for a user who updates while offline with queued
+    /// outbox ops: the pre-multi-account keys are unsuffixed, so copy them
+    /// across to this (necessarily the just-migrated legacy) account's keys
+    /// and remove the old ones. A no-op once this has run, since the legacy
+    /// keys are gone afterward.
+    private func migrateLegacyIfNeeded() {
+        guard opsKey != Self.legacyOpsKey else { return }
+        guard defaults.data(forKey: opsKey) == nil else { return }
+        guard let legacyData = defaults.data(forKey: Self.legacyOpsKey) else { return }
+        defaults.set(legacyData, forKey: opsKey)
+        if defaults.object(forKey: Self.legacyCounterKey) != nil {
+            defaults.set(defaults.integer(forKey: Self.legacyCounterKey), forKey: counterKey)
+        }
+        defaults.removeObject(forKey: Self.legacyOpsKey)
+        defaults.removeObject(forKey: Self.legacyCounterKey)
     }
 
     // MARK: - Mutations

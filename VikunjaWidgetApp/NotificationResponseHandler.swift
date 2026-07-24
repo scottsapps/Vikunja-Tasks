@@ -23,6 +23,16 @@ final class NotificationResponseHandler: NSObject, UNUserNotificationCenterDeleg
         let userInfo = response.notification.request.content.userInfo
         let notificationId = response.notification.request.identifier
 
+        // Belt-and-braces against an already-delivered notification from a
+        // different account being actioned after a switch. Notifications
+        // scheduled before this field existed carry no accountId — treat
+        // those as unscoped rather than blocking them.
+        if let accountId = userInfo["accountId"] as? String, !accountId.isEmpty,
+           accountId != VikunjaConfig.activeAccount?.id.uuidString {
+            completionHandler()
+            return
+        }
+
         switch response.actionIdentifier {
         case ReminderScheduler.actionComplete:
             guard let taskId = userInfo["taskId"] as? Int else { completionHandler(); return }

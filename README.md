@@ -10,6 +10,8 @@ Beta Builds Available on [TestFlight](https://testflight.apple.com/join/q8GhTkFz
   <img src="icon_source.png" width="128" alt="Veyrn icon">
 </p>
 
+![Veyrn — your tasks, everywhere you work. A native Vikunja client for Mac, iPhone, and Apple Watch.](Veyrn-hero.png)
+
 ## Features
 
 - **Full task management** — create, edit, complete, and reopen tasks

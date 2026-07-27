@@ -164,6 +164,9 @@ struct InlineTaskEditor: View {
                 Circle()
                     .stroke(circleStroke, lineWidth: 2)
                     .frame(width: 25, height: 25)
+                    // A stroked Circle only hit-tests on the ring itself; on macOS
+                    // the pointer is exact, so the interior would be dead.
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
             .padding(.top, 5)
@@ -462,6 +465,8 @@ struct InlineTaskEditor: View {
                                     .frame(width: 21, height: 21)
                             }
                         }
+                        .frame(width: 21, height: 21)
+                        .contentShape(Circle())
                     }
                     .buttonStyle(.plain)
 

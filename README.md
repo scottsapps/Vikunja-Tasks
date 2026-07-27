@@ -1,5 +1,7 @@
 # Veyrn
 
+![Veyrn — your tasks, everywhere you work. A native Vikunja client for Mac, iPhone, and Apple Watch.](Veyrn-hero.png)
+
 A Things 3-style task management app for macOS and iOS that connects to a self-hosted [Vikunja](https://vikunja.io) instance.
 
 Latest Release Available on the [App Store](https://apps.apple.com/us/app/veyrn/id6764057920).
@@ -9,8 +11,6 @@ Beta Builds Available on [TestFlight](https://testflight.apple.com/join/q8GhTkFz
 <p>
   <img src="icon_source.png" width="128" alt="Veyrn icon">
 </p>
-
-![Veyrn — your tasks, everywhere you work. A native Vikunja client for Mac, iPhone, and Apple Watch.](Veyrn-hero.png)
 
 ## Features
 

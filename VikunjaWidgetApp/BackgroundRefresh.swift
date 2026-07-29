@@ -14,13 +14,21 @@ enum BackgroundRefresh {
     static func schedule() {
         let request = BGAppRefreshTaskRequest(identifier: taskId)
         request.earliestBeginDate = Date(timeIntervalSinceNow: 30 * 60)
-        try? BGTaskScheduler.shared.submit(request)
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            DiagnosticLog.info("BGTask scheduled (earliest +30 m)")
+        } catch {
+            DiagnosticLog.warn("BGTask schedule failed: \(VeyrnError.logDescription(for: error))")
+        }
     }
 
     private static func handle(_ task: BGAppRefreshTask) {
         schedule()   // always queue the next run
+        DiagnosticLog.info("BGTask fired")
+        let start = Date()
         let work = Task {
             guard VikunjaConfig.isConfigured else {
+                DiagnosticLog.info("isConfigured=false")
                 task.setTaskCompleted(success: true); return
             }
             do {
@@ -30,12 +38,17 @@ enum BackgroundRefresh {
                 await ReminderScheduler.sync(tasks: tasks)
                 WatchSessionProvider.shared.pushSnapshot(tasks: tasks, projects: projects)
                 WidgetCenter.shared.reloadAllTimelines()
+                DiagnosticLog.info("BGTask done: \(tasks.count) tasks, \(String(format: "%.1f", Date().timeIntervalSince(start))) s")
                 task.setTaskCompleted(success: true)
             } catch {
+                DiagnosticLog.warn("BGTask failed: \(VeyrnError.logDescription(for: error))")
                 task.setTaskCompleted(success: false)
             }
         }
-        task.expirationHandler = { work.cancel() }
+        task.expirationHandler = {
+            DiagnosticLog.warn("BGTask expired")
+            work.cancel()
+        }
     }
 }
 #endif

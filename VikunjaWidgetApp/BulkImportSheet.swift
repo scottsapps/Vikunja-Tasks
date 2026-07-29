@@ -324,6 +324,8 @@ struct BulkImportSheet: View {
     private func importTasks(_ spec: BulkImportSpec) async {
         guard let project = resolvedProject(for: spec) else { return }
         phase = .importing
+        DiagnosticLog.breadcrumb("bulkImport")
+        DiagnosticLog.info("bulk import: \(spec.tasks.count) tasks, \(spec.labelTitles.count) labels")
 
         var resolvedLabels: [VikunjaLabel] = []
         for title in spec.labelTitles {

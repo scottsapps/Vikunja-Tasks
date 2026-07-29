@@ -128,7 +128,10 @@ struct QuickAddSheet: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 22)
         }
-        .onAppear { fieldFocused = true }
+        .onAppear {
+            fieldFocused = true
+            DiagnosticLog.breadcrumb("quickAdd.open")
+        }
         .animation(.easeInOut(duration: 0.18), value: isExpanded)
         .animation(.easeInOut(duration: 0.18), value: hasPreviewContent)
         .animation(.easeInOut(duration: 0.2), value: showExpandedDatePicker)
@@ -635,6 +638,7 @@ struct QuickAddSheet: View {
 
         isSubmitting = true
         errorMessage = nil
+        DiagnosticLog.breadcrumb("quickAdd.submit")
 
         Task {
             let targetProject: VikunjaProject?

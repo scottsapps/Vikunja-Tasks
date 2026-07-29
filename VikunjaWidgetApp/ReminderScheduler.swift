@@ -51,6 +51,7 @@ enum ReminderScheduler {
 
         // Only proceed if we have permission
         let settings = await center.notificationSettings()
+        DiagnosticLog.info("notification authorization: \(authDescription(settings.authorizationStatus))")
         guard settings.authorizationStatus == .authorized else { return }
 
         // Build the set of (id → reminder ISO) that the server wants
@@ -98,6 +99,9 @@ enum ReminderScheduler {
 
             try? await center.add(request)
         }
+
+        let unchanged = pendingIds.intersection(desiredIds).count
+        DiagnosticLog.info("reminders synced: \(toAdd.count) scheduled, \(toCancel.count) cancelled, \(unchanged) unchanged")
     }
 
     /// Cancel every pending reminder for a single task (e.g. when it is
@@ -105,15 +109,26 @@ enum ReminderScheduler {
     /// set that `sync` diffs against, but `sync` only runs on a full network
     /// refresh — so without this the OS keeps the already-scheduled local
     /// notification and fires it before the next refresh reconciles.
-    static func cancel(taskId: Int) async {
+    static func cancel(taskId: Int, reason: String) async {
         let center = UNUserNotificationCenter.current()
         let prefix = "vikunja.reminder.\(taskId)."
         let pending = await center.pendingNotificationRequests()
         let ids = pending
             .filter { $0.identifier.hasPrefix(prefix) }
             .map(\.identifier)
-        if !ids.isEmpty {
-            center.removePendingNotificationRequests(withIdentifiers: ids)
+        guard !ids.isEmpty else { return }
+        center.removePendingNotificationRequests(withIdentifiers: ids)
+        DiagnosticLog.info("reminder cancelled for task \(taskId) (\(reason))")
+    }
+
+    private static func authDescription(_ status: UNAuthorizationStatus) -> String {
+        switch status {
+        case .authorized: return "authorized"
+        case .denied: return "denied"
+        case .notDetermined: return "notDetermined"
+        case .provisional: return "provisional"
+        case .ephemeral: return "ephemeral"
+        @unknown default: return "unknown"
         }
     }
 

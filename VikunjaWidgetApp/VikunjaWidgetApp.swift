@@ -1,5 +1,8 @@
 import SwiftUI
 import UserNotifications
+#if os(macOS)
+import AppKit
+#endif
 #if os(iOS)
 import UIKit
 
@@ -65,9 +68,21 @@ struct VikunjaWidgetAppEntry: App {
 
     init() {
         VeyrnTelemetry.initialize()
+        DiagnosticLog.registerCrashHandlers()
+        // Before the first line of this session, so the environment block at
+        // the top of the file describes the build that's actually running.
+        DiagnosticLog.refreshHeader()
+        HangWatchdog.start()
+        DiagnosticLog.info("app launch: configured=\(VikunjaConfig.isConfigured), accounts=\(VikunjaConfig.accounts.count)")
         VikunjaConfig.cleanupOrphanedKeychainItemsIfNeeded()
         #if os(macOS)
         VikunjaConfig.registerHotkeyDefaults()
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+        ) { _ in
+            DiagnosticLog.info("app will terminate")
+            DiagnosticLog.flushSync()
+        }
         #endif
         #if os(iOS)
         WatchSessionProvider.shared.activate()
@@ -89,10 +104,14 @@ struct VikunjaWidgetAppEntry: App {
         .defaultSize(width: 900, height: 600)
         #endif
         .onChange(of: scenePhase) { _, newPhase in
+            DiagnosticLog.info("scenePhase → \(newPhase)")
+            // A backgrounded (iOS: suspended) process must not be mistaken for
+            // a hung one — see HangWatchdog.pause().
+            if newPhase == .active { HangWatchdog.resume() } else { HangWatchdog.pause() }
             if newPhase == .active {
                 Task {
                     await store.drainOutbox()
-                    await store.refreshIfStale(maxAge: 60)
+                    await store.refreshIfStale(maxAge: 60, reason: "scenePhase")
                 }
             }
             #if os(iOS)

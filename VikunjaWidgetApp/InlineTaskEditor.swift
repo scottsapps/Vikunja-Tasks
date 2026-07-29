@@ -130,13 +130,29 @@ struct InlineTaskEditor: View {
         .frame(minWidth: 440, idealWidth: 520, maxWidth: 520)
         #endif
         .task {
+            DiagnosticLog.info("editor open task \(task.id)")
+            DiagnosticLog.breadcrumb("editor.open")
+
             // WebKit HTML parsing must not run during a SwiftUI render pass.
-            notesAttrStr = RichTextUtils.attributedString(from: task.description ?? "")
+            DiagnosticLog.breadcrumb("editor.htmlImport")
+            let html = task.description ?? ""
+            let importStart = Date()
+            notesAttrStr = RichTextUtils.attributedString(from: html)
+            let importElapsed = Date().timeIntervalSince(importStart)
+            let imgCount = html.components(separatedBy: "<img").count - 1
+            DiagnosticLog.info("html import: \(html.utf8.count) bytes → \(String(format: "%.2f", importElapsed)) s; img tags \(imgCount) (absolute \(absoluteImgTagCount(html)))")
+            DiagnosticLog.breadcrumb("idle")
+
+            DiagnosticLog.breadcrumb("editor.subtaskFetch")
+            let subtaskStart = Date()
             if task.id > 0, let full = try? await VikunjaAPI.fetchTask(id: task.id) {
                 loadedSubtasks = full.subtasks
             } else {
                 loadedSubtasks = task.subtasks.isEmpty ? [] : task.subtasks
             }
+            let subtaskElapsed = Date().timeIntervalSince(subtaskStart)
+            DiagnosticLog.info("subtask fetch task \(task.id) → \(loadedSubtasks?.count ?? 0) subtasks, \(String(format: "%.1f", subtaskElapsed)) s")
+            DiagnosticLog.breadcrumb("idle")
         }
         .animation(.easeInOut(duration: 0.2), value: showDatePicker)
         .animation(.easeInOut(duration: 0.2), value: showReminderPicker)
@@ -519,7 +535,10 @@ struct InlineTaskEditor: View {
 
             Spacer()
 
-            Button("Cancel") { onDismiss() }
+            Button("Cancel") {
+                DiagnosticLog.info("editor dismissed (cancelled)")
+                onDismiss()
+            }
                 .font(.system(size: 16))
                 .foregroundStyle(accentBlue)
                 .padding(.horizontal, 14).padding(.vertical, 9)
@@ -678,40 +697,58 @@ struct InlineTaskEditor: View {
     // MARK: - Save
 
     private func save() async {
+        DiagnosticLog.breadcrumb("editor.save")
         let trimmedTitle = title.trimmingCharacters(in: .whitespaces)
         guard !trimmedTitle.isEmpty else { return }
         isSaving = true
         var update = TaskUpdate()
+        var changedFields: [String] = []
 
-        if trimmedTitle != task.title { update.title = trimmedTitle }
+        if trimmedTitle != task.title { update.title = trimmedTitle; changedFields.append("title") }
 
+        let exportStart = Date()
         let currentHTML = RichTextUtils.html(from: notesAttrStr)
-        if currentHTML != (task.description ?? "") { update.description = currentHTML }
+        let exportElapsed = Date().timeIntervalSince(exportStart)
+        let descriptionChanged = currentHTML != (task.description ?? "")
+        if descriptionChanged { update.description = currentHTML; changedFields.append("description") }
+        DiagnosticLog.info("html export: \(currentHTML.utf8.count) bytes, \(String(format: "%.2f", exportElapsed)) s, changed=\(descriptionChanged ? "yes" : "no")")
 
         let originalDue = task.effectiveDueDate
         if !hasDueDate && originalDue != nil {
             update.clearDueDate = true
+            changedFields.append("dueDate")
         } else if hasDueDate, let d = dueDate {
             let cal = Calendar.current
             if originalDue == nil || !cal.isDate(d, inSameDayAs: originalDue!) {
                 update.dueDate = VikunjaAPI.applyDefaultTime(d)
+                changedFields.append("dueDate")
             }
         }
 
         let originalPriority = task.priority ?? 0
         if priority != originalPriority {
             if priority == 0 { update.clearPriority = true } else { update.priority = priority }
+            changedFields.append("priority")
         }
 
         let originalLabelIds = Set(task.labels?.map(\.id) ?? [])
-        if selectedLabelIds != originalLabelIds { update.labelIds = Array(selectedLabelIds) }
+        if selectedLabelIds != originalLabelIds {
+            update.labelIds = Array(selectedLabelIds)
+            changedFields.append("labels")
+        }
 
-        if selectedProjectId != task.projectId { update.projectId = selectedProjectId }
+        if selectedProjectId != task.projectId {
+            update.projectId = selectedProjectId
+            changedFields.append("project")
+        }
 
         let originalReminder = task.reminders?.compactMap(\.date).first
         let reminderChanged = hasReminder != (originalReminder != nil)
             || (hasReminder && reminderDate != originalReminder)
-        if reminderChanged { update.reminders = hasReminder ? [reminderDate] : [] }
+        if reminderChanged {
+            update.reminders = hasReminder ? [reminderDate] : []
+            changedFields.append("reminders")
+        }
 
         let originalRepeat = task.repeatAfter.flatMap { $0 > 0 ? $0 : nil }
         let originalMode = task.repeatMode ?? 0
@@ -725,6 +762,7 @@ struct InlineTaskEditor: View {
             } else {
                 update.clearRepeat = true
             }
+            changedFields.append("repeat")
         }
 
         let hasChanges = update.title != nil || update.description != nil
@@ -734,9 +772,20 @@ struct InlineTaskEditor: View {
             || update.reminders != nil || update.repeatAfter != nil
             || update.repeatMode != nil || update.clearRepeat
 
-        if hasChanges { await store.update(taskId: task.id, with: update) }
+        if hasChanges {
+            DiagnosticLog.info("save task \(task.id): fields [\(changedFields.joined(separator: ", "))]")
+            await store.update(taskId: task.id, with: update)
+        }
+        DiagnosticLog.info("editor dismissed (saved)")
+        DiagnosticLog.breadcrumb("idle")
         onDismiss()
         isSaving = false
+    }
+
+    private func absoluteImgTagCount(_ html: String) -> Int {
+        guard let regex = try? NSRegularExpression(pattern: "<img[^>]*src=[\"']https?://", options: .caseInsensitive) else { return 0 }
+        let range = NSRange(html.startIndex..., in: html)
+        return regex.numberOfMatches(in: html, range: range)
     }
 
     // MARK: - Helpers

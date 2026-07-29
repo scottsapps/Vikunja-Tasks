@@ -14,6 +14,7 @@ struct UndoCompleteTaskIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         try await VikunjaAPI.reopenTask(id: taskId)
+        DiagnosticLog.info("UndoCompleteTaskIntent task \(taskId) → 200")
         SharedState.remove(taskId: taskId)
         WidgetCenter.shared.reloadAllTimelines()
         return .result()

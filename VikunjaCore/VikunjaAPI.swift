@@ -25,11 +25,7 @@ enum VikunjaAPI {
 
     static func deleteProject(id: Int) async throws {
         let request = makeRequest("/projects/\(id)", method: "DELETE")
-        let (_, response) = try await session.data(for: request)
-        let http = response as? HTTPURLResponse
-        guard let http, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus(http?.statusCode ?? -1)
-        }
+        _ = try await send(request)
     }
 
     static func fetchAllProjects() async throws -> [VikunjaProject] {
@@ -96,11 +92,7 @@ enum VikunjaAPI {
 
     static func deleteTask(id: Int) async throws {
         let request = makeRequest("/tasks/\(id)", method: "DELETE")
-        let (_, response) = try await session.data(for: request)
-        let http = response as? HTTPURLResponse
-        guard let http, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus(http?.statusCode ?? -1)
-        }
+        _ = try await send(request)
     }
 
     static func completeTask(id: Int) async throws {
@@ -121,11 +113,7 @@ enum VikunjaAPI {
         task.done = done
         let body = try JSONEncoder().encode(task)
         let request = makeRequest("/tasks/\(id)", method: "POST", body: body)
-        let (_, response) = try await session.data(for: request)
-        let http = response as? HTTPURLResponse
-        guard let http, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus(http?.statusCode ?? -1)
-        }
+        _ = try await send(request)
     }
 
     static func createTask(
@@ -196,10 +184,7 @@ enum VikunjaAPI {
     static func addLabelToTask(taskId: Int, labelId: Int) async throws {
         let body = try JSONSerialization.data(withJSONObject: ["label_id": labelId])
         let request = makeRequest("/tasks/\(taskId)/labels", method: "PUT", body: body)
-        let (_, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
-        }
+        _ = try await send(request)
     }
 
     // MARK: - Task relations (subtasks)
@@ -210,18 +195,12 @@ enum VikunjaAPI {
             "relation_kind": kind,
         ])
         let request = makeRequest("/tasks/\(taskId)/relations", method: "PUT", body: body)
-        let (_, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
-        }
+        _ = try await send(request)
     }
 
     static func removeRelation(taskId: Int, otherTaskId: Int, kind: String = "subtask") async throws {
         let request = makeRequest("/tasks/\(taskId)/relations/\(kind)/\(otherTaskId)", method: "DELETE")
-        let (_, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
-        }
+        _ = try await send(request)
     }
 
     // MARK: - Date helpers
@@ -312,31 +291,19 @@ enum VikunjaAPI {
 
     private static func get<T: Decodable>(_ path: String, as type: T.Type) async throws -> T {
         let request = makeRequest(path)
-        let (data, response) = try await session.data(for: request)
-        let http = response as? HTTPURLResponse
-        guard let http, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus(http?.statusCode ?? -1)
-        }
+        let (data, _) = try await send(request)
         return try JSONDecoder().decode(T.self, from: data)
     }
 
     private static func put<T: Decodable>(_ path: String, body: Data, as type: T.Type) async throws -> T {
         let request = makeRequest(path, method: "PUT", body: body)
-        let (data, response) = try await session.data(for: request)
-        let http = response as? HTTPURLResponse
-        guard let http, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus(http?.statusCode ?? -1)
-        }
+        let (data, _) = try await send(request)
         return try JSONDecoder().decode(T.self, from: data)
     }
 
     private static func post<T: Decodable>(_ path: String, body: Data, as type: T.Type) async throws -> T {
         let request = makeRequest(path, method: "POST", body: body)
-        let (data, response) = try await session.data(for: request)
-        let http = response as? HTTPURLResponse
-        guard let http, (200...299).contains(http.statusCode) else {
-            throw APIError.badStatus(http?.statusCode ?? -1)
-        }
+        let (data, _) = try await send(request)
         return try JSONDecoder().decode(T.self, from: data)
     }
 
@@ -349,6 +316,76 @@ enum VikunjaAPI {
             request.httpBody = body
         }
         return request
+    }
+
+    // MARK: - Request chokepoint (logging + status validation)
+
+    /// Every request goes through here — the single place that validates the
+    /// status code and writes a diagnostic line. Successful GETs only bump a
+    /// counter (see `beginRequestBatch`); everything else (mutations, non-2xx,
+    /// transport errors) gets its own line. `path` is `request.url?.path`
+    /// only — never `.absoluteString` and never the query string, since
+    /// `fetchLabels(search:)` puts the user's search text in `?s=`.
+    private static func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        let method = request.httpMethod ?? "GET"
+        let path = request.url?.path ?? "?"
+        let start = Date()
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            let elapsed = Date().timeIntervalSince(start)
+            DiagnosticLog.error("✗ \(VeyrnError.logDescription(for: error)) \(method) \(path) (\(formatDuration(elapsed)))")
+            throw error
+        }
+
+        let elapsed = Date().timeIntervalSince(start)
+        guard let http = response as? HTTPURLResponse else {
+            throw APIError.badStatus(-1)
+        }
+        guard (200...299).contains(http.statusCode) else {
+            DiagnosticLog.warn("← \(http.statusCode) \(method) \(path) (\(formatDuration(elapsed)))")
+            throw APIError.badStatus(http.statusCode)
+        }
+
+        if method == "GET" {
+            bumpRequestCounter(bytes: data.count)
+        } else {
+            DiagnosticLog.info("← \(http.statusCode) \(method) \(path) (\(formatDuration(elapsed)))")
+        }
+        return (data, http)
+    }
+
+    private static func formatDuration(_ seconds: TimeInterval) -> String {
+        seconds < 1 ? String(format: "%.0f ms", seconds * 1000) : String(format: "%.1f s", seconds)
+    }
+
+    // MARK: - Request batch counters (for TaskStore.refresh()'s summary line)
+
+    private static let counterLock = NSLock()
+    private static var requestCount = 0
+    private static var bytesReceived = 0
+
+    static func beginRequestBatch() {
+        counterLock.lock()
+        requestCount = 0
+        bytesReceived = 0
+        counterLock.unlock()
+    }
+
+    static func takeRequestBatch() -> (count: Int, bytes: Int) {
+        counterLock.lock()
+        defer { counterLock.unlock() }
+        return (requestCount, bytesReceived)
+    }
+
+    private static func bumpRequestCounter(bytes: Int) {
+        counterLock.lock()
+        requestCount += 1
+        bytesReceived += bytes
+        counterLock.unlock()
     }
 
     enum APIError: Error, LocalizedError {

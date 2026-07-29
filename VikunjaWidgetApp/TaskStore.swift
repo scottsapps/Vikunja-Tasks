@@ -28,6 +28,12 @@ final class TaskStore {
     /// hitting the same dead server every 60s) doesn't re-alert.
     private var lastReportedFailure: String?
 
+    /// Volume control (plan §2): a successful refresh whose counts are
+    /// unchanged only logs once every 10 minutes; a change (or failure)
+    /// always logs.
+    private var lastLoggedRefreshSummary: String?
+    private var lastLoggedRefreshAt: Date?
+
     // MARK: - Offline infrastructure
 
     private(set) var outbox: Outbox
@@ -71,12 +77,31 @@ final class TaskStore {
 
     private var lastRefreshAt: Date?
 
-    func refresh(deferAlert: Bool = false) async {
-        guard VikunjaConfig.isConfigured else { return }
+    /// Launch fires two refreshes ~60 ms apart — `AppRoot.task` and the
+    /// `scenePhase == .active` handler, which can't be stale-skipped because
+    /// `lastRefreshAt` is still nil. That doubled the fan-out to ~24
+    /// simultaneous requests against the server, and the first observed
+    /// timeout was one of that pair. One refresh at a time is enough.
+    private var isRefreshing = false
+
+    func refresh(deferAlert: Bool = false, reason: String = "manual") async {
+        guard VikunjaConfig.isConfigured else {
+            DiagnosticLog.info("isConfigured=false")
+            return
+        }
+        guard !isRefreshing else {
+            DiagnosticLog.info("refresh skipped (reason: \(reason)) — already in flight")
+            return
+        }
+        isRefreshing = true
+        defer { isRefreshing = false }
         isLoading = true
         error = nil
         transientRefreshFailure = false
         lastRefreshError = nil
+        DiagnosticLog.info("refresh start (reason: \(reason))")
+        VikunjaAPI.beginRequestBatch()
+        let refreshStart = Date()
         do {
             let fetchedProjects = try await VikunjaAPI.fetchAllProjects()
             let fetchedTasks = try await VikunjaAPI.fetchAllUndoneTasks(projects: fetchedProjects)
@@ -95,38 +120,72 @@ final class TaskStore {
             await ReminderScheduler.sync(tasks: undoneTasks)
             lastRefreshAt = Date()
             lastReportedFailure = nil
-            Task { await VeyrnTelemetry.reportServerInfoIfNeeded() }
+            Task { await VeyrnTelemetry.probeServerInfoIfNeeded() }
+            logRefreshOk(elapsed: Date().timeIntervalSince(refreshStart))
         } catch {
             lastRefreshError = error
-            if VeyrnError.isConnectivityOnly(error) {
+            let tier: String
+            if VeyrnError.isCancellation(error) {
+                // Our own doing — quitting, switching accounts, tearing down a
+                // session. Not a failure: no alert, and not even the pill.
+                tier = "cancelled"
+            } else if VeyrnError.isConnectivityOnly(error) {
                 // Nothing for the user to fix and the cached list is still on
                 // screen — show it in the pill, let the poll loop recover.
                 transientRefreshFailure = true
+                tier = "transient"
             } else if deferAlert && VeyrnError.isRetryable(error) {
                 // Launch path: a name-resolution/connection failure while
                 // Wi-Fi or a VPN is still coming up. Stay quiet; the caller
                 // reports it if the retries run out.
                 transientRefreshFailure = true
+                tier = "retryable"
             } else {
                 report(error)
+                tier = "alerting"
             }
+            let elapsed = Date().timeIntervalSince(refreshStart)
+            DiagnosticLog.warn("refresh failed: \(VeyrnError.logDescription(for: error)) [\(tier)], \(formatDuration(elapsed))")
         }
         isLoading = false
+    }
+
+    /// Logs a summary line, subject to the 10-minute quiet rule: a refresh
+    /// whose counts are unchanged from the last logged one only logs at most
+    /// once every 10 minutes, so a healthy 60s poll loop doesn't fill the log.
+    private func logRefreshOk(elapsed: TimeInterval) {
+        let batch = VikunjaAPI.takeRequestBatch()
+        let summary = "\(projects.count) projects, \(undoneTasks.count) undone"
+        let changed = summary != lastLoggedRefreshSummary
+        let quietElapsed = lastLoggedRefreshAt.map { Date().timeIntervalSince($0) } ?? .infinity
+        guard changed || quietElapsed >= 600 else { return }
+        lastLoggedRefreshSummary = summary
+        lastLoggedRefreshAt = Date()
+        DiagnosticLog.info("refresh ok: \(summary), \(batch.count) requests, \(formatDuration(elapsed))")
+    }
+
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        seconds < 1 ? String(format: "%.0f ms", seconds * 1000) : String(format: "%.1f s", seconds)
     }
 
     /// Launch-path refresh: retries with backoff so a network stack that isn't
     /// ready yet (Wi-Fi reassociating, VPN handshaking) doesn't surface as a
     /// failure at all. If the retries run out on something the user can
     /// actually fix — a wrong address, a dead server — it's reported then.
-    func refreshWithRetry(attempts: Int = 3) async {
+    func refreshWithRetry(attempts: Int = 3, reason: String = "launch") async {
         for attempt in 0..<attempts {
-            await refresh(deferAlert: true)
+            if attempt > 0 {
+                DiagnosticLog.info("refreshWithRetry attempt \(attempt + 1)/\(attempts)")
+            }
+            await refresh(deferAlert: true, reason: reason)
             if !transientRefreshFailure { return }
             if attempt < attempts - 1 {
                 try? await Task.sleep(for: .seconds(Double(attempt + 1) * 2))
             }
         }
-        if let error = lastRefreshError, !VeyrnError.isConnectivityOnly(error) {
+        if let error = lastRefreshError,
+           !VeyrnError.isConnectivityOnly(error),
+           !VeyrnError.isCancellation(error) {
             report(error)
         }
     }
@@ -143,9 +202,13 @@ final class TaskStore {
     /// Refreshes only if the last successful refresh is older than `maxAge`.
     /// Lets foreground/poll triggers pull server-side changes without
     /// hammering the API on every 60s outbox drain.
-    func refreshIfStale(maxAge: TimeInterval = 300) async {
-        if let last = lastRefreshAt, Date().timeIntervalSince(last) < maxAge { return }
-        await refresh()
+    func refreshIfStale(maxAge: TimeInterval = 300, reason: String = "manual") async {
+        if let last = lastRefreshAt, Date().timeIntervalSince(last) < maxAge {
+            let age = Date().timeIntervalSince(last)
+            DiagnosticLog.info("refreshIfStale skipped (age \(String(format: "%.0f", age)) s < \(Int(maxAge)) s)")
+            return
+        }
+        await refresh(reason: reason)
     }
 
     // MARK: - Account switching
@@ -156,17 +219,24 @@ final class TaskStore {
     /// and (iOS) the Watch's config snapshot. Order matters — see plan §2d.
     @MainActor
     func switchAccount(to id: UUID) async {
+        let accounts = VikunjaConfig.accounts
+        let fromIndex = accounts.firstIndex(where: { $0.id == VikunjaConfig.activeAccountId }).map { $0 + 1 }
+        let toIndex = accounts.firstIndex(where: { $0.id == id }).map { $0 + 1 } ?? 0
+        DiagnosticLog.info("switchAccount #\(fromIndex.map(String.init) ?? "?") → #\(toIndex) of \(accounts.count)")
+
         VikunjaConfig.setActive(id: id)
         resetPerAccountState(accountId: id)
 
         await ReminderScheduler.cancelAll()
+        DiagnosticLog.info("reminders cancelled")
         #if os(iOS)
         WatchSessionProvider.shared.syncConfig()
+        DiagnosticLog.info("watch config synced")
         #endif
         VeyrnTelemetry.resetServerInfoGuard()
         VeyrnTelemetry.accountSwitched(accountCount: VikunjaConfig.accounts.count)
 
-        await refreshWithRetry()
+        await refreshWithRetry(reason: "switchAccount")
     }
 
     /// The last account was deleted — same per-account cleanup as
@@ -174,6 +244,7 @@ final class TaskStore {
     /// falls back to onboarding.
     @MainActor
     func clearForNoAccounts() async {
+        DiagnosticLog.info("clearForNoAccounts")
         resetPerAccountState(accountId: nil)
 
         await ReminderScheduler.cancelAll()
@@ -187,6 +258,7 @@ final class TaskStore {
     /// the active account; this reacts to that at the app layer.
     @MainActor
     func handleAccountDeleted() async {
+        DiagnosticLog.info("handleAccountDeleted")
         if let newActive = VikunjaConfig.activeAccount {
             await switchAccount(to: newActive.id)
         } else {
@@ -211,13 +283,18 @@ final class TaskStore {
         pendingUndo.removeAll()
 
         outbox = Outbox(accountId: accountId)
+        DiagnosticLog.info("outbox replaced")
 
         WidgetCache.clear()
         WidgetCenter.shared.reloadAllTimelines()
+        DiagnosticLog.info("widget cache cleared")
     }
 
     func refreshLogbook() async {
-        guard VikunjaConfig.isConfigured else { return }
+        guard VikunjaConfig.isConfigured else {
+            DiagnosticLog.info("isConfigured=false")
+            return
+        }
         do {
             let serverDone = try await VikunjaAPI.fetchDoneTasks(page: 1)
             let labelDir = labelDirectory
@@ -311,12 +388,13 @@ final class TaskStore {
     // MARK: - Delete task
 
     func deleteTask(task: VikunjaTask) async {
+        DiagnosticLog.info("delete task \(task.id)\(task.id < 0 ? " (placeholder)" : "")")
         undoneTasks.removeAll { $0.id == task.id }
         lastServerUndone.removeAll { $0.id == task.id }
         if task.id > 0 {
             try? await VikunjaAPI.deleteTask(id: task.id)
         }
-        await ReminderScheduler.cancel(taskId: task.id)
+        await ReminderScheduler.cancel(taskId: task.id, reason: "deleted")
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -342,6 +420,7 @@ final class TaskStore {
     let undoWindow: TimeInterval = 4
 
     func complete(task: VikunjaTask) async {
+        DiagnosticLog.info("complete task \(task.id) (undo window open)")
         undoneTasks.removeAll { $0.id == task.id }
         pendingUndo[task.id] = task
         scheduleUndoExpiry(for: task)
@@ -349,6 +428,7 @@ final class TaskStore {
 
     func undoComplete(taskId: Int) {
         guard let task = pendingUndo[taskId] else { return }
+        DiagnosticLog.info("undo complete task \(taskId)")
         undoTimers[taskId]?.cancel()
         undoTimers.removeValue(forKey: taskId)
         pendingUndo.removeValue(forKey: taskId)
@@ -365,6 +445,7 @@ final class TaskStore {
     }
 
     private func commitCompletion(task: VikunjaTask) async {
+        DiagnosticLog.info("commit complete task \(task.id)")
         VeyrnTelemetry.signal("TaskCompleted")
         pendingUndo.removeValue(forKey: task.id)
         undoTimers.removeValue(forKey: task.id)
@@ -380,7 +461,7 @@ final class TaskStore {
             kind: .complete
         )
         outbox.append(op)
-        await ReminderScheduler.cancel(taskId: task.id)
+        await ReminderScheduler.cancel(taskId: task.id, reason: "completed")
         WidgetCenter.shared.reloadAllTimelines()
         await drainOutbox()
     }
@@ -410,6 +491,10 @@ final class TaskStore {
         defer { isDraining = false }
         guard reachability.isOnline, !outbox.ops.isEmpty else { return }
         let snapshot = outbox.ops
+        DiagnosticLog.info("drain start: \(snapshot.count) ops [\(opCounts(snapshot))]")
+        let drainStart = Date()
+        var okCount = 0
+        var droppedCount = 0
         for op in snapshot {
             do {
                 switch op.kind {
@@ -428,15 +513,19 @@ final class TaskStore {
                     if case .client(let uuid) = op.ref {
                         outbox.remap(client: uuid, toServer: created.id)
                     }
+                    DiagnosticLog.info("op create task \(created.id) → ok")
                 case .update(let update):
                     guard let serverId = serverId(for: op.ref) else { continue }
                     _ = try await VikunjaAPI.updateTask(id: serverId, update: update)
+                    DiagnosticLog.info("op update task \(serverId) → ok")
                 case .complete:
                     guard let serverId = serverId(for: op.ref) else { continue }
                     try await VikunjaAPI.completeTask(id: serverId)
+                    DiagnosticLog.info("op complete task \(serverId) → ok")
                 case .reopen:
                     guard let serverId = serverId(for: op.ref) else { continue }
                     try await VikunjaAPI.reopenTask(id: serverId)
+                    DiagnosticLog.info("op reopen task \(serverId) → ok")
                 case .relation(let parentRef, let childRef, let kind, let add):
                     guard let parentId = serverId(for: parentRef),
                           let childId = serverId(for: childRef) else { continue }
@@ -445,17 +534,48 @@ final class TaskStore {
                     } else {
                         try await VikunjaAPI.removeRelation(taskId: parentId, otherTaskId: childId, kind: kind)
                     }
+                    DiagnosticLog.info("op relation task \(parentId) → ok")
                 }
                 outbox.remove(id: op.id)
+                okCount += 1
             } catch let error as VikunjaAPI.APIError where error.isClient4xx {
                 // Task likely deleted server-side — drop op silently
+                DiagnosticLog.warn("op \(opLabel(op)) → dropped (\(error.statusCode), task gone)")
                 outbox.remove(id: op.id)
+                droppedCount += 1
             } catch {
                 // Network/server error — stop draining, retry next time
+                DiagnosticLog.warn("drain paused: \(VeyrnError.logDescription(for: error))")
                 break
             }
         }
-        await refresh()
+        let elapsed = Date().timeIntervalSince(drainStart)
+        DiagnosticLog.info("drain end: \(okCount) ok, \(droppedCount) dropped, \(formatDuration(elapsed)) — queue depth \(outbox.ops.count)")
+        await refresh(reason: "outbox")
+    }
+
+    private func opCounts(_ ops: [PendingOp]) -> String {
+        var counts: [String: Int] = [:]
+        for op in ops {
+            switch op.kind {
+            case .create: counts["create", default: 0] += 1
+            case .update: counts["update", default: 0] += 1
+            case .complete: counts["complete", default: 0] += 1
+            case .reopen: counts["reopen", default: 0] += 1
+            case .relation: counts["relation", default: 0] += 1
+            }
+        }
+        return counts.sorted { $0.key < $1.key }.map { "\($0.key) \($0.value)" }.joined(separator: ", ")
+    }
+
+    private func opLabel(_ op: PendingOp) -> String {
+        switch op.kind {
+        case .create: return "create"
+        case .update: return "update task \(serverId(for: op.ref).map(String.init) ?? "?")"
+        case .complete: return "complete task \(serverId(for: op.ref).map(String.init) ?? "?")"
+        case .reopen: return "reopen task \(serverId(for: op.ref).map(String.init) ?? "?")"
+        case .relation: return "relation"
+        }
     }
 
     // MARK: - Reachability observation
@@ -485,7 +605,7 @@ final class TaskStore {
                 try? await Task.sleep(for: .seconds(60))
                 guard !Task.isCancelled else { break }
                 await self?.drainOutbox()
-                await self?.refreshIfStale()
+                await self?.refreshIfStale(reason: "poll")
             }
         }
     }
@@ -540,6 +660,10 @@ final class TaskStore {
            let tasks = try? JSONDecoder().decode([VikunjaTask].self, from: data) {
             doneTasks = tasks
         }
+        if let savedAt = WidgetCache.savedAt {
+            let age = Date().timeIntervalSince(savedAt)
+            DiagnosticLog.info("cache loaded: \(undoneTasks.count) tasks, age \(String(format: "%.0f", age)) s")
+        }
     }
 
     private func saveCache() {
@@ -547,6 +671,7 @@ final class TaskStore {
         UserDefaults.standard.set(try? JSONEncoder().encode(projects), forKey: projectsCacheKey)
         UserDefaults.standard.set(try? JSONEncoder().encode(labels), forKey: labelsCacheKey)
         WidgetCache.save(tasks: undoneTasks, projects: projects)
+        DiagnosticLog.info("widget cache saved: \(undoneTasks.count) tasks, \(projects.count) projects")
     }
 
     private func saveDoneCache() {

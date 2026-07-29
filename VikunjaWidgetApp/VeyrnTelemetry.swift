@@ -35,22 +35,38 @@ enum VeyrnTelemetry {
         hasReportedServerThisLaunch = false
     }
 
-    /// Fetches the server version and reports it once per launch.
-    /// Silent on network failure; safe to call from any refresh path.
-    static func reportServerInfoIfNeeded() async {
+    /// Fetches the server version once per launch (or once per account after
+    /// a switch) and caches the parsed result for the diagnostic log header
+    /// (`DiagnosticLog.serverVersionDefaultsKey`/`serverSupportsV2DefaultsKey`
+    /// in the App Group, so the widget extension's header can read it too).
+    ///
+    /// Renamed from `reportServerInfoIfNeeded` (was gated on
+    /// `telemetryOptIn` before the fetch, so a user with analytics off had no
+    /// server version in their diagnostic log). The fetch is now gated on
+    /// `isConfigured` only — the version is non-identifying, stays on-device,
+    /// and only leaves if the user attaches the log themselves. Only the
+    /// TelemetryDeck *signal* stays behind the opt-in.
+    static func probeServerInfoIfNeeded() async {
         guard !hasReportedServerThisLaunch else { return }
-        guard VikunjaConfig.telemetryOptIn, VikunjaConfig.isConfigured else { return }
+        guard VikunjaConfig.isConfigured else { return }
         guard let info = try? await VikunjaAPI.fetchServerInfo() else { return }
 
         hasReportedServerThisLaunch = true
 
         let parsed = parseVersion(info.version)
+        let kind = VikunjaConfig.host == VikunjaConfig.vikunjaCloudHost ? "cloud" : "custom"
+
+        let diagDefaults = UserDefaults(suiteName: VikunjaConfig.appGroupSuite)
+        diagDefaults?.set(parsed.full, forKey: DiagnosticLog.serverVersionDefaultsKey)
+        diagDefaults?.set(parsed.supportsV2, forKey: DiagnosticLog.serverSupportsV2DefaultsKey)
+        DiagnosticLog.info("server: \(kind) · Vikunja \(parsed.full) · API v2 available: \(parsed.supportsV2 ? "yes" : "no")")
+
+        guard VikunjaConfig.telemetryOptIn else { return }
         signal("ServerInfo", parameters: [
             "serverVersion": parsed.full,       // "2.4.0" | "unparseable"
             "serverMinor": parsed.minor,        // "2.4"   | "unparseable"
             "supportsApiV2": parsed.supportsV2 ? "true" : "false",
-            "serverKind": VikunjaConfig.host == VikunjaConfig.vikunjaCloudHost
-                ? "cloud" : "custom",
+            "serverKind": kind,
         ])
     }
 

@@ -151,4 +151,54 @@ enum VeyrnError {
             NSURLErrorSecureConnectionFailed
         ].contains(ns.code)
     }
+
+    /// `NSURLErrorCancelled` (-999) — the app cancelled its own request, by
+    /// quitting mid-refresh, switching accounts, or tearing down a session.
+    /// Nothing failed, so it must never alert and never light the offline
+    /// pill. Seen in the first real Mac log as
+    /// `refresh failed: URLError(-999) [alerting]` on app quit — harmless
+    /// there only because the app was already going away.
+    static func isCancellation(_ error: Error) -> Bool {
+        let ns = error as NSError
+        return ns.domain == NSURLErrorDomain && ns.code == NSURLErrorCancelled
+    }
+
+    // MARK: - Diagnostic log rendering
+
+    /// Bounded, privacy-safe error description for `DiagnosticLog` —
+    /// `APIError.badStatus(401)`, `URLError(-1009)`,
+    /// `DecodingError.keyNotFound(due_date)`. Never use
+    /// `error.localizedDescription` in a log line: NSURLErrorDomain messages
+    /// can embed the request's hostname.
+    static func logDescription(for error: Error) -> String {
+        if let apiError = error as? VikunjaAPI.APIError {
+            return "APIError.badStatus(\(apiError.statusCode))"
+        }
+        if let decodingError = error as? DecodingError {
+            return logDescription(forDecodingError: decodingError)
+        }
+        let ns = error as NSError
+        if ns.domain == NSURLErrorDomain {
+            return "URLError(\(ns.code))"
+        }
+        return "\(type(of: error))"
+    }
+
+    private static func logDescription(forDecodingError error: DecodingError) -> String {
+        switch error {
+        case .keyNotFound(let key, _):
+            return "DecodingError.keyNotFound(\(key.stringValue))"
+        case .typeMismatch(let type, let context):
+            let key = context.codingPath.last?.stringValue ?? "root"
+            return "DecodingError.typeMismatch(\(key): expected \(type))"
+        case .valueNotFound(let type, let context):
+            let key = context.codingPath.last?.stringValue ?? "root"
+            return "DecodingError.valueNotFound(\(key): expected \(type))"
+        case .dataCorrupted(let context):
+            let key = context.codingPath.last?.stringValue ?? "root"
+            return "DecodingError.dataCorrupted(\(key))"
+        @unknown default:
+            return "DecodingError.unknown"
+        }
+    }
 }

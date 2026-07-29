@@ -14,6 +14,7 @@
 		088C68EEFC872A273BE81EF9 /* TaskMerger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */; };
 		096DAC80C49C5D35B8469747 /* RichTextToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE1E2473B28773FB31C83C53 /* RichTextToolbar.swift */; };
 		09B9990AA282D81B80385485 /* Outbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52749DF5C84EB8B6350FE276 /* Outbox.swift */; };
+		0A4C0E5ED794EE7206E621AE /* BugReportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653C8DAF2700721283A8A509 /* BugReportSheet.swift */; };
 		0D05C8A2A2215D665C51970A /* RichTextUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E14A86ED969A63033CECCD3 /* RichTextUtils.swift */; };
 		0D11C0D3CF3FAEA401E14587 /* VikunjaAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */; };
 		0DE91F897CC393857D83DEFC /* CompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56EB3BD825210E0BC7DDD877 /* CompleteTaskIntent.swift */; };
@@ -77,6 +78,7 @@
 		66830DEDFCEE3994EE19D447 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = 492A5C2F14D15C60B3380285 /* TelemetryDeck */; };
 		66A65A39450D46B75FFAFDDD /* VikunjaTimelineProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5AA1613FD9623F81CF2764F /* VikunjaTimelineProvider.swift */; };
 		6848CC6B84948D92D155FE3A /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
+		6A469E41B898C387D75EA7F3 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A88F453140ABF753FB449C /* DiagnosticLog.swift */; };
 		6AE4426F1C4EA1A3091BDFCD /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E38CA1B0723B492B073EAE3 /* SharedState.swift */; };
 		6C0154B0D3C14BF642C6DEA6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3500B5442B30927185C99FA /* SwiftUI.framework */; };
 		6C460691B5F9E205B40CD447 /* BulkImportParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4CA3A47F03EBF7AE5424D07 /* BulkImportParser.swift */; };
@@ -86,6 +88,7 @@
 		6DF6675026F90FB69C086C79 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FF9B209536157736A98A9B /* TokenStore.swift */; };
 		6F03EC65CB9B61738FA4D04D /* WatchTaskRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F649163D6741E497E12DA87 /* WatchTaskRow.swift */; };
 		718E10F7317C56D4E583A48D /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E38CA1B0723B492B073EAE3 /* SharedState.swift */; };
+		71B7452B98221EB08721646D /* LogViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58D5363164D9E1B03D079B04 /* LogViewerView.swift */; };
 		72226A5E79207AE181B16849 /* VikunjaWidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */; };
 		73A46D89CE623AB28A39F2E9 /* Sidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32CFE246FC70A61041EF6E4C /* Sidebar.swift */; };
 		770E0ED2F26991B6FAAF99E5 /* NotificationResponseHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 097AE4727EE099A83DE65940 /* NotificationResponseHandler.swift */; };
@@ -95,6 +98,7 @@
 		7C9417368EDFD8FD0923F955 /* InfoIOS.plist in Resources */ = {isa = PBXBuildFile; fileRef = 7E2A53ED8DB6BC3CCBC225B2 /* InfoIOS.plist */; };
 		7D23D0A203B4397E740C4534 /* VikunjaWidgetApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B189E2189A5C4A68E826A0BC /* VikunjaWidgetApp.swift */; };
 		7E9970A1B058D0F4677D0659 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3500B5442B30927185C99FA /* SwiftUI.framework */; };
+		80D29D4DEF11CA888DCCDBA2 /* ErrorMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7331DC244DE0910F695C4 /* ErrorMessages.swift */; };
 		814CA279B7E092879D42A777 /* Sidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32CFE246FC70A61041EF6E4C /* Sidebar.swift */; };
 		8539E404CFA5AED9E7EE80C6 /* WatchSessionProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA24B83963A30DBD2EBED4CA /* WatchSessionProvider.swift */; };
 		862CF3B1755C0FAA540F10F1 /* VikunjaAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */; };
@@ -103,7 +107,9 @@
 		871D4007BB0F55B7D01D2A0D /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3500B5442B30927185C99FA /* SwiftUI.framework */; };
 		8820551B64E9828354D42648 /* ErrorMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7331DC244DE0910F695C4 /* ErrorMessages.swift */; };
 		8925F878F954BE54EEF55BA9 /* VikunjaConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */; };
+		89AC1F951874840B84A203D7 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A88F453140ABF753FB449C /* DiagnosticLog.swift */; };
 		89EBCE16EFFEFDB7F95BEA06 /* TaskRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0EC5DA80C84EAC14606DF3 /* TaskRowView.swift */; };
+		8B2F84901BACA6826FD0C4C5 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A88F453140ABF753FB449C /* DiagnosticLog.swift */; };
 		8B46C4D21A7CC007CAC2B65A /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
 		8C6BA528CCB5784AB0ABCC1B /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
 		904A879D801FBCD4B08DB1C9 /* AccountListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D1C8F0A7257D6E7B0C47ED9 /* AccountListView.swift */; };
@@ -113,6 +119,7 @@
 		944CF132112852C4C6EF42DB /* QuickAddSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E801F43454C29A23CC09D2B3 /* QuickAddSheet.swift */; };
 		95081F050067C8886AB0A59D /* ColorUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1254289BB5BBCBD170DCACE /* ColorUtils.swift */; };
 		950BD0C66AAC8B38D8A50D71 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
+		95ACD4AB52AF0FEF6716FB2C /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A88F453140ABF753FB449C /* DiagnosticLog.swift */; };
 		9760739F1921EFE07139E83C /* UndoCompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E12C5D7A535480216299E3 /* UndoCompleteTaskIntent.swift */; };
 		97AAC28FA52B79FBC01E7E6B /* TaskMerger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */; };
 		99248E0B0E92BD4F33A7E065 /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02DFECBCB1BD52DDACF60742 /* BackgroundRefresh.swift */; };
@@ -123,20 +130,25 @@
 		9A4E08C259621460C087C4DF /* QuickAddParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 575C0A574F52F869DB4CA643 /* QuickAddParser.swift */; };
 		9B4962CBEE8CCFACACDA25FB /* QuickAddPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A419351B8B970957D829770C /* QuickAddPanelController.swift */; };
 		9B95835E2ED20F48D7BFF275 /* VikunjaConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */; };
+		9DC4850340C07CBA7224E2F1 /* HangWatchdog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EAB5006E6FD9CE4BCD8B41 /* HangWatchdog.swift */; };
 		A01292FCA9718460BA3186F7 /* AppRoot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C19BA8BB693A0D3B77D8FD25 /* AppRoot.swift */; };
 		A0A5DC26F6EE43D76A6144DC /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 68C6E7BB60EBB7C6C225DFAE /* AppIntents.framework */; };
 		A11C5F4AD5A24673789AD261 /* InlineTaskEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB39CB6616D672184062F00A /* InlineTaskEditor.swift */; };
 		A1A77E9F6D003D8266DDF5B1 /* AppRoot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C19BA8BB693A0D3B77D8FD25 /* AppRoot.swift */; };
 		A36F04EEDD4AF3186263B7A8 /* VikunjaWidgetApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B189E2189A5C4A68E826A0BC /* VikunjaWidgetApp.swift */; };
 		A408B000612F4479E750F52B /* WatchWidgetEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AE51A55FABBD4A8AB5E856A /* WatchWidgetEntry.swift */; };
+		A4F44E6C7083A57F999426E0 /* HangWatchdog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4EAB5006E6FD9CE4BCD8B41 /* HangWatchdog.swift */; };
 		A63E777EDE70A2D04544AABA /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E8B866134A71528ACC14C76 /* TodayView.swift */; };
+		A65FA3220FD5532AC9E9C5EC /* BugReportMail.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF5D7B53205EC9A9D91FC36 /* BugReportMail.swift */; };
 		A67288DFB2D8348FBD79AAB7 /* RichTextUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E14A86ED969A63033CECCD3 /* RichTextUtils.swift */; };
 		A81C8CEA6CA7E7396B8FB6F4 /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E38CA1B0723B492B073EAE3 /* SharedState.swift */; };
 		ABE10E84629633EDBEDCE5AF /* Outbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52749DF5C84EB8B6350FE276 /* Outbox.swift */; };
 		ACD4CAD1F490956471E7D203 /* Outbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52749DF5C84EB8B6350FE276 /* Outbox.swift */; };
 		ACF8DF55D2DDE7B9C5E38FCF /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
 		AE684B56885C43B0D213C045 /* VikunjaAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */; };
+		B00CF08FBBD4DC4F34BA3ED6 /* LogViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58D5363164D9E1B03D079B04 /* LogViewerView.swift */; };
 		B1636EA123C74E6725878B48 /* VikunjaWidgetWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 79B09FCA9032E9C475309927 /* VikunjaWidgetWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B26DACE690392EC680360023 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A88F453140ABF753FB449C /* DiagnosticLog.swift */; };
 		B6247D5D27C33F89D9D6DC91 /* WatchWidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AE9081EC5C412593ED6D117 /* WatchWidgetEntryView.swift */; };
 		B73FB8EBDF00BB4796B8F614 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E8B866134A71528ACC14C76 /* TodayView.swift */; };
 		B76A35BE7E972B5E11E78B2D /* VikunjaWidgetWatchExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6C10DDD003EFBE283E6DE288 /* VikunjaWidgetWatchExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -144,12 +156,14 @@
 		BA3189BE869A7CEDFDF990D0 /* InfoIOS.plist in Resources */ = {isa = PBXBuildFile; fileRef = 7E2A53ED8DB6BC3CCBC225B2 /* InfoIOS.plist */; };
 		BBB629FBE31DC715BE9BEEF5 /* InlineTaskEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB39CB6616D672184062F00A /* InlineTaskEditor.swift */; };
 		BBDAED74A2CE38A0D6CB6B3D /* BulkImportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB4EF59CB974358A163128A /* BulkImportSheet.swift */; };
+		BC56EC1416FE6297AB5ECF09 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A88F453140ABF753FB449C /* DiagnosticLog.swift */; };
 		BC86652D6F845B7B3F5FB197 /* WatchSessionProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA24B83963A30DBD2EBED4CA /* WatchSessionProvider.swift */; };
 		BD3AF313630DB83383D30C77 /* FontSizeEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D2233282108571CCBCFADE2 /* FontSizeEnvironment.swift */; };
 		BD84DD49E895AD80BAE68C4A /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F88B5A5977A4665065232F /* FlowLayout.swift */; };
 		BE9D7675A68505B3AF04B593 /* VikunjaWidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */; };
 		C26CA5E4DCCA235E2D67AB5E /* VikunjaConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */; };
 		C326827ADB0A2D34A50C5BC7 /* ErrorMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7331DC244DE0910F695C4 /* ErrorMessages.swift */; };
+		C43390360528E40BCB2F4777 /* BugReportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653C8DAF2700721283A8A509 /* BugReportSheet.swift */; };
 		C7F3CF11A3B0EA2ABA694A2E /* RichTextContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C19966D06DD9CB26072478 /* RichTextContext.swift */; };
 		C96638BF7E98A75F67737365 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CC7FD8E2C9A6337A5A52D003 /* Assets.xcassets */; };
 		CE90B20C7552361D2D6F9B3A /* ParsedChips.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21FA382DDD241D0564F5BDF4 /* ParsedChips.swift */; };
@@ -159,6 +173,7 @@
 		D1049B52368E223631ADEC46 /* TaskMerger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */; };
 		D2B56A3D292BDB28B9B7EACA /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3DA4F4CFBB26B3E8AB8F9F4 /* SettingsView.swift */; };
 		D3B5C46929A34AA8A6B2465A /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB82D40CDF612A9CCA6F58D9 /* InboxView.swift */; };
+		D52509E640DCD605EFB1C3EE /* BugReportMail.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF5D7B53205EC9A9D91FC36 /* BugReportMail.swift */; };
 		D634667E71C80C13720BF4B5 /* WatchConfigStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8F8BCEA1FF2E83F4C1D9DF /* WatchConfigStore.swift */; };
 		D739D4C309FD43AD274A3214 /* DictationNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18DB545AFCB997139C49B6CE /* DictationNormalizer.swift */; };
 		D8E1118DB723757837DD84BC /* BulkImportParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4CA3A47F03EBF7AE5424D07 /* BulkImportParser.swift */; };
@@ -292,15 +307,18 @@
 		4F50C8AD74D69618B165D0A4 /* WatchRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchRootView.swift; sourceTree = "<group>"; };
 		4F649163D6741E497E12DA87 /* WatchTaskRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTaskRow.swift; sourceTree = "<group>"; };
 		52749DF5C84EB8B6350FE276 /* Outbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Outbox.swift; sourceTree = "<group>"; };
+		52A88F453140ABF753FB449C /* DiagnosticLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticLog.swift; sourceTree = "<group>"; };
 		55A53B67DF4D3C4E9B1789F8 /* VeyrnTelemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VeyrnTelemetry.swift; sourceTree = "<group>"; };
 		56EB3BD825210E0BC7DDD877 /* CompleteTaskIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteTaskIntent.swift; sourceTree = "<group>"; };
 		575C0A574F52F869DB4CA643 /* QuickAddParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddParser.swift; sourceTree = "<group>"; };
+		58D5363164D9E1B03D079B04 /* LogViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogViewerView.swift; sourceTree = "<group>"; };
 		59CE9102E8DBF8AF63CD0CB4 /* AccountEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountEditorView.swift; sourceTree = "<group>"; };
 		5A112CB4533D5AB9D9D4361D /* ReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduler.swift; sourceTree = "<group>"; };
 		5D1C8F0A7257D6E7B0C47ED9 /* AccountListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountListView.swift; sourceTree = "<group>"; };
 		61D23F47FA0737597537CAE8 /* VikunjaWidgetWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VikunjaWidgetWatch.entitlements; sourceTree = "<group>"; };
 		6310D2E398EF259266307AA4 /* Reachability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reachability.swift; sourceTree = "<group>"; };
 		6413699055632BF2AF310ADC /* ShortcutRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRouter.swift; sourceTree = "<group>"; };
+		653C8DAF2700721283A8A509 /* BugReportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BugReportSheet.swift; sourceTree = "<group>"; };
 		68C6E7BB60EBB7C6C225DFAE /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		6C10DDD003EFBE283E6DE288 /* VikunjaWidgetWatchExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = VikunjaWidgetWatchExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetEntryView.swift; sourceTree = "<group>"; };
@@ -328,9 +346,11 @@
 		B189E2189A5C4A68E826A0BC /* VikunjaWidgetApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetApp.swift; sourceTree = "<group>"; };
 		B3BB9C870B4EF39EC432A03D /* ProjectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectView.swift; sourceTree = "<group>"; };
 		B3DA4F4CFBB26B3E8AB8F9F4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		B4EAB5006E6FD9CE4BCD8B41 /* HangWatchdog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HangWatchdog.swift; sourceTree = "<group>"; };
 		B63219D6BDD41CF316F5617F /* AddTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTaskView.swift; sourceTree = "<group>"; };
 		BBB0B0D0A0BF988D3D00D46A /* WatchWidgetProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidgetProvider.swift; sourceTree = "<group>"; };
 		BDB2CBC26BADD19ED549207B /* VikunjaWidgetApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VikunjaWidgetApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BDF5D7B53205EC9A9D91FC36 /* BugReportMail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BugReportMail.swift; sourceTree = "<group>"; };
 		C0FF9B209536157736A98A9B /* TokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStore.swift; sourceTree = "<group>"; };
 		C1254289BB5BBCBD170DCACE /* ColorUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorUtils.swift; sourceTree = "<group>"; };
 		C1938B254B547B170A850D02 /* WatchWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidget.swift; sourceTree = "<group>"; };
@@ -446,15 +466,19 @@
 				C19BA8BB693A0D3B77D8FD25 /* AppRoot.swift */,
 				A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */,
 				02DFECBCB1BD52DDACF60742 /* BackgroundRefresh.swift */,
+				BDF5D7B53205EC9A9D91FC36 /* BugReportMail.swift */,
+				653C8DAF2700721283A8A509 /* BugReportSheet.swift */,
 				CDB4EF59CB974358A163128A /* BulkImportSheet.swift */,
 				C9F88B5A5977A4665065232F /* FlowLayout.swift */,
 				3D2233282108571CCBCFADE2 /* FontSizeEnvironment.swift */,
+				B4EAB5006E6FD9CE4BCD8B41 /* HangWatchdog.swift */,
 				7656B4E05FA981BC6A515B75 /* HotkeyRecorderView.swift */,
 				FB82D40CDF612A9CCA6F58D9 /* InboxView.swift */,
 				166859B301206500B9AE0420 /* Info.plist */,
 				7EAD0BC89662C3B29128BFEC /* InfoIOS.plist */,
 				DB39CB6616D672184062F00A /* InlineTaskEditor.swift */,
 				FD6802321CF98C91D0FC1142 /* LogbookView.swift */,
+				58D5363164D9E1B03D079B04 /* LogViewerView.swift */,
 				097AE4727EE099A83DE65940 /* NotificationResponseHandler.swift */,
 				B3BB9C870B4EF39EC432A03D /* ProjectView.swift */,
 				A419351B8B970957D829770C /* QuickAddPanelController.swift */,
@@ -529,6 +553,7 @@
 			children = (
 				A4CA3A47F03EBF7AE5424D07 /* BulkImportParser.swift */,
 				C1254289BB5BBCBD170DCACE /* ColorUtils.swift */,
+				52A88F453140ABF753FB449C /* DiagnosticLog.swift */,
 				19B7331DC244DE0910F695C4 /* ErrorMessages.swift */,
 				52749DF5C84EB8B6350FE276 /* Outbox.swift */,
 				575C0A574F52F869DB4CA643 /* QuickAddParser.swift */,
@@ -817,15 +842,20 @@
 				904A879D801FBCD4B08DB1C9 /* AccountListView.swift in Sources */,
 				A1A77E9F6D003D8266DDF5B1 /* AppRoot.swift in Sources */,
 				3A07D9BD742BFA923FE07562 /* BackgroundRefresh.swift in Sources */,
+				A65FA3220FD5532AC9E9C5EC /* BugReportMail.swift in Sources */,
+				0A4C0E5ED794EE7206E621AE /* BugReportSheet.swift in Sources */,
 				13432CFDA3F3F4FEAC708519 /* BulkImportParser.swift in Sources */,
 				BBDAED74A2CE38A0D6CB6B3D /* BulkImportSheet.swift in Sources */,
 				95081F050067C8886AB0A59D /* ColorUtils.swift in Sources */,
+				8B2F84901BACA6826FD0C4C5 /* DiagnosticLog.swift in Sources */,
 				86353261F9AF502792FDCEEA /* ErrorMessages.swift in Sources */,
 				BD84DD49E895AD80BAE68C4A /* FlowLayout.swift in Sources */,
 				BD3AF313630DB83383D30C77 /* FontSizeEnvironment.swift in Sources */,
+				9DC4850340C07CBA7224E2F1 /* HangWatchdog.swift in Sources */,
 				47110862A580A698D5DCC51E /* HotkeyRecorderView.swift in Sources */,
 				DB38C05911F489759F92739A /* InboxView.swift in Sources */,
 				BBB629FBE31DC715BE9BEEF5 /* InlineTaskEditor.swift in Sources */,
+				B00CF08FBBD4DC4F34BA3ED6 /* LogViewerView.swift in Sources */,
 				EDD77C1F97806905078A8173 /* LogbookView.swift in Sources */,
 				7C4457BE79D282FB1EB9FB65 /* NotificationResponseHandler.swift in Sources */,
 				ACD4CAD1F490956471E7D203 /* Outbox.swift in Sources */,
@@ -866,6 +896,7 @@
 				6C460691B5F9E205B40CD447 /* BulkImportParser.swift in Sources */,
 				D9C7AEAE0B2FD6278C09B73B /* ColorUtils.swift in Sources */,
 				0DE91F897CC393857D83DEFC /* CompleteTaskIntent.swift in Sources */,
+				89AC1F951874840B84A203D7 /* DiagnosticLog.swift in Sources */,
 				C326827ADB0A2D34A50C5BC7 /* ErrorMessages.swift in Sources */,
 				ABE10E84629633EDBEDCE5AF /* Outbox.swift in Sources */,
 				7A7C13B41F052C0A061CD460 /* QuickAddParser.swift in Sources */,
@@ -895,15 +926,20 @@
 				5846187C648674E9EC5F9EA2 /* AccountListView.swift in Sources */,
 				A01292FCA9718460BA3186F7 /* AppRoot.swift in Sources */,
 				99248E0B0E92BD4F33A7E065 /* BackgroundRefresh.swift in Sources */,
+				D52509E640DCD605EFB1C3EE /* BugReportMail.swift in Sources */,
+				C43390360528E40BCB2F4777 /* BugReportSheet.swift in Sources */,
 				557C43CFE255EBCE5CCB0D5B /* BulkImportParser.swift in Sources */,
 				F7A9AEBEDFC251D941B03C72 /* BulkImportSheet.swift in Sources */,
 				E553C0F4C22FDFE41056EFF1 /* ColorUtils.swift in Sources */,
+				6A469E41B898C387D75EA7F3 /* DiagnosticLog.swift in Sources */,
 				0EB1B7DE0E9259C5FC459EB4 /* ErrorMessages.swift in Sources */,
 				34BE0CEDD53EE2181A01F21A /* FlowLayout.swift in Sources */,
 				06EC0B89C05871F841685153 /* FontSizeEnvironment.swift in Sources */,
+				A4F44E6C7083A57F999426E0 /* HangWatchdog.swift in Sources */,
 				1EDD136852120DECD2DA7518 /* HotkeyRecorderView.swift in Sources */,
 				D3B5C46929A34AA8A6B2465A /* InboxView.swift in Sources */,
 				A11C5F4AD5A24673789AD261 /* InlineTaskEditor.swift in Sources */,
+				71B7452B98221EB08721646D /* LogViewerView.swift in Sources */,
 				3B1C3BDF5AF9E198D17FB79B /* LogbookView.swift in Sources */,
 				770E0ED2F26991B6FAAF99E5 /* NotificationResponseHandler.swift in Sources */,
 				09B9990AA282D81B80385485 /* Outbox.swift in Sources */,
@@ -944,6 +980,7 @@
 				D8E1118DB723757837DD84BC /* BulkImportParser.swift in Sources */,
 				CED785F3FA61459AF4C180BC /* ColorUtils.swift in Sources */,
 				06026FB1769E4DFB3D3207A1 /* CompleteTaskIntent.swift in Sources */,
+				95ACD4AB52AF0FEF6716FB2C /* DiagnosticLog.swift in Sources */,
 				5B2D2D4F2E6D3D858F13A078 /* ErrorMessages.swift in Sources */,
 				13859958B79E16B366B865E8 /* Outbox.swift in Sources */,
 				1F9113E75413F38F0F123ABA /* QuickAddParser.swift in Sources */,
@@ -971,6 +1008,7 @@
 			files = (
 				FBB2CBB1BB9E7F1F874BD5D9 /* AddTaskView.swift in Sources */,
 				992A9E0CAEE76F2BA5F3F56D /* ColorUtils.swift in Sources */,
+				BC56EC1416FE6297AB5ECF09 /* DiagnosticLog.swift in Sources */,
 				D739D4C309FD43AD274A3214 /* DictationNormalizer.swift in Sources */,
 				8820551B64E9828354D42648 /* ErrorMessages.swift in Sources */,
 				50B098CF49F155E54355E5EF /* InboxListView.swift in Sources */,
@@ -996,6 +1034,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				FCBEF1F749FDE83E425B07CE /* ColorUtils.swift in Sources */,
+				B26DACE690392EC680360023 /* DiagnosticLog.swift in Sources */,
+				80D29D4DEF11CA888DCCDBA2 /* ErrorMessages.swift in Sources */,
 				E470C59271E6BC68F2EC6B1A /* TokenStore.swift in Sources */,
 				2D49DEE37080B6FC91475652 /* VikunjaAPI.swift in Sources */,
 				142533694A5C10A6FF160C31 /* VikunjaConfig.swift in Sources */,
@@ -1047,7 +1087,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.7.4;
+				MARKETING_VERSION = 2.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1069,7 +1109,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.7.4;
+				MARKETING_VERSION = 2.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -1090,7 +1130,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.7.4;
+				MARKETING_VERSION = 2.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = macosx;
@@ -1108,7 +1148,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.7.4;
+				MARKETING_VERSION = 2.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.watchkitapp.widget;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1154,7 +1194,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 59;
+				CURRENT_PROJECT_VERSION = 62;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1203,7 +1243,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.7.4;
+				MARKETING_VERSION = 2.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = macosx;
@@ -1224,7 +1264,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.7.4;
+				MARKETING_VERSION = 2.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -1244,7 +1284,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.7.4;
+				MARKETING_VERSION = 2.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = iphoneos;
@@ -1259,7 +1299,7 @@
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetWatch/VikunjaWidgetWatch.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetWatch/Info.plist;
-				MARKETING_VERSION = 2.7.4;
+				MARKETING_VERSION = 2.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.watchkitapp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = watchos;
@@ -1280,7 +1320,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.7.4;
+				MARKETING_VERSION = 2.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.watchkitapp.widget;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1296,7 +1336,7 @@
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetWatch/VikunjaWidgetWatch.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetWatch/Info.plist;
-				MARKETING_VERSION = 2.7.4;
+				MARKETING_VERSION = 2.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.watchkitapp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = watchos;
@@ -1319,7 +1359,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.7.4;
+				MARKETING_VERSION = 2.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = iphoneos;
@@ -1339,7 +1379,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.7.4;
+				MARKETING_VERSION = 2.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1384,7 +1424,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 59;
+				CURRENT_PROJECT_VERSION = 62;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;

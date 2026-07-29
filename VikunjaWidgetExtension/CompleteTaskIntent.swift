@@ -27,8 +27,10 @@ struct CompleteTaskIntent: AppIntent {
         intentLog.notice("CompleteTaskIntent.perform fired for task \(taskId, privacy: .public)")
         do {
             try await VikunjaAPI.completeTask(id: taskId)
+            DiagnosticLog.info("CompleteTaskIntent task \(taskId) → 200")
         } catch {
             intentLog.error("completeTask(\(taskId, privacy: .public)) failed: \(error.localizedDescription, privacy: .public)")
+            DiagnosticLog.warn("CompleteTaskIntent task \(taskId) → \(VeyrnError.logDescription(for: error))")
             throw error
         }
         SharedState.add(PendingUndo(

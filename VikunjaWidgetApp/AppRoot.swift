@@ -91,7 +91,7 @@ struct AppRoot: View {
     var body: some View {
         Group {
             if !VikunjaConfig.isConfigured {
-                SettingsView(store: store, onSave: { Task { await store.refresh() } })
+                SettingsView(store: store, onSave: { Task { await store.refresh(reason: "settings") } })
             } else if sizeClass == .compact {
                 compactLayout   // iPhone: NavigationStack
             } else {
@@ -139,7 +139,7 @@ struct AppRoot: View {
             Text(store.error ?? "")
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView(store: store, onSave: { Task { await store.refresh() } })
+            SettingsView(store: store, onSave: { Task { await store.refresh(reason: "settings") } })
         }
         .sheet(isPresented: $showQuickAdd) {
             QuickAddSheet(store: store)

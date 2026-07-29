@@ -29,6 +29,7 @@ final class NotificationResponseHandler: NSObject, UNUserNotificationCenterDeleg
         // those as unscoped rather than blocking them.
         if let accountId = userInfo["accountId"] as? String, !accountId.isEmpty,
            accountId != VikunjaConfig.activeAccount?.id.uuidString {
+            DiagnosticLog.warn("notification ignored: accountId mismatch")
             completionHandler()
             return
         }
@@ -37,7 +38,9 @@ final class NotificationResponseHandler: NSObject, UNUserNotificationCenterDeleg
         case ReminderScheduler.actionComplete:
             guard let taskId = userInfo["taskId"] as? Int else { completionHandler(); return }
             Task {
-                if (try? await VikunjaAPI.completeTask(id: taskId)) != nil {
+                let succeeded = (try? await VikunjaAPI.completeTask(id: taskId)) != nil
+                DiagnosticLog.info("notification action COMPLETE_TASK task \(taskId) → \(succeeded ? "200" : "failed")")
+                if succeeded {
                     WidgetCenter.shared.reloadAllTimelines()
                 }
                 completionHandler()

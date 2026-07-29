@@ -40,8 +40,24 @@ enum TokenStore {
 
         var result: AnyObject?
         let status = SecItemCopyMatching(q as CFDictionary, &result)
-        guard status == errSecSuccess, let data = result as? Data else { return nil }
+        guard status == errSecSuccess, let data = result as? Data else {
+            // Never the item itself — just the raw OSStatus. This is the
+            // signature of the kSecUseDataProtectionKeychain-missing bug: a
+            // read that silently lands on the wrong keychain store looks
+            // exactly like "no token yet" from the caller's side.
+            if status != errSecSuccess {
+                DiagnosticLog.error("token read failed: OSStatus \(status) (\(accountLabel(for: id)))")
+            }
+            return nil
+        }
         return String(data: data, encoding: .utf8)
+    }
+
+    private static func accountLabel(for id: UUID) -> String {
+        if let index = VikunjaConfig.accounts.firstIndex(where: { $0.id == id }) {
+            return "account #\(index + 1)"
+        }
+        return "account ?"
     }
 
     /// Accessible after first unlock — not the default (`whenUnlocked`).
@@ -61,6 +77,7 @@ enum TokenStore {
         if addStatus == errSecDuplicateItem {
             SecItemUpdate(q as CFDictionary, [kSecValueData as String: data] as CFDictionary)
         }
+        DiagnosticLog.info("token updated (\(accountLabel(for: id)))")
     }
 
     static func deleteToken(for id: UUID) {
@@ -70,13 +87,26 @@ enum TokenStore {
     /// Deletes every token under this service, regardless of account.
     /// Keychain items survive app deletion — used at launch when there are
     /// no accounts left but items still exist, which means they're residue
-    /// from a previous install.
-    static func deleteAll() {
-        let q: [String: Any] = [
+    /// from a previous install. Returns the count deleted, for logging.
+    @discardableResult
+    static func deleteAll() -> Int {
+        let searchQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecUseDataProtectionKeychain as String: true,
+            kSecMatchLimit as String: kSecMatchLimitAll,
+            kSecReturnAttributes as String: true,
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(searchQuery as CFDictionary, &result)
+        let count = status == errSecSuccess ? (result as? [[String: Any]])?.count ?? 0 : 0
+
+        let deleteQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecUseDataProtectionKeychain as String: true,
         ]
-        SecItemDelete(q as CFDictionary)
+        SecItemDelete(deleteQuery as CFDictionary)
+        return count
     }
 }

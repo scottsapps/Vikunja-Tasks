@@ -56,7 +56,28 @@ enum VikunjaConfig {
     // reads don't each hit the Keychain. Keyed by account id, so switching
     // accounts naturally invalidates it; edits/deletes invalidate explicitly
     // via `invalidateTokenCache()`.
+    ///
+    /// Lock-protected: `apiToken` is called from the concurrent per-project
+    /// fan-out in `fetchAllUndoneTasks`, and `cachedTokenIfAvailable` is read
+    /// by `DiagnosticLog.sanitize(_:)` on whatever thread emitted a log line —
+    /// so reads and writes genuinely overlap. Unsynchronized access to a
+    /// stored `String` from two threads can over-release it and crash. Never
+    /// hold this lock across a Keychain call or anything that can log.
     private static var cachedToken: (accountId: UUID, value: String)?
+    private static let cachedTokenLock = NSLock()
+
+    private static func readCachedToken(for id: UUID) -> String? {
+        cachedTokenLock.lock()
+        defer { cachedTokenLock.unlock() }
+        guard let cached = cachedToken, cached.accountId == id else { return nil }
+        return cached.value
+    }
+
+    private static func storeCachedToken(_ value: String, for id: UUID) {
+        cachedTokenLock.lock()
+        cachedToken = (id, value)
+        cachedTokenLock.unlock()
+    }
 
     static var apiToken: String {
         ensureMigrated()
@@ -65,16 +86,37 @@ enum VikunjaConfig {
         #else
         guard let id = activeAccount?.id else { return "" }
         #endif
-        if let cached = cachedToken, cached.accountId == id {
-            return cached.value
+        if let cached = readCachedToken(for: id) {
+            return cached
         }
+        // Deliberately outside the lock — `TokenStore.token(for:)` logs on a
+        // failed read, and logging re-enters `readCachedToken` via sanitize.
         let token = TokenStore.token(for: id) ?? ""
-        cachedToken = (id, token)
+        storeCachedToken(token, for: id)
         return token
     }
 
     static func invalidateTokenCache() {
+        cachedTokenLock.lock()
         cachedToken = nil
+        cachedTokenLock.unlock()
+    }
+
+    /// Peek at the in-memory token cache **without** ever touching the
+    /// Keychain. `DiagnosticLog.sanitize(_:)` uses this (never `apiToken`) —
+    /// `TokenStore.token(for:)` itself logs on a failed read, and that log
+    /// line passes through `sanitize`, which would otherwise call `apiToken`,
+    /// which calls `TokenStore.token(for:)` again: an unbounded recursion
+    /// triggered by nothing more than a single bad Keychain read (confirmed
+    /// by a real crash in the simulator — hundreds of re-entrant
+    /// `SecItemCopyMatching` calls in under a second before the process died).
+    static var cachedTokenIfAvailable: String? {
+        #if os(watchOS)
+        let id = watchTokenAccountId
+        #else
+        guard let id = activeAccountId else { return nil }
+        #endif
+        return readCachedToken(for: id)
     }
 
     static var isConfigured: Bool {
@@ -111,6 +153,7 @@ enum VikunjaConfig {
         accts.append(account)
         persist(accts)
         TokenStore.setToken(token, for: account.id)
+        DiagnosticLog.info("account added (now \(accts.count))")
     }
 
     static func updateAccount(_ account: VeyrnAccount, token: String) throws {
@@ -142,6 +185,7 @@ enum VikunjaConfig {
         TokenStore.deleteToken(for: id)
         UserDefaults.standard.removeObject(forKey: "vikunja.outbox.v1.\(id.uuidString)")
         UserDefaults.standard.removeObject(forKey: "vikunja.outbox.placeholderCounter.v1.\(id.uuidString)")
+        DiagnosticLog.info("account deleted (now \(accts.count))")
 
         guard wasActive else { return }
         if let first = accts.first {
@@ -218,6 +262,7 @@ enum VikunjaConfig {
             persist([account])
             TokenStore.setToken(legacyToken, for: account.id)
             setActive(id: account.id)
+            DiagnosticLog.info("migrated legacy account")
         } else {
             persist([])
         }
@@ -247,6 +292,7 @@ enum VikunjaConfig {
         }
         if movedAny {
             persist(rewritten)
+            DiagnosticLog.info("migrated token to keychain")
         }
     }
 
@@ -269,7 +315,10 @@ enum VikunjaConfig {
         TokenStore.deleteToken(for: watchTokenAccountId)
         #else
         guard accounts.isEmpty else { return }
-        TokenStore.deleteAll()
+        let count = TokenStore.deleteAll()
+        if count > 0 {
+            DiagnosticLog.info("cleaned \(count) orphaned keychain items")
+        }
         #endif
     }
 

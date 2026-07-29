@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var accounts: [VeyrnAccount] = []
     @State private var showAccountList = false
     @State private var showAddAccount = false
+    @State private var showBugReport = false
 
     // Onboarding-only state — shown inline when there are no accounts yet,
     // matching the pre-multi-account first-run flow (no navigating two
@@ -32,54 +33,75 @@ struct SettingsView: View {
     private var isOnboarding: Bool { accounts.isEmpty }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(isOnboarding ? "Welcome to Veyrn" : "Settings")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                Text("Connect to your Vikunja instance.")
-                    .foregroundStyle(.secondary)
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            // The Help section pushed this screen past what fits on a small
+            // iPhone in a large Dynamic Type setting — the body is scrollable
+            // now, with the footer button kept outside so Done/Get Started
+            // stays pinned regardless of content height.
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(isOnboarding ? "Welcome to Veyrn" : "Settings")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        Text("Connect to your Vikunja instance.")
+                            .foregroundStyle(.secondary)
+                    }
 
-            if isOnboarding {
-                onboardingForm
-            } else {
-                accountsSection
-            }
+                    if isOnboarding {
+                        onboardingForm
+                    } else {
+                        accountsSection
+                    }
 
-            // Font size
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Task Font Size")
-                    .font(.headline)
-                Picker("Font Size", selection: $fontSizeOffset) {
-                    Text("Small").tag(-1)
-                    Text("Medium").tag(0)
-                    Text("Large").tag(2)
-                    Text("Extra Large").tag(4)
+                    // Font size
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Task Font Size")
+                            .font(.headline)
+                        Picker("Font Size", selection: $fontSizeOffset) {
+                            Text("Small").tag(-1)
+                            Text("Medium").tag(0)
+                            Text("Large").tag(2)
+                            Text("Extra Large").tag(4)
+                        }
+                        .pickerStyle(.segmented)
+                    }
+
+                    // Analytics opt-in
+                    Toggle("Share anonymous usage analytics", isOn: $telemetryOptIn)
+                        .onChange(of: telemetryOptIn) { _, v in
+                            UserDefaults.standard.set(v, forKey: "vikunja_telemetry_opt_in")
+                        }
+
+                    #if os(macOS)
+                    // Quick Add Shortcut
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Quick Add Shortcut")
+                            .font(.headline)
+                        HotkeyRecorderView(keyCode: $hotkeyKeyCode, modifiers: $hotkeyModifiers)
+                            .onChange(of: hotkeyKeyCode) { _, _ in saveHotkey() }
+                            .onChange(of: hotkeyModifiers) { _, _ in saveHotkey() }
+                        Text("Click to record a new global shortcut (default: ⌃Space)")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    #endif
+
+                    // Help — shown in both onboarding and configured layouts,
+                    // so a user who can't sign in still has a way to report it.
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Help")
+                            .font(.headline)
+                        Button {
+                            showBugReport = true
+                        } label: {
+                            Label("Report a Bug", systemImage: "ladybug")
+                        }
+                        .buttonStyle(.bordered)
+                        Text("Sends a report to scottsapps@protonmail.com. You choose whether to attach the diagnostic log, and you can read it first.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
-                .pickerStyle(.segmented)
             }
-
-            // Analytics opt-in
-            Toggle("Share anonymous usage analytics", isOn: $telemetryOptIn)
-                .onChange(of: telemetryOptIn) { _, v in
-                    UserDefaults.standard.set(v, forKey: "vikunja_telemetry_opt_in")
-                }
-
-            #if os(macOS)
-            // Quick Add Shortcut
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Quick Add Shortcut")
-                    .font(.headline)
-                HotkeyRecorderView(keyCode: $hotkeyKeyCode, modifiers: $hotkeyModifiers)
-                    .onChange(of: hotkeyKeyCode) { _, _ in saveHotkey() }
-                    .onChange(of: hotkeyModifiers) { _, _ in saveHotkey() }
-                Text("Click to record a new global shortcut (default: ⌃Space)")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            #endif
-
-            Spacer()
 
             HStack {
                 Spacer()
@@ -99,6 +121,7 @@ struct SettingsView: View {
                         .keyboardShortcut(.defaultAction)
                 }
             }
+            .padding(.top, 16)
         }
         .padding(32)
         .onAppear { reload() }
@@ -107,6 +130,9 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showAddAccount, onDismiss: { reload(); onSave?() }) {
             AccountEditorView(mode: .create, store: store, onComplete: { reload(); onSave?() })
+        }
+        .sheet(isPresented: $showBugReport) {
+            BugReportSheet()
         }
     }
 

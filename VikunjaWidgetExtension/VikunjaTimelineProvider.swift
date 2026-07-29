@@ -29,6 +29,7 @@ struct VikunjaTimelineProvider: TimelineProvider {
                 let cleanAt = earliestCompletion.addingTimeInterval(SharedState.undoWindow + 0.5)
                 entries.append(VikunjaEntry(date: cleanAt, taskGroups: entry.taskGroups, error: nil, todayCount: entry.todayCount))
                 policy = .after(cleanAt)
+                DiagnosticLog.info("reload policy: after \(String(format: "%.1f", SharedState.undoWindow + 0.5)) s (undo)")
             } else {
                 // The app explicitly reloads timelines whenever data changes, so
                 // this self-reload only covers changes made on other devices and
@@ -37,6 +38,7 @@ struct VikunjaTimelineProvider: TimelineProvider {
                 // widget parked as a blank placeholder.
                 let refreshAt = Calendar.current.date(byAdding: .minute, value: 15, to: Date())!
                 policy = .after(refreshAt)
+                DiagnosticLog.info("reload policy: after 15 m")
             }
 
             completion(Timeline(entries: entries, policy: policy))
@@ -46,31 +48,53 @@ struct VikunjaTimelineProvider: TimelineProvider {
     // MARK: - Entry construction
 
     private func buildEntry(family: WidgetFamily) async -> VikunjaEntry {
+        DiagnosticLog.info("timeline request: family=\(family)")
+
         // 1. Fresh cache → no network at all. The app writes the cache on
         //    every refresh (and iOS background refresh does too), so this is
         //    the common path and keeps the extension well inside WidgetKit's
         //    time budget. 15 min (not 5) so that while the app is running its
         //    ~5-min poll always beats the window — the widget should only pay
         //    for a network fetch when nothing else is keeping the cache warm.
-        if let cached = WidgetCache.load(),
-           let savedAt = WidgetCache.savedAt,
-           Date().timeIntervalSince(savedAt) < 15 * 60 {
-            return entry(tasks: cached.tasks, projects: cached.projects, family: family)
+        if let savedAt = WidgetCache.savedAt {
+            let age = Date().timeIntervalSince(savedAt)
+            if age < 15 * 60, let cached = WidgetCache.load() {
+                DiagnosticLog.info("cache hit: age \(String(format: "%.0f", age)) s, \(cached.tasks.count) tasks (no network)")
+                return loggedEntry(tasks: cached.tasks, projects: cached.projects, family: family)
+            }
+            DiagnosticLog.info("cache stale: age \(String(format: "%.0f", age / 60)) m → live fetch")
+        } else {
+            DiagnosticLog.info("cache miss")
         }
+
+        guard VikunjaConfig.isConfigured else {
+            DiagnosticLog.info("isConfigured=false")
+            if let cached = WidgetCache.load() {
+                return loggedEntry(tasks: cached.tasks, projects: cached.projects, family: family)
+            }
+            DiagnosticLog.error("no cache, showing error view")
+            return VikunjaEntry(date: Date(), taskGroups: [], error: "Not configured", todayCount: 0)
+        }
+
         // 2. Network, hard-capped at 10 s so the system never kills us mid-fetch.
+        let fetchStart = Date()
         do {
             let (projects, tasks) = try await withTimeout(seconds: 10) {
                 let p = try await VikunjaAPI.fetchAllProjects()
                 let t = try await VikunjaAPI.fetchAllUndoneTasks(projects: p)
                 return (p, t)
             }
+            DiagnosticLog.info("fetch ok: \(String(format: "%.1f", Date().timeIntervalSince(fetchStart))) s")
             WidgetCache.save(tasks: tasks, projects: projects)
-            return entry(tasks: tasks, projects: projects, family: family)
+            return loggedEntry(tasks: tasks, projects: projects, family: family)
         } catch {
             // 3. Stale cache beats a blank widget.
-            if let cached = WidgetCache.load() {
-                return entry(tasks: cached.tasks, projects: cached.projects, family: family)
+            if let cached = WidgetCache.load(), let savedAt = WidgetCache.savedAt {
+                let age = Date().timeIntervalSince(savedAt)
+                DiagnosticLog.error("fetch \(VeyrnError.logDescription(for: error)) → stale cache (age \(String(format: "%.0f", age / 60)) m)")
+                return loggedEntry(tasks: cached.tasks, projects: cached.projects, family: family)
             }
+            DiagnosticLog.error("no cache, showing error view")
             return VikunjaEntry(date: Date(), taskGroups: [], error: error.localizedDescription, todayCount: 0)
         }
     }
@@ -84,6 +108,13 @@ struct VikunjaTimelineProvider: TimelineProvider {
             error: nil,
             todayCount: todayCount(allItems)
         )
+    }
+
+    private func loggedEntry(tasks: [VikunjaTask], projects: [VikunjaProject], family: WidgetFamily) -> VikunjaEntry {
+        let e = entry(tasks: tasks, projects: projects, family: family)
+        let itemCount = e.taskGroups.reduce(0) { $0 + $1.tasks.count }
+        DiagnosticLog.info("entry: \(itemCount) items in \(e.taskGroups.count) groups")
+        return e
     }
 
     private func todayCount(_ items: [TaskEntryItem]) -> Int {

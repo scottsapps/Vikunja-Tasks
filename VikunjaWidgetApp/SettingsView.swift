@@ -97,7 +97,10 @@ struct SettingsView: View {
                             Label("Report a Bug", systemImage: "ladybug")
                         }
                         .buttonStyle(.bordered)
-                        Text("Sends a report to scottsapps@protonmail.com. You choose whether to attach the diagnostic log, and you can read it first.")
+                        // Interpolated, not written out: a fork that changes
+                        // `BugReportMail.supportAddress` would otherwise still
+                        // show this project's address to its own users.
+                        Text("Sends a report to \(BugReportMail.supportAddress). You choose whether to attach the diagnostic log, and you can read it first.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }

@@ -162,26 +162,32 @@ extension BugReportMail {
         return Bundle(url: appURL)?.bundleIdentifier
     }
 
-    /// Attaching the log is reliable with Apple Mail and **was** silently
-    /// dropped by Outlook and Mimestream (confirmed with both on build 65),
-    /// which handed back a compose window with no attachment. Two candidate
-    /// causes, not yet distinguished: the file sat inside our sandbox
-    /// container, which Apple Mail can read via a sandbox extension and other
-    /// clients may not; or their share extensions ignore file items wherever
-    /// they live. Build 66 tests the first by putting the file in ~/Downloads
-    /// and handing it over regardless of client.
+    /// **Only Apple Mail accepts the attachment, and this was tested rather
+    /// than assumed.** Outlook and Mimestream both hand back a compose window
+    /// with the log silently missing. Build 65 suggested the cause was our
+    /// sandbox container (Apple Mail can read a file there via a sandbox
+    /// extension; other clients may not), so build 66 put the file in
+    /// ~/Downloads — readable by anything — and handed it over anyway. **Both
+    /// clients still dropped it.** So it isn't the file's location: their
+    /// share extensions don't implement file items for the compose service at
+    /// all. `NSSharingServicePicker` routes through the same extension
+    /// mechanism, so it wouldn't help either. There is no API left to try.
+    ///
+    /// The ~/Downloads write stays, for a different reason than it was added:
+    /// a file in the sandbox container is unreachable for the user, so writing
+    /// somewhere they can actually navigate to is what makes "drag it in"
+    /// possible at all.
     ///
     /// Nothing can be detected after the fact — `canPerform(withItems:)`
     /// returns true either way — so the body carries a line pointing at the
-    /// saved file, which reads correctly whether or not the attachment landed.
+    /// saved file.
     private static func presentMacOS(attachLog: Bool, onFinish: @escaping () -> Void) {
-        // Apple Mail can read a file in our sandbox container (it gets a
-        // sandbox extension through the sharing machinery). For every other
-        // client we don't know whether the original failure was the container
-        // path or their extension ignoring file items — so put the log
-        // somewhere any app can read, hand it over anyway, and mention it in
-        // the body. If the client attaches it, the note is redundant and
-        // harmless; if it doesn't, the user has the file and knows where.
+        // Apple Mail gets the file from our container and attaches it. Every
+        // other client drops it regardless of where it lives, so for those the
+        // log goes to ~/Downloads — somewhere the user can actually reach —
+        // and the body tells them to drag it in. It's still handed to the
+        // service as well: costs nothing, and any client that does implement
+        // file items will just attach it.
         let isAppleMail = defaultMailClientBundleID() == "com.apple.mail"
 
         var attachmentURL: URL?

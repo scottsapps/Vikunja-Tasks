@@ -116,6 +116,18 @@ struct AppRoot: View {
         .task {
             _ = await ReminderScheduler.requestPermission()
             guard VikunjaConfig.isConfigured else { return }
+            #if os(iOS)
+            // A BGTask wake launches the whole app into the background, where
+            // this refresh duplicates the one BackgroundRefresh is already
+            // doing — and then gets frozen mid-flight when iOS re-suspends us,
+            // "completing" half an hour later against stale state. Let the
+            // background task own that path; the foreground refresh happens on
+            // the scenePhase → active transition.
+            if UIApplication.shared.applicationState == .background {
+                DiagnosticLog.info("launch refresh skipped — launched into background")
+                return
+            }
+            #endif
             await store.refreshWithRetry()
             store.startPolling()
         }

@@ -11,6 +11,11 @@ import Foundation
 enum HangWatchdog {
     private static let checkInterval: TimeInterval = 1
     private static let hangThreshold: TimeInterval = 3
+    /// A gap this large between our own ticks means the process was frozen,
+    /// not that the main thread is busy — the timer runs on its own queue and
+    /// keeps firing through any amount of main-thread work.
+    private static let suspensionTickGap: TimeInterval = 3
+    private static var lastTickAt: Date?
 
     private static let stateLock = NSLock()
     private static var lastHeartbeat = Date()
@@ -37,12 +42,19 @@ enum HangWatchdog {
     /// Resets the clock as well as clearing the flag — otherwise the gap
     /// accumulated while suspended is reported the moment we resume.
     static func resume() {
+        let now = Date()
         stateLock.lock()
+        let gap = now.timeIntervalSince(lastHeartbeat)
         isPaused = false
         isHanging = false
         hangStart = nil
-        lastHeartbeat = Date()
+        lastHeartbeat = now
+        lastTickAt = now
         stateLock.unlock()
+        // Coming back from a long gap is itself evidence the process was
+        // frozen — record it here too, in case resume() lands before the next
+        // tick would have noticed.
+        if gap > suspensionTickGap { DiagnosticLog.noteSuspension() }
     }
 
     static func start() {
@@ -55,9 +67,35 @@ enum HangWatchdog {
     }
 
     private static func tick() {
+        // Did WE just get frozen? The timer fires every second, so a much
+        // larger gap between consecutive ticks means the whole process was
+        // suspended — iOS backgrounding it, or the Mac going to sleep — not
+        // the main thread hanging. Scene phase can't tell us this: macOS
+        // system sleep never changes it, and a BGTask-launched iOS process
+        // never leaves .background. This check does, on every platform, and
+        // it also covers debugger pauses.
+        //
+        // Build 62 shipped without it and logged 18 false hangs on the Mac
+        // (654 s, 545 s, 350 s — sleep periods) and 6 more on iOS. The tell
+        // was that "unresponsive" and "recovered" always shared a timestamp:
+        // a real hang reports at the 3 s mark and recovers later.
+        let now = Date()
         stateLock.lock()
         let paused = isPaused
+        let tickGap = lastTickAt.map { now.timeIntervalSince($0) } ?? 0
+        lastTickAt = now
+        let wasFrozen = tickGap > suspensionTickGap
+        if wasFrozen {
+            lastHeartbeat = now
+            isHanging = false
+            hangStart = nil
+        }
         stateLock.unlock()
+
+        if wasFrozen {
+            DiagnosticLog.noteSuspension()
+            return
+        }
         guard !paused else { return }
 
         pingMainThread()

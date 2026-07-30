@@ -8,11 +8,20 @@ enum VikunjaAPI {
     /// instantly with "The request timed out." The widget extension stays
     /// bounded regardless — `VikunjaTimelineProvider` races its fetch against
     /// its own 10s `withTimeout`.
+    ///
+    /// `timeoutIntervalForResource` was 45 s and is now **25 s**. With
+    /// `waitsForConnectivity` the request timeout doesn't start until a
+    /// connection exists, so the resource ceiling is what a stalled request
+    /// actually costs — and on macOS ~35% of refreshes were burning the full
+    /// 45 s (see the open timeout issue). 25 s halves the staleness window and
+    /// stops one stuck request from blocking later refreshes for that long,
+    /// while keeping real headroom over the 20 s request timeout for a cold
+    /// radio or a VPN still coming up, which is what the 2.7.4 fix needed.
     private static let session: URLSession = {
         let config = URLSessionConfiguration.default
         config.waitsForConnectivity = true
         config.timeoutIntervalForRequest = 20
-        config.timeoutIntervalForResource = 45
+        config.timeoutIntervalForResource = 25
         return URLSession(configuration: config)
     }()
 
@@ -330,36 +339,36 @@ enum VikunjaAPI {
         let method = request.httpMethod ?? "GET"
         let path = request.url?.path ?? "?"
         let start = Date()
+        let epoch = DiagnosticLog.suspensionEpoch
+        // Per-request delegate purely to collect metrics; see `phaseSummary`.
+        let metrics = MetricsCollector()
 
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(for: request)
+            (data, response) = try await session.data(for: request, delegate: metrics)
         } catch {
-            let elapsed = Date().timeIntervalSince(start)
-            DiagnosticLog.error("✗ \(VeyrnError.logDescription(for: error)) \(method) \(path) (\(formatDuration(elapsed)))")
+            let elapsed = DiagnosticLog.elapsedDescription(since: start, epoch: epoch)
+            DiagnosticLog.error("✗ \(VeyrnError.logDescription(for: error)) \(method) \(path) (\(elapsed)) \(metrics.phaseSummary())")
             throw error
         }
 
-        let elapsed = Date().timeIntervalSince(start)
+        let elapsed = DiagnosticLog.elapsedDescription(since: start, epoch: epoch)
         guard let http = response as? HTTPURLResponse else {
+            DiagnosticLog.error("✗ non-HTTP response \(method) \(path) (\(elapsed))")
             throw APIError.badStatus(-1)
         }
         guard (200...299).contains(http.statusCode) else {
-            DiagnosticLog.warn("← \(http.statusCode) \(method) \(path) (\(formatDuration(elapsed)))")
+            DiagnosticLog.warn("← \(http.statusCode) \(method) \(path) (\(elapsed)) \(metrics.phaseSummary())")
             throw APIError.badStatus(http.statusCode)
         }
 
         if method == "GET" {
             bumpRequestCounter(bytes: data.count)
         } else {
-            DiagnosticLog.info("← \(http.statusCode) \(method) \(path) (\(formatDuration(elapsed)))")
+            DiagnosticLog.info("← \(http.statusCode) \(method) \(path) (\(elapsed))")
         }
         return (data, http)
-    }
-
-    private static func formatDuration(_ seconds: TimeInterval) -> String {
-        seconds < 1 ? String(format: "%.0f ms", seconds * 1000) : String(format: "%.1f s", seconds)
     }
 
     // MARK: - Request batch counters (for TaskStore.refresh()'s summary line)
@@ -405,5 +414,75 @@ enum VikunjaAPI {
             case .badStatus(let code): return "Server returned HTTP \(code)"
             }
         }
+    }
+}
+
+/// Collects `URLSessionTaskMetrics` for one request so a failure can say *which
+/// phase* stalled instead of leaving us to guess between a dead pooled
+/// connection, a blackholed route, and a resolver hang. Attached as a
+/// per-request delegate by `VikunjaAPI.send(_:)` and read only on failure.
+///
+/// Deliberately logs **no** host and **no** remote address — only phase names,
+/// durations, and booleans.
+final class MetricsCollector: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    private let lock = NSLock()
+    private var last: URLSessionTaskTransactionMetrics?
+    private var transactionCount = 0
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
+        lock.lock()
+        last = metrics.transactionMetrics.last
+        transactionCount = metrics.transactionMetrics.count
+        lock.unlock()
+    }
+
+    func phaseSummary() -> String {
+        lock.lock()
+        let m = last
+        let attempts = transactionCount
+        lock.unlock()
+
+        // Delivery of didFinishCollecting isn't strictly ordered before
+        // `data(for:)` returns, so this can legitimately be empty.
+        guard let m else { return "[metrics: none collected]" }
+
+        var parts: [String] = ["reused=\(m.isReusedConnection)"]
+        if let proto = m.networkProtocolName { parts.append(proto) }
+
+        func duration(_ from: Date?, _ to: Date?) -> String? {
+            guard let from, let to else { return nil }
+            return String(format: "%.0f ms", to.timeIntervalSince(from) * 1000)
+        }
+
+        // The whole point: a phase with a start and no end is where it died.
+        let phases: [(String, Date?, Date?)] = [
+            ("dns", m.domainLookupStartDate, m.domainLookupEndDate),
+            ("connect", m.connectStartDate, m.connectEndDate),
+            ("tls", m.secureConnectionStartDate, m.secureConnectionEndDate),
+            ("request", m.requestStartDate, m.requestEndDate),
+            ("response", m.responseStartDate, m.responseEndDate),
+        ]
+        var stalled = false
+        for (name, start, end) in phases {
+            if let d = duration(start, end) {
+                parts.append("\(name) \(d)")
+            } else if start != nil, end == nil {
+                parts.append("\(name) ✗ never completed")
+                stalled = true
+                break
+            }
+        }
+        if !stalled {
+            if m.domainLookupStartDate == nil, m.connectStartDate == nil, m.requestStartDate == nil {
+                // Never even attempted a connection — the request sat waiting
+                // for one. This is the shape a stale/exhausted connection pool
+                // would take.
+                parts.append("no connection attempt")
+            } else if m.requestEndDate != nil, m.responseStartDate == nil {
+                parts.append("response ✗ never started")
+            }
+        }
+        if attempts > 1 { parts.append("attempts=\(attempts)") }
+        return "[" + parts.joined(separator: ", ") + "]"
     }
 }

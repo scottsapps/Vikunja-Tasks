@@ -30,10 +30,60 @@ enum DiagnosticLog {
         breadcrumbLock.unlock()
     }
 
+    /// Clears the breadcrumb back to "idle", but only if `label` is still the
+    /// current one — so a nested or newer operation isn't clobbered. Call at
+    /// the end of anything that set one: an uncleared breadcrumb gets blamed
+    /// for a hang hours later (build 62's logs reported `quickAdd.submit`
+    /// against eighteen unrelated events).
+    static func endBreadcrumb(_ label: String) {
+        breadcrumbLock.lock()
+        if _breadcrumb == label { _breadcrumb = "idle" }
+        breadcrumbLock.unlock()
+    }
+
     static var currentBreadcrumb: String {
         breadcrumbLock.lock()
         defer { breadcrumbLock.unlock() }
         return _breadcrumb
+    }
+
+    // MARK: - Suspension tracking
+
+    /// Bumped whenever the process is detected to have been frozen — iOS
+    /// suspending a backgrounded app, or macOS system sleep. `HangWatchdog`
+    /// is the detector (it notices that its own 1 s timer missed ticks);
+    /// this counter is what lets everything else tell a slow operation from
+    /// a suspended one.
+    ///
+    /// Only bumped in app processes — widget extensions have no watchdog, but
+    /// they're short-lived and killed rather than frozen mid-request.
+    static var suspensionEpoch: Int {
+        suspensionLock.lock()
+        defer { suspensionLock.unlock() }
+        return _suspensionEpoch
+    }
+
+    static func noteSuspension() {
+        suspensionLock.lock()
+        _suspensionEpoch += 1
+        suspensionLock.unlock()
+    }
+
+    private static var _suspensionEpoch = 0
+    private static let suspensionLock = NSLock()
+
+    /// Renders an elapsed time, or says the process was frozen instead of
+    /// printing fiction. Durations come from `Date()`, which keeps counting
+    /// while a process is suspended, so an iOS app frozen mid-refresh
+    /// produced lines like `GET /api/v1/labels (1852.2 s)` and even
+    /// `refresh ok: … 2039.0 s` for a refresh that actually took a second.
+    /// Pass the `suspensionEpoch` captured when the operation started.
+    static func elapsedDescription(since start: Date, epoch: Int) -> String {
+        guard epoch == suspensionEpoch else { return "app suspended during" }
+        let seconds = Date().timeIntervalSince(start)
+        return seconds < 1
+            ? String(format: "%.0f ms", seconds * 1000)
+            : String(format: "%.1f s", seconds)
     }
 
     /// Every log file this process can see (its own, plus any sibling files
@@ -117,6 +167,11 @@ enum DiagnosticLog {
     /// file-creation time (the `/info` fetch lands seconds later), so it read
     /// `Vikunja unknown` forever. Re-stamping at launch picks up the value
     /// cached by the previous session.
+    /// Safe to call often — it rewrites only when the header would actually
+    /// change, so the widget extension can call it on every timeline request
+    /// without churning the file. (Build 62 re-stamped the app's header at
+    /// launch but never the widget's, which kept reporting `(60)` and
+    /// `Vikunja unknown` indefinitely.)
     static func refreshHeader() {
         queue.async {
             let url = currentURL
@@ -128,6 +183,9 @@ enum DiagnosticLog {
             // buildHeader() reads `Started:` back out of the file on disk, so
             // it must run before the rewrite.
             let header = buildHeader()
+            let existingHeader = String(text[..<terminator.upperBound])
+            guard !headersMatch(existingHeader, header) else { return }
+
             var body = String(text[terminator.upperBound...])
             while body.hasPrefix("\n") { body.removeFirst() }
 
@@ -135,6 +193,15 @@ enum DiagnosticLog {
             try? combined.write(to: url, options: .atomic)
             approxSize = combined.count
         }
+    }
+
+    /// Compares everything but `Started:`, which is preserved across
+    /// re-stamps and so always matches anyway.
+    private static func headersMatch(_ a: String, _ b: String) -> Bool {
+        func significant(_ s: String) -> [String] {
+            s.split(separator: "\n").filter { !$0.hasPrefix("Started:") }.map(String.init)
+        }
+        return significant(a) == significant(b)
     }
 
     private static let headerTerminator = "============================\n"

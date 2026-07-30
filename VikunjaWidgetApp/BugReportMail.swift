@@ -17,10 +17,14 @@ enum BugReportMail {
 
     static func present(attachLog: Bool, onFinish: @escaping () -> Void) {
         DiagnosticLog.breadcrumb("mailCompose")
+        let finish = {
+            DiagnosticLog.endBreadcrumb("mailCompose")
+            onFinish()
+        }
         #if os(iOS)
-        presentIOS(attachLog: attachLog, onFinish: onFinish)
+        presentIOS(attachLog: attachLog, onFinish: finish)
         #elseif os(macOS)
-        presentMacOS(attachLog: attachLog, onFinish: onFinish)
+        presentMacOS(attachLog: attachLog, onFinish: finish)
         #endif
     }
 

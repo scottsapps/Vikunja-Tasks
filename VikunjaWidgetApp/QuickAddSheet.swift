@@ -132,6 +132,7 @@ struct QuickAddSheet: View {
             fieldFocused = true
             DiagnosticLog.breadcrumb("quickAdd.open")
         }
+        .onDisappear { DiagnosticLog.endBreadcrumb("quickAdd.open") }
         .animation(.easeInOut(duration: 0.18), value: isExpanded)
         .animation(.easeInOut(duration: 0.18), value: hasPreviewContent)
         .animation(.easeInOut(duration: 0.2), value: showExpandedDatePicker)
@@ -641,6 +642,7 @@ struct QuickAddSheet: View {
         DiagnosticLog.breadcrumb("quickAdd.submit")
 
         Task {
+            defer { DiagnosticLog.endBreadcrumb("quickAdd.submit") }
             let targetProject: VikunjaProject?
             if isExpanded, let pid = expandedProjectId {
                 targetProject = store.projects.first { $0.id == pid } ?? store.inboxProject

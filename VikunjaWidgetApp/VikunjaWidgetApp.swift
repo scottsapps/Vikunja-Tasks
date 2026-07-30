@@ -73,7 +73,22 @@ struct VikunjaWidgetAppEntry: App {
         // the top of the file describes the build that's actually running.
         DiagnosticLog.refreshHeader()
         HangWatchdog.start()
-        DiagnosticLog.info("app launch: configured=\(VikunjaConfig.isConfigured), accounts=\(VikunjaConfig.accounts.count)")
+        // Version and build on the launch line, not just in the header: the
+        // header is re-stamped to the *current* build, so on a log spanning an
+        // update it no longer describes the older entries below it (a build-62
+        // header sat above entries written by 60 and 61). This makes each
+        // session self-identifying.
+        //
+        // "background" means BGTaskScheduler woke the whole app rather than the
+        // user opening it — seven of the "launches" in one iOS log were these,
+        // and they read identically without the label.
+        let (version, build) = DiagnosticLog.appVersionAndBuild()
+        #if os(iOS)
+        let launchKind = UIApplication.shared.applicationState == .background ? "background" : "foreground"
+        #else
+        let launchKind = "foreground"
+        #endif
+        DiagnosticLog.info("app launch (\(launchKind)): Veyrn \(version) (\(build)), configured=\(VikunjaConfig.isConfigured), accounts=\(VikunjaConfig.accounts.count)")
         VikunjaConfig.cleanupOrphanedKeychainItemsIfNeeded()
         #if os(macOS)
         VikunjaConfig.registerHotkeyDefaults()

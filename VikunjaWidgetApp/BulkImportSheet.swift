@@ -326,6 +326,7 @@ struct BulkImportSheet: View {
         phase = .importing
         DiagnosticLog.breadcrumb("bulkImport")
         DiagnosticLog.info("bulk import: \(spec.tasks.count) tasks, \(spec.labelTitles.count) labels")
+        defer { DiagnosticLog.endBreadcrumb("bulkImport") }
 
         var resolvedLabels: [VikunjaLabel] = []
         for title in spec.labelTitles {

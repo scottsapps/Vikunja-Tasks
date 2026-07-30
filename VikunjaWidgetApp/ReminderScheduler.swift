@@ -45,13 +45,24 @@ enum ReminderScheduler {
         return (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
     }
 
+    /// Logged on change only. `sync` runs after every refresh, so logging this
+    /// unconditionally cost one line per refresh (165 of them in one Mac
+    /// session) to report a value that essentially never changes.
+    private static var lastLoggedAuthStatus: UNAuthorizationStatus?
+
+    private static func logAuthorizationIfChanged(_ status: UNAuthorizationStatus) {
+        guard status != lastLoggedAuthStatus else { return }
+        lastLoggedAuthStatus = status
+        DiagnosticLog.info("notification authorization: \(authDescription(status))")
+    }
+
     /// Call after every task refresh. Diffs server reminders vs. scheduled requests.
     static func sync(tasks: [VikunjaTask]) async {
         let center = UNUserNotificationCenter.current()
 
         // Only proceed if we have permission
         let settings = await center.notificationSettings()
-        DiagnosticLog.info("notification authorization: \(authDescription(settings.authorizationStatus))")
+        logAuthorizationIfChanged(settings.authorizationStatus)
         guard settings.authorizationStatus == .authorized else { return }
 
         // Build the set of (id → reminder ISO) that the server wants

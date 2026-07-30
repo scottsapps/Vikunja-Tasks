@@ -102,6 +102,7 @@ final class TaskStore {
         DiagnosticLog.info("refresh start (reason: \(reason))")
         VikunjaAPI.beginRequestBatch()
         let refreshStart = Date()
+        let refreshEpoch = DiagnosticLog.suspensionEpoch
         do {
             let fetchedProjects = try await VikunjaAPI.fetchAllProjects()
             let fetchedTasks = try await VikunjaAPI.fetchAllUndoneTasks(projects: fetchedProjects)
@@ -121,7 +122,7 @@ final class TaskStore {
             lastRefreshAt = Date()
             lastReportedFailure = nil
             Task { await VeyrnTelemetry.probeServerInfoIfNeeded() }
-            logRefreshOk(elapsed: Date().timeIntervalSince(refreshStart))
+            logRefreshOk(elapsed: DiagnosticLog.elapsedDescription(since: refreshStart, epoch: refreshEpoch))
         } catch {
             lastRefreshError = error
             let tier: String
@@ -144,8 +145,8 @@ final class TaskStore {
                 report(error)
                 tier = "alerting"
             }
-            let elapsed = Date().timeIntervalSince(refreshStart)
-            DiagnosticLog.warn("refresh failed: \(VeyrnError.logDescription(for: error)) [\(tier)], \(formatDuration(elapsed))")
+            let elapsed = DiagnosticLog.elapsedDescription(since: refreshStart, epoch: refreshEpoch)
+            DiagnosticLog.warn("refresh failed: \(VeyrnError.logDescription(for: error)) [\(tier)], \(elapsed)")
         }
         isLoading = false
     }
@@ -153,7 +154,7 @@ final class TaskStore {
     /// Logs a summary line, subject to the 10-minute quiet rule: a refresh
     /// whose counts are unchanged from the last logged one only logs at most
     /// once every 10 minutes, so a healthy 60s poll loop doesn't fill the log.
-    private func logRefreshOk(elapsed: TimeInterval) {
+    private func logRefreshOk(elapsed: String) {
         let batch = VikunjaAPI.takeRequestBatch()
         let summary = "\(projects.count) projects, \(undoneTasks.count) undone"
         let changed = summary != lastLoggedRefreshSummary
@@ -161,11 +162,7 @@ final class TaskStore {
         guard changed || quietElapsed >= 600 else { return }
         lastLoggedRefreshSummary = summary
         lastLoggedRefreshAt = Date()
-        DiagnosticLog.info("refresh ok: \(summary), \(batch.count) requests, \(formatDuration(elapsed))")
-    }
-
-    private func formatDuration(_ seconds: TimeInterval) -> String {
-        seconds < 1 ? String(format: "%.0f ms", seconds * 1000) : String(format: "%.1f s", seconds)
+        DiagnosticLog.info("refresh ok: \(summary), \(batch.count) requests, \(elapsed)")
     }
 
     /// Launch-path refresh: retries with backoff so a network stack that isn't
@@ -493,6 +490,7 @@ final class TaskStore {
         let snapshot = outbox.ops
         DiagnosticLog.info("drain start: \(snapshot.count) ops [\(opCounts(snapshot))]")
         let drainStart = Date()
+        let drainEpoch = DiagnosticLog.suspensionEpoch
         var okCount = 0
         var droppedCount = 0
         for op in snapshot {
@@ -549,8 +547,8 @@ final class TaskStore {
                 break
             }
         }
-        let elapsed = Date().timeIntervalSince(drainStart)
-        DiagnosticLog.info("drain end: \(okCount) ok, \(droppedCount) dropped, \(formatDuration(elapsed)) — queue depth \(outbox.ops.count)")
+        let elapsed = DiagnosticLog.elapsedDescription(since: drainStart, epoch: drainEpoch)
+        DiagnosticLog.info("drain end: \(okCount) ok, \(droppedCount) dropped, \(elapsed) — queue depth \(outbox.ops.count)")
         await refresh(reason: "outbox")
     }
 

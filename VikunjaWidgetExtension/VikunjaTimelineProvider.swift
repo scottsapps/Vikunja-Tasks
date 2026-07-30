@@ -48,6 +48,9 @@ struct VikunjaTimelineProvider: TimelineProvider {
     // MARK: - Entry construction
 
     private func buildEntry(family: WidgetFamily) async -> VikunjaEntry {
+        // Keeps the extension's own log header describing the running build
+        // and the current account/server; rewrites only when something changed.
+        DiagnosticLog.refreshHeader()
         DiagnosticLog.info("timeline request: family=\(family)")
 
         // 1. Fresh cache → no network at all. The app writes the cache on

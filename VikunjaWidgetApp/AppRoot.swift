@@ -124,9 +124,10 @@ struct AppRoot: View {
             // background task own that path; the foreground refresh happens on
             // the scenePhase → active transition.
             if UIApplication.shared.applicationState == .background {
-                DiagnosticLog.info("launch refresh skipped — launched into background")
+                DiagnosticLog.info("launch context: background — launch refresh skipped")
                 return
             }
+            DiagnosticLog.info("launch context: foreground")
             #endif
             await store.refreshWithRetry()
             store.startPolling()

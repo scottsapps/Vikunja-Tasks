@@ -58,13 +58,71 @@ enum VikunjaAPI {
         } else {
             projectList = try await fetchAllProjects()
         }
-        return try await withThrowingTaskGroup(of: [VikunjaTask].self) { group in
-            for project in projectList {
-                group.addTask { try await fetchTasks(projectId: project.id, done: false) }
+
+        // v2 replaces the whole per-project fan-out with one paged endpoint.
+        // That matters beyond tidiness: the fan-out is what triggers the
+        // macOS stall — requests that never get a connection slot at all
+        // (`no connection attempt`), 1–2 per refresh, killing the whole
+        // refresh. One request can't contend with itself.
+        if supportsAPIv2 {
+            do {
+                let tasks = try await fetchAllUndoneTasksV2(
+                    knownProjectIds: Set(projectList.map(\.id))
+                )
+                DiagnosticLog.info("fetch path: v2, \(tasks.count) undone")
+                return tasks
+            } catch {
+                // Cancellation is our own doing — don't paper over it with a
+                // second full fetch.
+                if VeyrnError.isCancellation(error) { throw error }
+                DiagnosticLog.warn("v2 task fetch failed (\(VeyrnError.logDescription(for: error))) — falling back to v1 fan-out")
             }
-            var combined: [VikunjaTask] = []
-            for try await batch in group { combined.append(contentsOf: batch) }
-            return combined
+        }
+
+        return try await fetchTasksAcrossProjects(projectList.map(\.id), done: false)
+    }
+
+    /// Bounded fan-out: at most `maxConcurrentProjectFetches` in flight rather
+    /// than one per project. Twelve simultaneous requests is what leaves one
+    /// or two queued behind connection slots they never get; four keeps the
+    /// client's own scheduler out of the picture. Used for v1 servers and as
+    /// the v2 fallback.
+    private static let maxConcurrentProjectFetches = 4
+
+    private static func fetchTasksAcrossProjects(_ projectIds: [Int], done: Bool, page: Int = 1) async throws -> [VikunjaTask] {
+        var combined: [VikunjaTask] = []
+        var next = 0
+        try await withThrowingTaskGroup(of: [VikunjaTask].self) { group in
+            func addNext() {
+                guard next < projectIds.count else { return }
+                let projectId = projectIds[next]
+                next += 1
+                group.addTask { try await fetchTasksRetrying(projectId: projectId, done: done, page: page) }
+            }
+            for _ in 0..<min(maxConcurrentProjectFetches, projectIds.count) { addNext() }
+            while let batch = try await group.next() {
+                combined.append(contentsOf: batch)
+                addNext()
+            }
+        }
+        return combined
+    }
+
+    /// One retry for a single project before the whole refresh is written off.
+    /// The task group cancels every sibling on the first throw, so one stalled
+    /// request was discarding eleven successful ones — 46% of refreshes failed
+    /// this way on macOS. Still all-or-nothing overall: a partial result would
+    /// silently make a project's tasks vanish from the lists.
+    private static func fetchTasksRetrying(projectId: Int, done: Bool, page: Int) async throws -> [VikunjaTask] {
+        do {
+            return try await fetchTasks(projectId: projectId, done: done, page: page)
+        } catch {
+            // Never retry a cancellation — that's the group tearing down.
+            guard !VeyrnError.isCancellation(error),
+                  VeyrnError.isConnectivityOnly(error) || VeyrnError.isRetryable(error)
+            else { throw error }
+            DiagnosticLog.warn("project \(projectId) fetch failed (\(VeyrnError.logDescription(for: error))) — retrying once")
+            return try await fetchTasks(projectId: projectId, done: done, page: page)
         }
     }
 
@@ -72,14 +130,7 @@ enum VikunjaAPI {
 
     static func fetchDoneTasks(page: Int = 1) async throws -> [VikunjaTask] {
         let projectList = try await fetchAllProjects()
-        let tasks: [VikunjaTask] = try await withThrowingTaskGroup(of: [VikunjaTask].self) { group in
-            for project in projectList {
-                group.addTask { try await fetchTasks(projectId: project.id, done: true, page: page) }
-            }
-            var combined: [VikunjaTask] = []
-            for try await batch in group { combined.append(contentsOf: batch) }
-            return combined
-        }
+        let tasks = try await fetchTasksAcrossProjects(projectList.map(\.id), done: true, page: page)
         return tasks.sorted { ($0.updatedDate ?? .distantPast) > ($1.updatedDate ?? .distantPast) }
     }
 
@@ -316,7 +367,67 @@ enum VikunjaAPI {
         return try JSONDecoder().decode(T.self, from: data)
     }
 
-    private static func makeRequest(_ path: String, method: String = "GET", body: Data? = nil) -> URLRequest {
+    // MARK: - API v2 (undone-task fetch only)
+    //
+    // Veyrn stays on v1 for everything else. v2 is used for exactly one call —
+    // the undone-task fetch — because v1's `/tasks/all` is broken, forcing a
+    // per-project fan-out, and that fan-out is what stalls on macOS. Verified
+    // against Vikunja 2.4.0: the response is a `{items, page, total_pages, …}`
+    // envelope, tasks carry `related_tasks` (so subtask detection and progress
+    // badges keep working), and the v1 `filter=done = false` syntax is accepted.
+    //
+    // Gated on the server version cached by the `/info` probe, and any failure
+    // falls back to the v1 fan-out — so a server that answers `/info`
+    // optimistically but not `/tasks` can't break anyone.
+
+    private static var v2BaseURL: String {
+        let host = VikunjaConfig.host.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        return "\(host)/api/v2"
+    }
+
+    private static var supportsAPIv2: Bool {
+        UserDefaults(suiteName: VikunjaConfig.appGroupSuite)?
+            .bool(forKey: DiagnosticLog.serverSupportsV2DefaultsKey) ?? false
+    }
+
+    private struct V2Page<T: Decodable>: Decodable {
+        let items: [T]?
+        let page: Int?
+        let totalPages: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case items, page
+            case totalPages = "total_pages"
+        }
+    }
+
+    private static func fetchAllUndoneTasksV2(knownProjectIds: Set<Int>) async throws -> [VikunjaTask] {
+        var all: [VikunjaTask] = []
+        var page = 1
+        while true {
+            // 200, not 50: at 50 a 165-task account took four round trips,
+            // which undercut the whole point of leaving the fan-out behind.
+            // Verified the server honours it (per_page=200 returned all 166
+            // in one response); a server that caps lower just yields more
+            // pages, since the loop follows `total_pages`.
+            let path = "/tasks?filter=done+%3D+false&per_page=200&page=\(page)"
+            let request = makeRequest(path, base: v2BaseURL)
+            let (data, _) = try await send(request)
+            let decoded = try JSONDecoder().decode(V2Page<VikunjaTask>.self, from: data)
+            all.append(contentsOf: decoded.items ?? [])
+            let totalPages = decoded.totalPages ?? 1
+            if page >= max(1, totalPages) || (decoded.items ?? []).isEmpty { break }
+            page += 1
+        }
+        // v2 is a global endpoint, so constrain it to the same universe the v1
+        // fan-out would have covered. Without this, a task in a project the app
+        // doesn't list would appear with no project — and the app's own count
+        // is the contract the rest of the code was written against.
+        return all.filter { knownProjectIds.contains($0.projectId) }
+    }
+
+    private static func makeRequest(_ path: String, method: String = "GET", body: Data? = nil, base: String? = nil) -> URLRequest {
+        let baseURL = base ?? self.baseURL
         var request = URLRequest(url: URL(string: "\(baseURL)\(path)")!, timeoutInterval: 20)
         request.httpMethod = method
         request.setValue("Bearer \(VikunjaConfig.apiToken)", forHTTPHeaderField: "Authorization")
@@ -338,8 +449,7 @@ enum VikunjaAPI {
     private static func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         let method = request.httpMethod ?? "GET"
         let path = request.url?.path ?? "?"
-        let start = Date()
-        let epoch = DiagnosticLog.suspensionEpoch
+        let stopwatch = DiagnosticLog.Stopwatch()
         // Per-request delegate purely to collect metrics; see `phaseSummary`.
         let metrics = MetricsCollector()
 
@@ -348,12 +458,20 @@ enum VikunjaAPI {
         do {
             (data, response) = try await session.data(for: request, delegate: metrics)
         } catch {
-            let elapsed = DiagnosticLog.elapsedDescription(since: start, epoch: epoch)
-            DiagnosticLog.error("✗ \(VeyrnError.logDescription(for: error)) \(method) \(path) (\(elapsed)) \(metrics.phaseSummary())")
+            let elapsed = DiagnosticLog.elapsed(stopwatch)
+            let line = "✗ \(VeyrnError.logDescription(for: error)) \(method) \(path) (\(elapsed)) \(metrics.phaseSummary())"
+            // A cancelled request is expected — we quit, switched accounts, or
+            // a task group tore down its siblings. Logging it at ERROR made
+            // routine teardown read as failure.
+            if VeyrnError.isCancellation(error) {
+                DiagnosticLog.info(line)
+            } else {
+                DiagnosticLog.error(line)
+            }
             throw error
         }
 
-        let elapsed = DiagnosticLog.elapsedDescription(since: start, epoch: epoch)
+        let elapsed = DiagnosticLog.elapsed(stopwatch)
         guard let http = response as? HTTPURLResponse else {
             DiagnosticLog.error("✗ non-HTTP response \(method) \(path) (\(elapsed))")
             throw APIError.badStatus(-1)

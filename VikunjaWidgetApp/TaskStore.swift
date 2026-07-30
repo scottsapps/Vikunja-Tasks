@@ -84,25 +84,46 @@ final class TaskStore {
     /// timeout was one of that pair. One refresh at a time is enough.
     private var isRefreshing = false
 
+    /// A refresh that arrives while one is running is **coalesced**, not
+    /// dropped. Dropping cost real correctness: completing a task drains the
+    /// outbox and asks for a reconciling refresh, and if that request landed
+    /// during an already-running refresh which had itself been issued *before*
+    /// the completion, the stale count stuck around — the widget cache held
+    /// one extra task for a full poll cycle. One follow-up pass is enough;
+    /// anything arriving during the follow-up sets the flag again for the next
+    /// caller rather than looping here.
+    private var coalescedRefreshReason: String?
+
     func refresh(deferAlert: Bool = false, reason: String = "manual") async {
         guard VikunjaConfig.isConfigured else {
             DiagnosticLog.info("isConfigured=false")
             return
         }
         guard !isRefreshing else {
-            DiagnosticLog.info("refresh skipped (reason: \(reason)) — already in flight")
+            coalescedRefreshReason = reason
+            DiagnosticLog.info("refresh coalesced (reason: \(reason)) — one already in flight")
             return
         }
         isRefreshing = true
         defer { isRefreshing = false }
+
+        await performRefresh(deferAlert: deferAlert, reason: reason)
+
+        // Still inside `isRefreshing`, so this can't start a third pass.
+        if let queued = coalescedRefreshReason {
+            coalescedRefreshReason = nil
+            await performRefresh(deferAlert: deferAlert, reason: "\(queued), coalesced")
+        }
+    }
+
+    private func performRefresh(deferAlert: Bool, reason: String) async {
         isLoading = true
         error = nil
         transientRefreshFailure = false
         lastRefreshError = nil
         DiagnosticLog.info("refresh start (reason: \(reason))")
         VikunjaAPI.beginRequestBatch()
-        let refreshStart = Date()
-        let refreshEpoch = DiagnosticLog.suspensionEpoch
+        let refreshClock = DiagnosticLog.Stopwatch()
         do {
             let fetchedProjects = try await VikunjaAPI.fetchAllProjects()
             let fetchedTasks = try await VikunjaAPI.fetchAllUndoneTasks(projects: fetchedProjects)
@@ -122,7 +143,7 @@ final class TaskStore {
             lastRefreshAt = Date()
             lastReportedFailure = nil
             Task { await VeyrnTelemetry.probeServerInfoIfNeeded() }
-            logRefreshOk(elapsed: DiagnosticLog.elapsedDescription(since: refreshStart, epoch: refreshEpoch))
+            logRefreshOk(elapsed: DiagnosticLog.elapsed(refreshClock))
         } catch {
             lastRefreshError = error
             let tier: String
@@ -145,7 +166,7 @@ final class TaskStore {
                 report(error)
                 tier = "alerting"
             }
-            let elapsed = DiagnosticLog.elapsedDescription(since: refreshStart, epoch: refreshEpoch)
+            let elapsed = DiagnosticLog.elapsed(refreshClock)
             DiagnosticLog.warn("refresh failed: \(VeyrnError.logDescription(for: error)) [\(tier)], \(elapsed)")
         }
         isLoading = false
@@ -489,8 +510,7 @@ final class TaskStore {
         guard reachability.isOnline, !outbox.ops.isEmpty else { return }
         let snapshot = outbox.ops
         DiagnosticLog.info("drain start: \(snapshot.count) ops [\(opCounts(snapshot))]")
-        let drainStart = Date()
-        let drainEpoch = DiagnosticLog.suspensionEpoch
+        let drainClock = DiagnosticLog.Stopwatch()
         var okCount = 0
         var droppedCount = 0
         for op in snapshot {
@@ -547,7 +567,7 @@ final class TaskStore {
                 break
             }
         }
-        let elapsed = DiagnosticLog.elapsedDescription(since: drainStart, epoch: drainEpoch)
+        let elapsed = DiagnosticLog.elapsed(drainClock)
         DiagnosticLog.info("drain end: \(okCount) ok, \(droppedCount) dropped, \(elapsed) — queue depth \(outbox.ops.count)")
         await refresh(reason: "outbox")
     }

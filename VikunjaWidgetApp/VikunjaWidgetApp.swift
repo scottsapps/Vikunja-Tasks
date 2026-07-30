@@ -78,17 +78,13 @@ struct VikunjaWidgetAppEntry: App {
         // update it no longer describes the older entries below it (a build-62
         // header sat above entries written by 60 and 61). This makes each
         // session self-identifying.
-        //
-        // "background" means BGTaskScheduler woke the whole app rather than the
-        // user opening it — seven of the "launches" in one iOS log were these,
-        // and they read identically without the label.
         let (version, build) = DiagnosticLog.appVersionAndBuild()
-        #if os(iOS)
-        let launchKind = UIApplication.shared.applicationState == .background ? "background" : "foreground"
-        #else
-        let launchKind = "foreground"
-        #endif
-        DiagnosticLog.info("app launch (\(launchKind)): Veyrn \(version) (\(build)), configured=\(VikunjaConfig.isConfigured), accounts=\(VikunjaConfig.accounts.count)")
+        // The foreground/background trigger is logged separately by AppRoot:
+        // UIApplication.applicationState read this early in App.init() hasn't
+        // settled and reports .active even for a BGTask wake, which is how
+        // build 63 logged "app launch (foreground)" one line above
+        // "launched into background".
+        DiagnosticLog.info("app launch: Veyrn \(version) (\(build)), configured=\(VikunjaConfig.isConfigured), accounts=\(VikunjaConfig.accounts.count)")
         VikunjaConfig.cleanupOrphanedKeychainItemsIfNeeded()
         #if os(macOS)
         VikunjaConfig.registerHotkeyDefaults()

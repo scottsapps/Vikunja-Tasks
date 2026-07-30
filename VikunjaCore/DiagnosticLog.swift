@@ -72,16 +72,53 @@ enum DiagnosticLog {
     private static var _suspensionEpoch = 0
     private static let suspensionLock = NSLock()
 
-    /// Renders an elapsed time, or says the process was frozen instead of
-    /// printing fiction. Durations come from `Date()`, which keeps counting
-    /// while a process is suspended, so an iOS app frozen mid-refresh
-    /// produced lines like `GET /api/v1/labels (1852.2 s)` and even
-    /// `refresh ok: … 2039.0 s` for a refresh that actually took a second.
-    /// Pass the `suspensionEpoch` captured when the operation started.
-    static func elapsedDescription(since start: Date, epoch: Int) -> String {
-        guard epoch == suspensionEpoch else { return "app suspended during" }
-        let seconds = Date().timeIntervalSince(start)
-        return seconds < 1
+    /// Times an operation without reporting fiction when the process is
+    /// frozen mid-flight. `Date()` keeps counting through a suspension, which
+    /// is how build 62 logged `GET /api/v1/labels (1852.2 s)` and even
+    /// `refresh ok: … 2039.0 s` for a refresh that took about a second.
+    ///
+    /// Two independent signals, because they cover different freezes:
+    ///
+    /// - **System sleep** (`ProcessInfo.systemUptime` stops advancing while
+    ///   the machine is asleep; `Date()` doesn't). The difference between the
+    ///   two deltas *is* the sleep duration — exact, and with no race.
+    /// - **Process suspension** with the system awake (iOS backgrounding),
+    ///   where both clocks keep running and only `HangWatchdog`'s missed-tick
+    ///   detector can tell. That's `suspensionEpoch`.
+    ///
+    /// The epoch alone was racy: the watchdog only notices on its next tick,
+    /// up to a second after wake, so an operation completing immediately on
+    /// wake beat it and printed raw wall clock (build 63 logged a request as
+    /// `926.0 s` on the same wake where the refresh correctly said
+    /// `app suspended during`).
+    struct Stopwatch {
+        fileprivate let wallStart: Date
+        fileprivate let awakeStart: TimeInterval
+        fileprivate let epochStart: Int
+
+        init() {
+            wallStart = Date()
+            awakeStart = ProcessInfo.processInfo.systemUptime
+            epochStart = DiagnosticLog.suspensionEpoch
+        }
+    }
+
+    static func elapsed(_ stopwatch: Stopwatch) -> String {
+        let wall = Date().timeIntervalSince(stopwatch.wallStart)
+        let awake = ProcessInfo.processInfo.systemUptime - stopwatch.awakeStart
+        let slept = wall - awake
+
+        if slept > 2 {
+            return "\(formatSeconds(awake)) awake, \(formatSeconds(slept)) asleep"
+        }
+        if suspensionEpoch != stopwatch.epochStart {
+            return "app suspended during"
+        }
+        return formatSeconds(wall)
+    }
+
+    private static func formatSeconds(_ seconds: TimeInterval) -> String {
+        seconds < 1
             ? String(format: "%.0f ms", seconds * 1000)
             : String(format: "%.1f s", seconds)
     }

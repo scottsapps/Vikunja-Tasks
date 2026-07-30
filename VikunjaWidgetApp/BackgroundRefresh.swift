@@ -25,8 +25,7 @@ enum BackgroundRefresh {
     private static func handle(_ task: BGAppRefreshTask) {
         schedule()   // always queue the next run
         DiagnosticLog.info("BGTask fired")
-        let start = Date()
-        let epoch = DiagnosticLog.suspensionEpoch
+        let clock = DiagnosticLog.Stopwatch()
         let work = Task {
             guard VikunjaConfig.isConfigured else {
                 DiagnosticLog.info("isConfigured=false")
@@ -39,7 +38,7 @@ enum BackgroundRefresh {
                 await ReminderScheduler.sync(tasks: tasks)
                 WatchSessionProvider.shared.pushSnapshot(tasks: tasks, projects: projects)
                 WidgetCenter.shared.reloadAllTimelines()
-                DiagnosticLog.info("BGTask done: \(tasks.count) tasks, \(DiagnosticLog.elapsedDescription(since: start, epoch: epoch))")
+                DiagnosticLog.info("BGTask done: \(tasks.count) tasks, \(DiagnosticLog.elapsed(clock))")
                 task.setTaskCompleted(success: true)
             } catch {
                 DiagnosticLog.warn("BGTask failed: \(VeyrnError.logDescription(for: error))")

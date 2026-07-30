@@ -32,15 +32,20 @@ enum BugReportMail {
 
     private static func subject() -> String { "Veyrn Bug Report" }
 
-    private static func bodyText() -> String {
+    /// `savedLogName` is set only on the macOS path where the log couldn't be
+    /// attached automatically, so the body can point at the saved file.
+    private static func bodyText(savedLogName: String? = nil) -> String {
         let (version, build) = DiagnosticLog.appVersionAndBuild()
+        let note = savedLogName.map {
+            "\n(If the diagnostic log isn't attached above, it's also in your Downloads folder as \($0) — please drag it in.)\n"
+        } ?? ""
         return """
         What went wrong?
 
 
         What were you doing when it happened?
 
-
+        \(note)
         ---
         Veyrn \(version) (\(build))
         \(DiagnosticLog.osNameVersionBuild())
@@ -149,22 +154,63 @@ private final class MailCoordinator: NSObject, MFMailComposeViewControllerDelega
 
 #if os(macOS)
 extension BugReportMail {
+    /// Bundle id of whatever handles `mailto:`, or nil if nothing does.
+    private static func defaultMailClientBundleID() -> String? {
+        guard let mailto = URL(string: "mailto:"),
+              let appURL = NSWorkspace.shared.urlForApplication(toOpen: mailto)
+        else { return nil }
+        return Bundle(url: appURL)?.bundleIdentifier
+    }
+
+    /// Attaching the log is reliable with Apple Mail and **was** silently
+    /// dropped by Outlook and Mimestream (confirmed with both on build 65),
+    /// which handed back a compose window with no attachment. Two candidate
+    /// causes, not yet distinguished: the file sat inside our sandbox
+    /// container, which Apple Mail can read via a sandbox extension and other
+    /// clients may not; or their share extensions ignore file items wherever
+    /// they live. Build 66 tests the first by putting the file in ~/Downloads
+    /// and handing it over regardless of client.
+    ///
+    /// Nothing can be detected after the fact — `canPerform(withItems:)`
+    /// returns true either way — so the body carries a line pointing at the
+    /// saved file, which reads correctly whether or not the attachment landed.
     private static func presentMacOS(attachLog: Bool, onFinish: @escaping () -> Void) {
-        var tempURL: URL?
+        // Apple Mail can read a file in our sandbox container (it gets a
+        // sandbox extension through the sharing machinery). For every other
+        // client we don't know whether the original failure was the container
+        // path or their extension ignoring file items — so put the log
+        // somewhere any app can read, hand it over anyway, and mention it in
+        // the body. If the client attaches it, the note is redundant and
+        // harmless; if it doesn't, the user has the file and knows where.
+        let isAppleMail = defaultMailClientBundleID() == "com.apple.mail"
+
+        var attachmentURL: URL?
+        var savedName: String?
+
         if attachLog {
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent(attachmentFilename())
-            if (try? DiagnosticLog.bundledLogData().write(to: url)) != nil {
-                tempURL = url
+            if isAppleMail {
+                let url = FileManager.default.temporaryDirectory.appendingPathComponent(attachmentFilename())
+                if (try? DiagnosticLog.bundledLogData().write(to: url)) != nil {
+                    attachmentURL = url
+                }
+            } else if let url = writeLogToDownloads() {
+                attachmentURL = url
+                savedName = url.lastPathComponent
+            } else {
+                DiagnosticLog.warn("could not write log to Downloads — offering save panel")
+                offerSaveOrClipboardFallback(attachLog: attachLog, tempURL: nil, onFinish: onFinish)
+                return
             }
         }
 
         if let service = NSSharingService(named: .composeEmail) {
             service.recipients = [supportAddress]
             service.subject = subject()
-            var items: [Any] = [bodyText()]
-            if let tempURL { items.append(tempURL) }
+            var items: [Any] = [bodyText(savedLogName: savedName)]
+            if let attachmentURL { items.append(attachmentURL) }
             if service.canPerform(withItems: items) {
                 service.perform(withItems: items)
+                DiagnosticLog.info("bug report composed (log: \(attachLog ? (isAppleMail ? "attached" : "attached + saved to Downloads") : "none"))")
                 onFinish()
                 return
             }
@@ -172,8 +218,18 @@ extension BugReportMail {
 
         // No mail client configured — offer to save the log for webmail
         // users, falling back to a clipboard copy either way.
-        offerSaveOrClipboardFallback(attachLog: attachLog, tempURL: tempURL, onFinish: onFinish)
+        offerSaveOrClipboardFallback(attachLog: attachLog, tempURL: attachmentURL, onFinish: onFinish)
     }
+
+    private static func writeLogToDownloads() -> URL? {
+        guard let downloads = try? FileManager.default.url(
+            for: .downloadsDirectory, in: .userDomainMask, appropriateFor: nil, create: false
+        ) else { return nil }
+        let url = downloads.appendingPathComponent(attachmentFilename())
+        guard (try? DiagnosticLog.bundledLogData().write(to: url)) != nil else { return nil }
+        return url
+    }
+
 
     private static func offerSaveOrClipboardFallback(attachLog: Bool, tempURL: URL?, onFinish: @escaping () -> Void) {
         defer { if let tempURL { try? FileManager.default.removeItem(at: tempURL) } }

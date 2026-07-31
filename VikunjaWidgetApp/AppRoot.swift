@@ -232,6 +232,9 @@ struct AppRoot: View {
                     }
                 }
                 .searchable(text: $searchText, prompt: "Search tasks")
+                .task(id: searchText) {
+                    if item == .logbook { store.updateLogbookSearch(searchText) }
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -299,6 +302,13 @@ struct AppRoot: View {
                 }
             }
             .searchable(text: $searchText, prompt: "Search tasks")
+            // Keyed on selection too (unlike the iPhone destination, which is
+            // pushed fresh per item) — the split-view detail is one long-lived
+            // Group, so switching sidebar items alone wouldn't otherwise
+            // re-evaluate this against the new selection.
+            .task(id: "\(String(describing: selection))|\(searchText)") {
+                if selection == .logbook { store.updateLogbookSearch(searchText) }
+            }
         }
         #if os(macOS)
         .toolbar {
@@ -368,6 +378,12 @@ struct AppRoot: View {
     }
 
     private func searchResults(for item: SidebarItem?) -> [VikunjaTask] {
+        // On v2 servers, a Logbook search is answered server-side against the
+        // entire completion history (see `TaskStore.updateLogbookSearch`) —
+        // prefer that over filtering only what's already paged in locally.
+        if item == .logbook, let serverResults = store.logbookSearchResults {
+            return serverResults
+        }
         let q = searchText.lowercased()
         let pool = item == .logbook ? store.doneTasks : store.undoneTasks
         return pool.filter {

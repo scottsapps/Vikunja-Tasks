@@ -300,6 +300,13 @@ final class TaskStore {
         undoTimers.removeAll()
         pendingUndo.removeAll()
 
+        // A logbook search belongs to the account that ran it: an in-flight
+        // request could otherwise deliver the *old* server's completed tasks
+        // after the switch, and already-shown results would linger.
+        logbookSearchTask?.cancel()
+        logbookSearchTask = nil
+        logbookSearchResults = nil
+
         outbox = Outbox(accountId: accountId)
         DiagnosticLog.info("outbox replaced")
 
@@ -322,6 +329,45 @@ final class TaskStore {
             saveDoneCache()
         } catch {
             // silently fail — logbook is best-effort; keep cached data
+        }
+    }
+
+    // MARK: - Logbook search (Phase 3, v2 servers only)
+
+    /// Non-nil once a server-side search has returned results for the current
+    /// query text — the Logbook prefers these over client-side filtering of
+    /// `doneTasks` when present. Nil means "no server search in flight or
+    /// available"; the caller falls back to filtering what's already loaded,
+    /// exactly as it did before this existed.
+    private(set) var logbookSearchResults: [VikunjaTask]?
+    private var logbookSearchTask: Task<Void, Never>?
+
+    /// Debounces (~300 ms) and searches the server's entire completion
+    /// history via `VikunjaAPI.searchDoneTasks`. On a v1 server, or if the
+    /// search fails for any reason (including mid-flight cancellation), falls
+    /// back to nil so the caller's existing client-side filter takes over —
+    /// old-server users lose nothing and gain nothing.
+    func updateLogbookSearch(_ query: String) {
+        logbookSearchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            logbookSearchResults = nil
+            return
+        }
+        // @MainActor: `logbookSearchResults` is observed by SwiftUI, and an
+        // unstructured Task in this nonisolated method would otherwise publish
+        // it from a background thread (same pattern as `observeReachability`).
+        logbookSearchTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            do {
+                let results = try await VikunjaAPI.searchDoneTasks(query: trimmed)
+                guard !Task.isCancelled else { return }
+                self?.logbookSearchResults = results
+            } catch {
+                guard !Task.isCancelled else { return }
+                self?.logbookSearchResults = nil
+            }
         }
     }
 

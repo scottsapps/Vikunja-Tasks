@@ -29,15 +29,30 @@ enum VikunjaAPI {
 
     static func createProject(title: String) async throws -> VikunjaProject {
         let body = try JSONSerialization.data(withJSONObject: ["title": title])
+        if supportsAPIv2 {
+            return try await postV2("/projects", body: body, as: VikunjaProject.self)
+        }
         return try await put("/projects", body: body, as: VikunjaProject.self)
     }
 
     static func deleteProject(id: Int) async throws {
+        if supportsAPIv2 {
+            try await deleteV2("/projects/\(id)")
+            return
+        }
         let request = makeRequest("/projects/\(id)", method: "DELETE")
         _ = try await send(request)
     }
 
     static func fetchAllProjects() async throws -> [VikunjaProject] {
+        if supportsAPIv2 {
+            do {
+                return try await getV2Paged("/projects", perPage: 100)
+            } catch {
+                if VeyrnError.isCancellation(error) { throw error }
+                DiagnosticLog.warn("v2 fetchAllProjects failed (\(VeyrnError.logDescription(for: error))) — falling back to v1")
+            }
+        }
         var all: [VikunjaProject] = []
         var page = 1
         while true {
@@ -129,6 +144,22 @@ enum VikunjaAPI {
     // MARK: - Tasks (done / logbook)
 
     static func fetchDoneTasks(page: Int = 1) async throws -> [VikunjaTask] {
+        // v2 replaces the per-project-fan-out-then-merge with one request: the
+        // server's own "50 most recently completed overall" is a strictly
+        // better page 1 than v1's "50 done per project". Deliberately does not
+        // follow total_pages here — `page` is the logbook's own paging, not a
+        // full-drain loop.
+        if supportsAPIv2 {
+            do {
+                let path = "/tasks?filter=done+%3D+true&sort_by=done_at&order_by=desc&per_page=50&page=\(page)"
+                let result: V2Page<VikunjaTask> = try await getV2(path, as: V2Page<VikunjaTask>.self)
+                let tasks = result.items ?? []
+                return tasks.sorted { ($0.updatedDate ?? .distantPast) > ($1.updatedDate ?? .distantPast) }
+            } catch {
+                if VeyrnError.isCancellation(error) { throw error }
+                DiagnosticLog.warn("v2 fetchDoneTasks failed (\(VeyrnError.logDescription(for: error))) — falling back to v1")
+            }
+        }
         let projectList = try await fetchAllProjects()
         let tasks = try await fetchTasksAcrossProjects(projectList.map(\.id), done: true, page: page)
         return tasks.sorted { ($0.updatedDate ?? .distantPast) > ($1.updatedDate ?? .distantPast) }
@@ -136,7 +167,24 @@ enum VikunjaAPI {
 
     // MARK: - Single task (includes related_tasks from the server)
 
+    /// Public routed fetch — v2 when available (bare object, `related_tasks`
+    /// included with no `expand` needed), v1 fallback on any failure. Internal
+    /// callers that pre-fetch as part of a v1 read-modify-write mutation
+    /// (`setDone`, the v1 branch of `updateTask`) use `fetchTaskV1` directly so
+    /// a v1 mutation never mixes a v2 read with a v1 write.
     static func fetchTask(id: Int) async throws -> VikunjaTask {
+        if supportsAPIv2 {
+            do {
+                return try await getV2("/tasks/\(id)", as: VikunjaTask.self)
+            } catch {
+                if VeyrnError.isCancellation(error) { throw error }
+                DiagnosticLog.warn("v2 fetchTask failed (\(VeyrnError.logDescription(for: error))) — falling back to v1")
+            }
+        }
+        return try await fetchTaskV1(id: id)
+    }
+
+    private static func fetchTaskV1(id: Int) async throws -> VikunjaTask {
         return try await get("/tasks/\(id)", as: VikunjaTask.self)
     }
 
@@ -151,25 +199,44 @@ enum VikunjaAPI {
     // MARK: - Mutations
 
     static func deleteTask(id: Int) async throws {
+        if supportsAPIv2 {
+            try await deleteV2("/tasks/\(id)")
+            return
+        }
         let request = makeRequest("/tasks/\(id)", method: "DELETE")
         _ = try await send(request)
     }
 
+    /// v2: a single merge-patch `{"done": true/false}` — confirmed server-side
+    /// that a repeating task still reschedules (server keeps `done:false` and
+    /// advances `due_date`), identical to v1's full-POST behavior. No v1
+    /// fallback on failure (ground rule: mutations route by flag, never retry
+    /// on v1 — the flag is only true after the server itself reported ≥2.4.0).
     static func completeTask(id: Int) async throws {
+        if supportsAPIv2 {
+            try await patchV2("/tasks/\(id)", body: ["done": true])
+            return
+        }
         try await setDone(id: id, done: true)
     }
 
     static func reopenTask(id: Int) async throws {
+        if supportsAPIv2 {
+            try await patchV2("/tasks/\(id)", body: ["done": false])
+            return
+        }
         try await setDone(id: id, done: false)
     }
 
-    /// Toggle done state while preserving every other field. Vikunja's Go server
-    /// treats fields omitted from the JSON body as zero-valued (e.g. `due_date`
-    /// becomes `0001-01-01`), which silently wipes the due date. The web client
-    /// avoids this by sending the full task object — we mirror that here by
-    /// fetching the current task and re-posting it with `done` overridden.
+    /// v1 only. Toggle done state while preserving every other field. Vikunja's
+    /// Go server treats fields omitted from the JSON body as zero-valued (e.g.
+    /// `due_date` becomes `0001-01-01`), which silently wipes the due date. The
+    /// web client avoids this by sending the full task object — we mirror that
+    /// here by fetching the current task and re-posting it with `done`
+    /// overridden. Uses `fetchTaskV1`, not the routed `fetchTask`, so this v1
+    /// mutation never reads via v2.
     private static func setDone(id: Int, done: Bool) async throws {
-        var task = try await fetchTask(id: id)
+        var task = try await fetchTaskV1(id: id)
         task.done = done
         let body = try JSONEncoder().encode(task)
         let request = makeRequest("/tasks/\(id)", method: "POST", body: body)
@@ -201,7 +268,14 @@ enum VikunjaAPI {
             body["repeat_mode"] = repeatMode ?? 0
         }
         let data = try JSONSerialization.data(withJSONObject: body)
-        let task = try await put("/projects/\(projectId)/tasks", body: data, as: VikunjaTask.self)
+        // Create stays under the project on v2 too — there is no flat
+        // `POST /tasks` (405). Same body dictionary as the v1 path.
+        let task: VikunjaTask
+        if supportsAPIv2 {
+            task = try await postV2("/projects/\(projectId)/tasks", body: data, as: VikunjaTask.self)
+        } else {
+            task = try await put("/projects/\(projectId)/tasks", body: data, as: VikunjaTask.self)
+        }
 
         // Vikunja ignores labels on task creation — assign each via dedicated endpoint
         if !labelIds.isEmpty {
@@ -220,8 +294,29 @@ enum VikunjaAPI {
 
     // MARK: - Labels
 
+    /// Allowed characters for a *value* inside a query string. `.urlQueryAllowed`
+    /// permits characters that are legal in a query as a whole but change its
+    /// meaning inside a value — `&` starts a new parameter, `+` decodes as a
+    /// space, `=`/`?`/`#` are structural — so a search for "R&D" or "a+b" was
+    /// silently mangled into the wrong query.
+    private static let queryValueAllowed: CharacterSet = {
+        var set = CharacterSet.urlQueryAllowed
+        set.remove(charactersIn: "&+=?#")
+        return set
+    }()
+
     static func fetchLabels(search: String = "") async throws -> [VikunjaLabel] {
-        let encoded = search.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? search
+        let encoded = search.addingPercentEncoding(withAllowedCharacters: queryValueAllowed) ?? search
+        if supportsAPIv2 {
+            do {
+                // v2 renamed the label search param s→q.
+                let path = search.isEmpty ? "/labels" : "/labels?q=\(encoded)"
+                return try await getV2Paged(path, perPage: 50)
+            } catch {
+                if VeyrnError.isCancellation(error) { throw error }
+                DiagnosticLog.warn("v2 fetchLabels failed (\(VeyrnError.logDescription(for: error))) — falling back to v1")
+            }
+        }
         var all: [VikunjaLabel] = []
         var page = 1
         while true {
@@ -238,28 +333,48 @@ enum VikunjaAPI {
 
     static func createLabel(title: String) async throws -> VikunjaLabel {
         let body = try JSONSerialization.data(withJSONObject: ["title": title])
+        if supportsAPIv2 {
+            return try await postV2("/labels", body: body, as: VikunjaLabel.self)
+        }
         return try await put("/labels", body: body, as: VikunjaLabel.self)
     }
 
+    /// v2 attach is a body-POST with the same shape as v1 (verb PUT→POST) —
+    /// `POST /tasks/{id}/labels/{labelId}` (path-only form) is 405.
     static func addLabelToTask(taskId: Int, labelId: Int) async throws {
         let body = try JSONSerialization.data(withJSONObject: ["label_id": labelId])
+        if supportsAPIv2 {
+            try await postV2("/tasks/\(taskId)/labels", body: body)
+            return
+        }
         let request = makeRequest("/tasks/\(taskId)/labels", method: "PUT", body: body)
         _ = try await send(request)
     }
 
     // MARK: - Task relations (subtasks)
 
+    /// v2 add is a body-POST with the same shape as v1 (verb PUT→POST) — the
+    /// path-only form is 405. Remove is identical to v1 on both flavors.
     static func addRelation(taskId: Int, otherTaskId: Int, kind: String = "subtask") async throws {
         let body = try JSONSerialization.data(withJSONObject: [
             "other_task_id": otherTaskId,
             "relation_kind": kind,
         ])
+        if supportsAPIv2 {
+            try await postV2("/tasks/\(taskId)/relations", body: body)
+            return
+        }
         let request = makeRequest("/tasks/\(taskId)/relations", method: "PUT", body: body)
         _ = try await send(request)
     }
 
     static func removeRelation(taskId: Int, otherTaskId: Int, kind: String = "subtask") async throws {
-        let request = makeRequest("/tasks/\(taskId)/relations/\(kind)/\(otherTaskId)", method: "DELETE")
+        let path = "/tasks/\(taskId)/relations/\(kind)/\(otherTaskId)"
+        if supportsAPIv2 {
+            try await deleteV2(path)
+            return
+        }
+        let request = makeRequest(path, method: "DELETE")
         _ = try await send(request)
     }
 
@@ -280,15 +395,93 @@ enum VikunjaAPI {
 
     // MARK: - Task update
 
+    /// The headline v2 win: merge-patch means only the changed fields are ever
+    /// sent, so omitted fields structurally can't be clobbered — no pre-fetch
+    /// needed for the patch itself (V-2). This eliminates the 2.7.1 bug class
+    /// on v2 servers. No v1 fallback on failure (mutations route by flag).
     static func updateTask(id: Int, update: TaskUpdate) async throws -> VikunjaTask {
-        // Vikunja's Go server treats every field omitted from the JSON body as
-        // zero-valued, so a partial update silently wipes unrelated fields — e.g.
-        // adding a reminder (body has `reminders` but no `due_date`) clears the
-        // due date, and adding a due date clears existing reminders. Mirror the
-        // web client / `setDone`: fetch the current task, overlay only the changed
-        // fields, and re-post the full object so nothing gets clobbered.
+        if supportsAPIv2 {
+            try await updateTaskV2(id: id, update: update)
+            // Re-fetch so the returned task includes updated labels — same
+            // contract as v1 below.
+            return try await fetchTask(id: id)
+        }
+        return try await updateTaskV1(id: id, update: update)
+    }
+
+    private static func updateTaskV2(id: Int, update: TaskUpdate) async throws {
         let iso = ISO8601DateFormatter()
-        var task = try await fetchTask(id: id)
+        var body: [String: Any] = [:]
+
+        if let title = update.title { body["title"] = title }
+        if let description = update.description { body["description"] = description }
+        if let projectId = update.projectId { body["project_id"] = projectId }
+
+        // Merge-patch needs an *explicit* null to clear a field and an
+        // *absent* key for "no change" — JSONSerialization dictionaries can
+        // express that distinction; Codable can't.
+        if update.clearDueDate {
+            body["due_date"] = NSNull()
+        } else if let due = update.dueDate {
+            body["due_date"] = iso.string(from: due)
+        }
+
+        if update.clearPriority {
+            // 0 is Vikunja's "unset" sentinel for priority — not null (V-priority note).
+            body["priority"] = 0
+        } else if let priority = update.priority {
+            body["priority"] = priority
+        }
+
+        if let reminders = update.reminders {
+            // [] clears all reminders (merge-patch replaces arrays wholesale, V-12).
+            body["reminders"] = reminders.map { ["reminder": iso.string(from: $0)] }
+        }
+
+        if update.clearRepeat {
+            body["repeat_after"] = 0
+            body["repeat_mode"] = 0
+        } else if let repeatAfter = update.repeatAfter {
+            body["repeat_after"] = repeatAfter
+            body["repeat_mode"] = update.repeatMode ?? 0
+        }
+
+        if !body.isEmpty {
+            try await patchV2("/tasks/\(id)", body: body)
+        }
+
+        if let labelIds = update.labelIds {
+            try await syncLabelsV2(taskId: id, desiredLabelIds: labelIds)
+        }
+    }
+
+    /// Diffs current label ids against desired and attaches/detaches only the
+    /// difference (V-10) — merge-patch has no array-diff semantics for labels,
+    /// they're a separate sub-resource on both API flavors.
+    private static func syncLabelsV2(taskId: Int, desiredLabelIds: [Int]) async throws {
+        let current = try await getV2("/tasks/\(taskId)", as: VikunjaTask.self)
+        let currentIds = Set((current.labels ?? []).map(\.id))
+        let desiredIds = Set(desiredLabelIds)
+
+        for labelId in desiredIds.subtracting(currentIds) {
+            try await addLabelToTask(taskId: taskId, labelId: labelId)
+        }
+        for labelId in currentIds.subtracting(desiredIds) {
+            try await deleteV2("/tasks/\(taskId)/labels/\(labelId)")
+        }
+    }
+
+    /// v1 only: Vikunja's Go server treats every field omitted from the JSON
+    /// body as zero-valued, so a partial update silently wipes unrelated
+    /// fields — e.g. adding a reminder (body has `reminders` but no
+    /// `due_date`) clears the due date, and adding a due date clears existing
+    /// reminders. Mirror the web client / `setDone`: fetch the current task,
+    /// overlay only the changed fields, and re-post the full object so
+    /// nothing gets clobbered. Uses `fetchTaskV1` throughout so this v1
+    /// mutation never mixes in a v2 read.
+    private static func updateTaskV1(id: Int, update: TaskUpdate) async throws -> VikunjaTask {
+        let iso = ISO8601DateFormatter()
+        var task = try await fetchTaskV1(id: id)
 
         if let title = update.title { task.title = title }
         if let description = update.description { task.description = description }
@@ -330,7 +523,7 @@ enum VikunjaAPI {
         _ = try await post("/tasks/\(id)", body: body, as: VikunjaTask.self)
         // Re-fetch so the returned task includes updated labels.
         // Vikunja's POST /tasks/{id} response doesn't reliably embed label objects.
-        return try await fetchTask(id: id)
+        return try await fetchTaskV1(id: id)
     }
 
     // MARK: - Private helpers
@@ -367,18 +560,26 @@ enum VikunjaAPI {
         return try JSONDecoder().decode(T.self, from: data)
     }
 
-    // MARK: - API v2 (undone-task fetch only)
+    // MARK: - API v2 (preferred flavor for everything, v1 stays as fallback)
     //
-    // Veyrn stays on v1 for everything else. v2 is used for exactly one call —
-    // the undone-task fetch — because v1's `/tasks/all` is broken, forcing a
-    // per-project fan-out, and that fan-out is what stalls on macOS. Verified
-    // against Vikunja 2.4.0: the response is a `{items, page, total_pages, …}`
-    // envelope, tasks carry `related_tasks` (so subtask detection and progress
-    // badges keep working), and the v1 `filter=done = false` syntax is accepted.
+    // v2 is used for every call when the server supports it: reads try v2 and
+    // fall back to v1 per-call on any non-cancellation failure; mutations
+    // route by the flag with no automatic v1 retry (a timed-out v2 mutation
+    // may already have been applied server-side — replaying on v1 could
+    // double-create or double-toggle). Verified against Vikunja 2.4.0 before
+    // writing this: create is POST /projects/{id}/tasks (no flat POST
+    // /tasks), PATCH is merge-patch (explicit null clears, absent key means no
+    // change), label/relation attach are body-POSTs, GET /tasks/{id} returns
+    // `related_tasks` with no `expand` needed. See API_V2_MIGRATION_PLAN.md's
+    // fact table for the full list.
     //
-    // Gated on the server version cached by the `/info` probe, and any failure
-    // falls back to the v1 fan-out — so a server that answers `/info`
-    // optimistically but not `/tasks` can't break anyone.
+    // Gated on the server version cached by the `/info` probe (`fetchServerInfo`
+    // stays on v1 forever — it's the thing that decides the version), so a
+    // fresh install's first refresh is v1 and a server that answers `/info`
+    // optimistically but not the rest of `/api/v2` can't break anyone on the
+    // read side. `VikunjaConfig.syncActiveMirror()` clears the cached flag on
+    // every account switch, since it's a single App Group key but different
+    // accounts can point at servers on different versions.
 
     private static var v2BaseURL: String {
         let host = VikunjaConfig.host.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
@@ -401,29 +602,93 @@ enum VikunjaAPI {
         }
     }
 
-    private static func fetchAllUndoneTasksV2(knownProjectIds: Set<Int>) async throws -> [VikunjaTask] {
-        var all: [VikunjaTask] = []
+    /// Thrown by `searchDoneTasks` when the server doesn't support v2 — there
+    /// is no v1 equivalent for server-side search, so `TaskStore` catches this
+    /// (and any other failure) the same way: fall back to client-side
+    /// filtering of what's already loaded.
+    private struct V2NotAvailable: Error {}
+
+    // MARK: - v2 request plumbing
+
+    private static func getV2<T: Decodable>(_ path: String, as type: T.Type) async throws -> T {
+        let request = makeRequest(path, base: v2BaseURL)
+        let (data, _) = try await send(request)
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    /// Loops `page`/`total_pages` until the server reports no more pages (or
+    /// returns an empty page early). `pathWithoutPage` may already carry its
+    /// own query (e.g. a `q=` search term) — `per_page`/`page` are appended
+    /// with the right separator either way.
+    private static func getV2Paged<T: Decodable>(_ pathWithoutPage: String, perPage: Int) async throws -> [T] {
+        var all: [T] = []
         var page = 1
+        let separator = pathWithoutPage.contains("?") ? "&" : "?"
         while true {
-            // 200, not 50: at 50 a 165-task account took four round trips,
-            // which undercut the whole point of leaving the fan-out behind.
-            // Verified the server honours it (per_page=200 returned all 166
-            // in one response); a server that caps lower just yields more
-            // pages, since the loop follows `total_pages`.
-            let path = "/tasks?filter=done+%3D+false&per_page=200&page=\(page)"
-            let request = makeRequest(path, base: v2BaseURL)
-            let (data, _) = try await send(request)
-            let decoded = try JSONDecoder().decode(V2Page<VikunjaTask>.self, from: data)
-            all.append(contentsOf: decoded.items ?? [])
+            let path = "\(pathWithoutPage)\(separator)per_page=\(perPage)&page=\(page)"
+            let decoded: V2Page<T> = try await getV2(path, as: V2Page<T>.self)
+            let items = decoded.items ?? []
+            all.append(contentsOf: items)
             let totalPages = decoded.totalPages ?? 1
-            if page >= max(1, totalPages) || (decoded.items ?? []).isEmpty { break }
+            if page >= max(1, totalPages) || items.isEmpty { break }
             page += 1
         }
+        return all
+    }
+
+    private static func postV2<T: Decodable>(_ path: String, body: Data, as type: T.Type) async throws -> T {
+        let request = makeRequest(path, method: "POST", body: body, base: v2BaseURL)
+        let (data, _) = try await send(request)
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    private static func postV2(_ path: String, body: Data) async throws {
+        let request = makeRequest(path, method: "POST", body: body, base: v2BaseURL)
+        _ = try await send(request)
+    }
+
+    /// Bodies must be `JSONSerialization` dictionaries, not `JSONEncoder`
+    /// output: merge-patch needs an *explicit* `NSNull()` for a clear and an
+    /// *absent* key for "no change", a distinction `Codable` can't express.
+    private static func patchV2(_ path: String, body: [String: Any]) async throws {
+        let data = try JSONSerialization.data(withJSONObject: body)
+        let request = makeRequest(path, method: "PATCH", body: data, base: v2BaseURL)
+        _ = try await send(request)
+    }
+
+    private static func deleteV2(_ path: String) async throws {
+        let request = makeRequest(path, method: "DELETE", base: v2BaseURL)
+        _ = try await send(request)
+    }
+
+    private static func fetchAllUndoneTasksV2(knownProjectIds: Set<Int>) async throws -> [VikunjaTask] {
+        // 200, not 50: at 50 a 165-task account took four round trips, which
+        // undercut the whole point of leaving the fan-out behind. Verified the
+        // server honours it (per_page=200 returned all 166 in one response);
+        // a server that caps lower just yields more pages, since the loop
+        // follows `total_pages`.
+        let all: [VikunjaTask] = try await getV2Paged("/tasks?filter=done+%3D+false", perPage: 200)
         // v2 is a global endpoint, so constrain it to the same universe the v1
         // fan-out would have covered. Without this, a task in a project the app
         // doesn't list would appear with no project — and the app's own count
         // is the contract the rest of the code was written against.
         return all.filter { knownProjectIds.contains($0.projectId) }
+    }
+
+    // MARK: - Logbook search (Phase 3, v2 only)
+
+    /// Searches the server's *entire* completion history in one call — v1 can
+    /// only filter what's already been paged in locally. v2 only: throws
+    /// `V2NotAvailable` when the server doesn't support it, which `TaskStore`
+    /// treats the same as any other failure (fall back to client-side
+    /// filtering). The query is percent-encoded and never logged — `send(_:)`
+    /// already strips query strings from its log lines.
+    static func searchDoneTasks(query: String) async throws -> [VikunjaTask] {
+        guard supportsAPIv2 else { throw V2NotAvailable() }
+        let encoded = query.addingPercentEncoding(withAllowedCharacters: queryValueAllowed) ?? query
+        let path = "/tasks?filter=done+%3D+true&q=\(encoded)&sort_by=done_at&order_by=desc&per_page=50&page=1"
+        let result: V2Page<VikunjaTask> = try await getV2(path, as: V2Page<VikunjaTask>.self)
+        return result.items ?? []
     }
 
     private static func makeRequest(_ path: String, method: String = "GET", body: Data? = nil, base: String? = nil) -> URLRequest {

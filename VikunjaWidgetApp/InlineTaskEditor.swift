@@ -43,6 +43,10 @@ struct InlineTaskEditor: View {
     // Editable state
     @State private var title: String
     @State private var notesAttrStr: NSAttributedString
+    /// What the import produced, plus whether the user has typed since. Together
+    /// they let `save()` leave an untouched description completely alone.
+    @State private var importedNotesAttrStr = NSAttributedString()
+    @State private var notesEdited = false
     @State private var richContext = RichTextContext()
     @State private var dueDate: Date?
     @State private var hasDueDate: Bool
@@ -138,6 +142,7 @@ struct InlineTaskEditor: View {
             let html = task.description ?? ""
             let importStart = Date()
             notesAttrStr = RichTextUtils.attributedString(from: html)
+            importedNotesAttrStr = notesAttrStr
             let importElapsed = Date().timeIntervalSince(importStart)
             let imgCount = html.components(separatedBy: "<img").count - 1
             DiagnosticLog.info("html import: \(html.utf8.count) bytes → \(String(format: "%.2f", importElapsed)) s; img tags \(imgCount) (absolute \(absoluteImgTagCount(html)))")
@@ -240,7 +245,8 @@ struct InlineTaskEditor: View {
                 RichTextToolbar(richContext: richContext)
                     .padding(.bottom, 8)
             }
-            RichTextEditor(attributedText: $notesAttrStr, richContext: richContext)
+            RichTextEditor(attributedText: $notesAttrStr, richContext: richContext,
+                           onUserEdit: { notesEdited = true })
                 .frame(minHeight: 60, idealHeight: 90, maxHeight: 180)
                 .padding(.trailing, 42)
         }
@@ -706,12 +712,18 @@ struct InlineTaskEditor: View {
 
         if trimmedTitle != task.title { update.title = trimmedTitle; changedFields.append("title") }
 
+        // Only write the description back if the user actually edited it. Our HTML
+        // and the server's never match byte for byte, so comparing the two would
+        // rewrite every description on every save — degrading anything we can't
+        // round-trip (images especially) on notes the user only looked at.
         let exportStart = Date()
-        let currentHTML = RichTextUtils.html(from: notesAttrStr)
+        let currentHTML = notesEdited ? RichTextUtils.html(from: notesAttrStr) : (task.description ?? "")
         let exportElapsed = Date().timeIntervalSince(exportStart)
-        let descriptionChanged = currentHTML != (task.description ?? "")
+        // Second gate: typing something and undoing it shouldn't rewrite anything.
+        let descriptionChanged = notesEdited
+            && currentHTML != RichTextUtils.html(from: importedNotesAttrStr)
         if descriptionChanged { update.description = currentHTML; changedFields.append("description") }
-        DiagnosticLog.info("html export: \(currentHTML.utf8.count) bytes, \(String(format: "%.2f", exportElapsed)) s, changed=\(descriptionChanged ? "yes" : "no")")
+        DiagnosticLog.info("html export: \(currentHTML.utf8.count) bytes, \(String(format: "%.2f", exportElapsed)) s, edited=\(notesEdited ? "yes" : "no"), changed=\(descriptionChanged ? "yes" : "no")")
 
         let originalDue = task.effectiveDueDate
         if !hasDueDate && originalDue != nil {

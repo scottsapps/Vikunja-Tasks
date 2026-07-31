@@ -6,9 +6,14 @@ import AppKit
 struct RichTextEditor: NSViewRepresentable {
     @Binding var attributedText: NSAttributedString
     var richContext: RichTextContext
+    /// Fires only for edits the user actually made. `textDidChange` can't be used
+    /// for this: automatic link detection fires it once on load, before anyone has
+    /// touched the note.
+    var onUserEdit: (() -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
         let c = Coordinator(binding: $attributedText)
+        c.onUserEdit = onUserEdit
         richContext.toggleAction = { [weak c] action in c?.perform(action) }
         return c
     }
@@ -34,7 +39,9 @@ struct RichTextEditor: NSViewRepresentable {
         context.coordinator.textView = textView
 
         if attributedText.length > 0 {
-            textView.textStorage?.setAttributedString(attributedText)
+            context.coordinator.withProgrammaticUpdate {
+                textView.textStorage?.setAttributedString(attributedText)
+            }
         }
         // Apply after setting attributedText — setting it before gets overridden.
         textView.textColor = .labelColor
@@ -47,16 +54,21 @@ struct RichTextEditor: NSViewRepresentable {
         guard !context.coordinator.isEditing,
               let textView = scrollView.documentView as? NSTextView,
               !textView.attributedString().isEqual(to: attributedText) else { return }
-        textView.textStorage?.setAttributedString(attributedText)
-        // Re-apply after every attributedText update so dark mode stays correct.
-        textView.textColor = .labelColor
-        if textView.isAutomaticLinkDetectionEnabled {
-            textView.checkTextInDocument(nil)
+        context.coordinator.withProgrammaticUpdate {
+            textView.textStorage?.setAttributedString(attributedText)
+            // Re-apply after every attributedText update so dark mode stays correct.
+            textView.textColor = .labelColor
+            if textView.isAutomaticLinkDetectionEnabled {
+                // Linkifies bare URLs — and reports itself as a text edit, which is
+                // why it has to run inside the programmatic bracket.
+                textView.checkTextInDocument(nil)
+            }
         }
     }
 
     final class Coordinator: NSObject, NSTextViewDelegate {
         var binding: Binding<NSAttributedString>
+        var onUserEdit: (() -> Void)?
         weak var textView: NSTextView?
         var isEditing = false
         /// Last selection captured before focus may have left the text view.
@@ -64,6 +76,23 @@ struct RichTextEditor: NSViewRepresentable {
 
         init(binding: Binding<NSAttributedString>) {
             self.binding = binding
+        }
+
+        /// Set while we push a value into the text view ourselves, so the edits that
+        /// causes aren't mistaken for the user's. The callbacks are synchronous, so
+        /// bracketing the call is enough.
+        private var isApplyingProgrammaticUpdate = false
+
+        func withProgrammaticUpdate(_ body: () -> Void) {
+            isApplyingProgrammaticUpdate = true
+            body()
+            isApplyingProgrammaticUpdate = false
+        }
+
+        func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange,
+                      replacementString: String?) -> Bool {
+            if !isApplyingProgrammaticUpdate { onUserEdit?() }
+            return true
         }
 
         func textDidChange(_ notification: Notification) {
@@ -93,6 +122,7 @@ struct RichTextEditor: NSViewRepresentable {
 
         func perform(_ action: RichTextContext.Action) {
             guard let tv = textView else { return }
+            onUserEdit?()
             switch action {
             case .bold:              toggleFontTrait(.boldFontMask, in: tv)
             case .italic:            toggleFontTrait(.italicFontMask, in: tv)
@@ -221,9 +251,12 @@ import UIKit
 struct RichTextEditor: UIViewRepresentable {
     @Binding var attributedText: NSAttributedString
     var richContext: RichTextContext
+    /// Fires only for edits the user actually made — see the macOS note above.
+    var onUserEdit: (() -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
         let c = Coordinator(binding: $attributedText)
+        c.onUserEdit = onUserEdit
         richContext.toggleAction = { [weak c] action in c?.perform(action) }
         return c
     }
@@ -238,7 +271,7 @@ struct RichTextEditor: UIViewRepresentable {
         tv.delegate = context.coordinator
         context.coordinator.textView = tv
         if attributedText.length > 0 {
-            tv.attributedText = attributedText
+            context.coordinator.withProgrammaticUpdate { tv.attributedText = attributedText }
         }
         // Apply after setting attributedText — setting it before gets overridden.
         tv.textColor = .label
@@ -248,13 +281,16 @@ struct RichTextEditor: UIViewRepresentable {
     func updateUIView(_ tv: UITextView, context: Context) {
         guard !context.coordinator.isEditing,
               !tv.attributedText.isEqual(to: attributedText) else { return }
-        tv.attributedText = attributedText
-        // Re-apply after every attributedText update so dark mode stays correct.
-        tv.textColor = .label
+        context.coordinator.withProgrammaticUpdate {
+            tv.attributedText = attributedText
+            // Re-apply after every attributedText update so dark mode stays correct.
+            tv.textColor = .label
+        }
     }
 
     final class Coordinator: NSObject, UITextViewDelegate {
         var binding: Binding<NSAttributedString>
+        var onUserEdit: (() -> Void)?
         weak var textView: UITextView?
         var isEditing = false
         /// Last selection captured before focus may have left the text view.
@@ -262,6 +298,22 @@ struct RichTextEditor: UIViewRepresentable {
 
         init(binding: Binding<NSAttributedString>) {
             self.binding = binding
+        }
+
+        /// See the macOS coordinator — same guard, so pushing a value into the text
+        /// view never registers as the user editing it.
+        private var isApplyingProgrammaticUpdate = false
+
+        func withProgrammaticUpdate(_ body: () -> Void) {
+            isApplyingProgrammaticUpdate = true
+            body()
+            isApplyingProgrammaticUpdate = false
+        }
+
+        func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange,
+                      replacementText text: String) -> Bool {
+            if !isApplyingProgrammaticUpdate { onUserEdit?() }
+            return true
         }
 
         func textViewDidChange(_ textView: UITextView) {
@@ -286,6 +338,7 @@ struct RichTextEditor: UIViewRepresentable {
 
         func perform(_ action: RichTextContext.Action) {
             guard let tv = textView else { return }
+            onUserEdit?()
             switch action {
             case .bold:              toggleTrait(.traitBold, in: tv)
             case .italic:            toggleTrait(.traitItalic, in: tv)

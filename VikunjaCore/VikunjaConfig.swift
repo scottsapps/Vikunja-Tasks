@@ -252,7 +252,20 @@ enum VikunjaConfig {
 
     // MARK: - Migration (idempotent, safe to run in any process)
 
+    /// Migration writes tokens, and `TokenStore` labels its log lines with the
+    /// account number — which it looks up through `accounts`, which calls back
+    /// in here. `migrateTokensToKeychainIfNeeded()` only sets its done flag in a
+    /// `defer`, so on re-entry the guard still read false and it recursed until
+    /// the stack overflowed: a launch crash (SIGSEGV) on every launch, for
+    /// anyone upgrading from a Phase-1 install whose tokens were still embedded
+    /// in the accounts JSON. A migration already in flight has, by definition,
+    /// nothing to do for its caller.
+    private static var isMigrating = false
+
     private static func ensureMigrated() {
+        guard !isMigrating else { return }
+        isMigrating = true
+        defer { isMigrating = false }
         migrateAccountsIfNeeded()
         migrateTokensToKeychainIfNeeded()
     }

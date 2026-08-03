@@ -5,14 +5,11 @@ import UserNotifications
 /// UNNotificationRequests, scheduling new ones and cancelling removed ones.
 enum ReminderScheduler {
 
-    static let categoryId = "VIKUNJA_REMINDER"
+    // Identifiers, request-building and per-task cancellation live in
+    // `ReminderStore` (VikunjaCore) — the widget extension needs them too.
+    static let categoryId = ReminderStore.categoryId
     static let actionComplete = "COMPLETE_TASK"
     static let actionSnooze = "SNOOZE_TASK"
-
-    // Stable identifier: "vikunja.reminder.{taskId}.{reminderISO}"
-    private static func identifier(taskId: Int, reminderISO: String) -> String {
-        "vikunja.reminder.\(taskId).\(reminderISO)"
-    }
 
     // MARK: - Public
 
@@ -70,7 +67,7 @@ enum ReminderScheduler {
         for task in tasks {
             for reminder in task.reminders ?? [] {
                 guard let date = reminder.date, date > Date() else { continue }
-                let id = identifier(taskId: task.id, reminderISO: reminder.reminder)
+                let id = ReminderStore.identifier(taskId: task.id, reminderISO: reminder.reminder)
                 desired[id] = (task.id, task.title, date)
             }
         }
@@ -91,23 +88,12 @@ enum ReminderScheduler {
         let toAdd = desiredIds.subtracting(pendingIds)
         for id in toAdd {
             guard let info = desired[id] else { continue }
-            let content = UNMutableNotificationContent()
-            content.title = "Reminder"
-            content.body = info.title
-            content.sound = .default
-            content.userInfo = [
-                "taskId": info.taskId,
-                "accountId": VikunjaConfig.activeAccount?.id.uuidString ?? "",
-            ]
-            content.categoryIdentifier = categoryId
-
-            let components = Calendar.current.dateComponents(
-                [.year, .month, .day, .hour, .minute, .second],
-                from: info.date
+            let request = ReminderStore.request(
+                id: id,
+                taskId: info.taskId,
+                title: info.title,
+                date: info.date
             )
-            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-            let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
-
             try? await center.add(request)
         }
 
@@ -121,15 +107,7 @@ enum ReminderScheduler {
     /// refresh — so without this the OS keeps the already-scheduled local
     /// notification and fires it before the next refresh reconciles.
     static func cancel(taskId: Int, reason: String) async {
-        let center = UNUserNotificationCenter.current()
-        let prefix = "vikunja.reminder.\(taskId)."
-        let pending = await center.pendingNotificationRequests()
-        let ids = pending
-            .filter { $0.identifier.hasPrefix(prefix) }
-            .map(\.identifier)
-        guard !ids.isEmpty else { return }
-        center.removePendingNotificationRequests(withIdentifiers: ids)
-        DiagnosticLog.info("reminder cancelled for task \(taskId) (\(reason))")
+        await ReminderStore.cancel(taskId: taskId, reason: reason)
     }
 
     private static func authDescription(_ status: UNAuthorizationStatus) -> String {

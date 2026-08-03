@@ -39,11 +39,15 @@ final class NotificationResponseHandler: NSObject, UNUserNotificationCenterDeleg
             guard let taskId = userInfo["taskId"] as? Int else { completionHandler(); return }
             Task {
                 let succeeded = (try? await VikunjaAPI.completeTask(id: taskId)) != nil
-                DiagnosticLog.info("notification action COMPLETE_TASK task \(taskId) → \(succeeded ? "200" : "failed")")
+                DiagnosticLog.info("notification action COMPLETE_TASK task \(taskId) → \(succeeded ? "ok" : "failed")")
                 if succeeded {
+                    // The task may carry further reminders, and this one may
+                    // have a snoozed copy armed — neither should survive it
+                    // being completed.
+                    await ReminderStore.cancel(taskId: taskId, reason: "completed from notification")
                     WidgetCenter.shared.reloadAllTimelines()
                 }
-                completionHandler()
+                await finish(completionHandler)
             }
 
         case ReminderScheduler.actionSnooze:
@@ -58,11 +62,23 @@ final class NotificationResponseHandler: NSObject, UNUserNotificationCenterDeleg
             let request = UNNotificationRequest(identifier: newId, content: content, trigger: trigger)
             Task {
                 try? await center.add(request)
-                completionHandler()
+                await finish(completionHandler)
             }
 
         default:
             completionHandler()
         }
+    }
+
+    /// The instant this completion handler runs, UIKit updates the app snapshot
+    /// and the state-restoration archive — both main-thread-only. Called from
+    /// the background thread a `Task` resumes on, it trips an assertion ("Call
+    /// must be made on main thread") and takes the whole app down: in 3.0.0 (68)
+    /// every tap of a reminder's Complete button crashed Veyrn. The delegate
+    /// method itself is invoked on the main thread, so only the branches that
+    /// await the network need this hop back.
+    @MainActor
+    private func finish(_ completionHandler: @escaping () -> Void) {
+        completionHandler()
     }
 }

@@ -653,7 +653,7 @@ enum VikunjaAPI {
     private static func patchV2(_ path: String, body: [String: Any]) async throws {
         let data = try JSONSerialization.data(withJSONObject: body)
         let request = makeRequest(path, method: "PATCH", body: data, base: v2BaseURL)
-        _ = try await send(request)
+        _ = try await send(request, acceptingNotModified: true)
     }
 
     private static func deleteV2(_ path: String) async throws {
@@ -711,7 +711,16 @@ enum VikunjaAPI {
     /// transport errors) gets its own line. `path` is `request.url?.path`
     /// only — never `.absoluteString` and never the query string, since
     /// `fetchLabels(search:)` puts the user's search text in `?s=`.
-    private static func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+    ///
+    /// `acceptingNotModified` is opt-in per call and used only by `patchV2`: a
+    /// merge-patch that changes nothing answers 304, which is the write landing
+    /// in the state the caller asked for, not a failure. Nothing here sends
+    /// conditional headers, so a 304 anywhere else would be a genuine surprise —
+    /// and on a GET it would hand back an empty body to decode.
+    private static func send(
+        _ request: URLRequest,
+        acceptingNotModified: Bool = false
+    ) async throws -> (Data, HTTPURLResponse) {
         let method = request.httpMethod ?? "GET"
         let path = request.url?.path ?? "?"
         let stopwatch = DiagnosticLog.Stopwatch()
@@ -741,7 +750,8 @@ enum VikunjaAPI {
             DiagnosticLog.error("✗ non-HTTP response \(method) \(path) (\(elapsed))")
             throw APIError.badStatus(-1)
         }
-        guard (200...299).contains(http.statusCode) else {
+        let noChange = acceptingNotModified && http.statusCode == 304
+        guard (200...299).contains(http.statusCode) || noChange else {
             DiagnosticLog.warn("← \(http.statusCode) \(method) \(path) (\(elapsed)) \(metrics.phaseSummary())")
             throw APIError.badStatus(http.statusCode)
         }
@@ -749,7 +759,7 @@ enum VikunjaAPI {
         if method == "GET" {
             bumpRequestCounter(bytes: data.count)
         } else {
-            DiagnosticLog.info("← \(http.statusCode) \(method) \(path) (\(elapsed))")
+            DiagnosticLog.info("← \(http.statusCode) \(method) \(path) (\(elapsed))\(noChange ? " no change" : "")")
         }
         return (data, http)
     }

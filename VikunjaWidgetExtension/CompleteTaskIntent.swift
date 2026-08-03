@@ -27,7 +27,11 @@ struct CompleteTaskIntent: AppIntent {
         intentLog.notice("CompleteTaskIntent.perform fired for task \(taskId, privacy: .public)")
         do {
             try await VikunjaAPI.completeTask(id: taskId)
-            DiagnosticLog.info("CompleteTaskIntent task \(taskId) → 200")
+            DiagnosticLog.info("CompleteTaskIntent task \(taskId) → ok")
+            // The app schedules the local reminder, but it isn't running here —
+            // without this the OS still fires it for a task finished from the
+            // widget, right up until the app's next refresh reconciles.
+            await ReminderStore.cancel(taskId: taskId, reason: "completed in widget")
         } catch {
             intentLog.error("completeTask(\(taskId, privacy: .public)) failed: \(error.localizedDescription, privacy: .public)")
             DiagnosticLog.warn("CompleteTaskIntent task \(taskId) → \(VeyrnError.logDescription(for: error))")

@@ -5,8 +5,8 @@ Signing.xcconfig
 WATCH_APP_PLAN.md
 CLAUDE.md
 
-# Project skill master (canonical copy; re-uploaded to Claude via the Mac app)
-Veyrn.md
+# Project skill master (canonical copy; re-zipped + re-uploaded to Claude via the Mac app)
+skill/
 
 # Personal Claude Code tooling (skill drift check, hooks)
 .claude/

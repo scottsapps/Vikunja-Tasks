@@ -559,7 +559,45 @@ final class TaskStore {
         let drainClock = DiagnosticLog.Stopwatch()
         var okCount = 0
         var droppedCount = 0
-        for op in snapshot {
+        // Index walk rather than `for op in snapshot`: on a 2.5.0+ server a run
+        // of consecutive same-project creates (a bulk import, or a batch added
+        // offline) is swallowed by one atomic request instead of one round trip
+        // each. Only *consecutive* ops are coalesced, so ordering against a
+        // later update/complete on the same task is unchanged.
+        var index = 0
+        // One 4xx from the bulk endpoint disables it for the rest of this
+        // drain, so a systematically-rejected queue doesn't burn a wasted
+        // request per run before falling back.
+        var bulkDisabled = false
+        while index < snapshot.count {
+            let op = snapshot[index]
+
+            if !bulkDisabled, VikunjaAPI.supportsBulkTaskCreate,
+               let run = bulkCreateRun(in: snapshot, from: index), run.count >= 2 {
+                do {
+                    try await performBulkCreate(run)
+                    okCount += run.count
+                    index += run.count
+                    continue
+                } catch let error as VikunjaAPI.APIError where error.isClient4xx {
+                    // Bulk create is atomic — a 4xx means *nothing* was created,
+                    // so replaying these as single creates can't duplicate
+                    // anything. Falling back also restores per-op 4xx dropping,
+                    // so one bad task can't wedge the queue behind it.
+                    DiagnosticLog.warn("bulk create ×\(run.count) → \(error.statusCode), falling back to per-task creates")
+                    bulkDisabled = true
+                } catch {
+                    DiagnosticLog.warn("drain paused: \(VeyrnError.logDescription(for: error))")
+                    break
+                }
+            }
+
+            // Every path below handles exactly one op, and the switch uses
+            // `continue` to skip ops whose target task is gone — so the cursor
+            // advances here, before the body, not at the bottom of the loop.
+            // The bulk branch above advances by its whole run and `continue`s.
+            index += 1
+
             do {
                 switch op.kind {
                 case .create(let payload, _):
@@ -616,6 +654,101 @@ final class TaskStore {
         let elapsed = DiagnosticLog.elapsed(drainClock)
         DiagnosticLog.info("drain end: \(okCount) ok, \(droppedCount) dropped, \(elapsed) — queue depth \(outbox.ops.count)")
         await refresh(reason: "outbox")
+    }
+
+    // MARK: - Bulk create (Vikunja 2.5.0+)
+
+    /// The maximal run of consecutive `.create` ops starting at `start` that
+    /// all target the same project, capped at the server's per-request limit —
+    /// so a 250-task import drains as three accepted bulk requests rather than
+    /// one rejected one.
+    private func bulkCreateRun(in ops: [PendingOp], from start: Int) -> [PendingOp]? {
+        guard case .create(let first, _) = ops[start].kind else { return nil }
+        var run: [PendingOp] = []
+        var index = start
+        while index < ops.count, run.count < VikunjaAPI.bulkCreateMaxTasks {
+            guard case .create(let payload, _) = ops[index].kind,
+                  payload.projectId == first.projectId else { break }
+            run.append(ops[index])
+            index += 1
+        }
+        return run
+    }
+
+    private func performBulkCreate(_ run: [PendingOp]) async throws {
+        let payloads: [CreatePayload] = run.compactMap {
+            if case .create(let payload, _) = $0.kind { return payload } else { return nil }
+        }
+        guard let projectId = payloads.first?.projectId else { return }
+        let created = try await VikunjaAPI.createTasksBulk(
+            projectId: projectId,
+            tasks: payloads.map {
+                VikunjaAPI.NewTask(title: $0.title, description: $0.description, dueDate: $0.dueDate,
+                                   priority: $0.priority, reminders: $0.reminders,
+                                   repeatAfter: $0.repeatAfter, repeatMode: $0.repeatMode)
+            }
+        )
+
+        // A 201 means every task landed (the endpoint is atomic), so every op
+        // comes off the queue even if the response were somehow shorter than
+        // the request — leaving one behind would create that task a second time
+        // on the next drain. Anything that couldn't be remapped is reconciled by
+        // the refresh at the end of the drain.
+        for (offset, op) in run.enumerated() {
+            if offset < created.count, case .client(let uuid) = op.ref {
+                outbox.remap(client: uuid, toServer: created[offset].id)
+            }
+            outbox.remove(id: op.id)
+        }
+        DiagnosticLog.info("op bulk create ×\(run.count) → \(created.count) ok")
+
+        await attachLabels(payloads: payloads, created: created)
+    }
+
+    /// Labels still can't be set at create time (2.5.0 keeps them read-only on
+    /// the create body), so they go on afterwards — one request per task via
+    /// the bulk label-replace endpoint, four in flight at a time.
+    ///
+    /// A failure here must never fail the create: the tasks already exist and
+    /// their ops are gone, so throwing would re-create them on the next drain.
+    /// The labels are re-queued as an ordinary `.update` op instead and the
+    /// outbox's existing retry machinery finishes the job.
+    private func attachLabels(payloads: [CreatePayload], created: [VikunjaTask]) async {
+        let pairs = Array(zip(payloads, created)).filter { !$0.0.labels.isEmpty }
+        guard !pairs.isEmpty else { return }
+
+        for start in stride(from: 0, to: pairs.count, by: 4) {
+            let batch = pairs[start..<min(start + 4, pairs.count)]
+            let failures = await withTaskGroup(of: (Int, [Int])?.self) { group -> [(Int, [Int])] in
+                for (payload, task) in batch {
+                    let labelIds = payload.labels.map(\.id)
+                    let taskId = task.id
+                    group.addTask {
+                        do {
+                            try await VikunjaAPI.setLabels(taskId: taskId, labelIds: labelIds)
+                            return nil
+                        } catch {
+                            return (taskId, labelIds)
+                        }
+                    }
+                }
+                var collected: [(Int, [Int])] = []
+                for await failure in group {
+                    if let failure { collected.append(failure) }
+                }
+                return collected
+            }
+
+            for (taskId, labelIds) in failures {
+                DiagnosticLog.warn("bulk create: labels for task \(taskId) deferred to outbox")
+                outbox.append(PendingOp(
+                    id: UUID(),
+                    timestamp: Date(),
+                    ref: .server(taskId),
+                    kind: .update(update: TaskUpdate(labelIds: labelIds))
+                ))
+            }
+        }
     }
 
     private func opCounts(_ ops: [PendingOp]) -> String {

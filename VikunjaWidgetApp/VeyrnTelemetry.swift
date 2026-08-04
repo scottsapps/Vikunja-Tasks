@@ -59,29 +59,33 @@ enum VeyrnTelemetry {
         let diagDefaults = UserDefaults(suiteName: VikunjaConfig.appGroupSuite)
         diagDefaults?.set(parsed.full, forKey: DiagnosticLog.serverVersionDefaultsKey)
         diagDefaults?.set(parsed.supportsV2, forKey: DiagnosticLog.serverSupportsV2DefaultsKey)
-        DiagnosticLog.info("server: \(kind) · Vikunja \(parsed.full) · API v2 available: \(parsed.supportsV2 ? "yes" : "no")")
+        diagDefaults?.set(parsed.supportsBulkCreate, forKey: DiagnosticLog.serverSupportsBulkCreateDefaultsKey)
+        DiagnosticLog.info("server: \(kind) · Vikunja \(parsed.full) · API v2 available: \(parsed.supportsV2 ? "yes" : "no")"
+                           + " · bulk create: \(parsed.supportsBulkCreate ? "yes" : "no")")
 
         guard VikunjaConfig.telemetryOptIn else { return }
         signal("ServerInfo", parameters: [
             "serverVersion": parsed.full,       // "2.4.0" | "unparseable"
             "serverMinor": parsed.minor,        // "2.4"   | "unparseable"
             "supportsApiV2": parsed.supportsV2 ? "true" : "false",
+            "supportsBulkCreate": parsed.supportsBulkCreate ? "true" : "false",
             "serverKind": kind,
         ])
     }
 
     /// Parses "v2.4.0" / "2.4.0" into bounded, server-independent values.
     /// Anything else (dev builds like "unstable", git hashes, junk) → "unparseable".
-    static func parseVersion(_ raw: String) -> (full: String, minor: String, supportsV2: Bool) {
+    static func parseVersion(_ raw: String) -> (full: String, minor: String, supportsV2: Bool, supportsBulkCreate: Bool) {
         let stripped = raw.hasPrefix("v") ? String(raw.dropFirst()) : raw
         // Tolerate suffixes like "2.4.0-rc1" by taking the leading numeric core.
         let core = stripped.prefix { $0.isNumber || $0 == "." }
         let parts = core.split(separator: ".").compactMap { Int($0) }
         guard parts.count >= 3, parts.allSatisfy({ (0...999).contains($0) }) else {
-            return ("unparseable", "unparseable", false)
+            return ("unparseable", "unparseable", false, false)
         }
         let (major, minor, patch) = (parts[0], parts[1], parts[2])
-        let supportsV2 = (major, minor) >= (2, 4)   // v2 API landed in Vikunja 2.4.0
-        return ("\(major).\(minor).\(patch)", "\(major).\(minor)", supportsV2)
+        let supportsV2 = (major, minor) >= (2, 4)          // v2 API landed in Vikunja 2.4.0
+        let supportsBulk = (major, minor) >= (2, 5)        // bulk task creation landed in 2.5.0
+        return ("\(major).\(minor).\(patch)", "\(major).\(minor)", supportsV2, supportsBulk)
     }
 }

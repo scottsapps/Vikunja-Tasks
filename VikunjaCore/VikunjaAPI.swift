@@ -254,19 +254,10 @@ enum VikunjaAPI {
         repeatAfter: Int? = nil,
         repeatMode: Int? = nil
     ) async throws -> VikunjaTask {
-        var body: [String: Any] = ["title": title]
-        if let description, !description.isEmpty { body["description"] = description }
-        if let dueDate {
-            body["due_date"] = ISO8601DateFormatter().string(from: applyDefaultTime(dueDate))
-        }
-        if let priority { body["priority"] = priority }
-        if !reminders.isEmpty {
-            body["reminders"] = reminders.map { ["reminder": ISO8601DateFormatter().string(from: $0)] }
-        }
-        if let repeatAfter, repeatAfter > 0 {
-            body["repeat_after"] = repeatAfter
-            body["repeat_mode"] = repeatMode ?? 0
-        }
+        let body = taskCreateBody(
+            title: title, description: description, dueDate: dueDate, priority: priority,
+            reminders: reminders, repeatAfter: repeatAfter, repeatMode: repeatMode
+        )
         let data = try JSONSerialization.data(withJSONObject: body)
         // Create stays under the project on v2 too — there is no flat
         // `POST /tasks` (405). Same body dictionary as the v1 path.
@@ -290,6 +281,107 @@ enum VikunjaAPI {
         // Re-fetch so the returned task includes the newly assigned labels.
         // Vikunja's create/label responses don't embed the full label objects.
         return try await fetchTask(id: task.id)
+    }
+
+    /// The create body, shared by the single-task path and every entry of a v2
+    /// bulk create (2.5.0+ accepts exactly the same fields per entry). Kept in
+    /// one place so the two can't drift — e.g. the local-8-PM snap that
+    /// `applyDefaultTime` does to a bare due date.
+    private static func taskCreateBody(
+        title: String,
+        description: String?,
+        dueDate: Date?,
+        priority: Int?,
+        reminders: [Date],
+        repeatAfter: Int?,
+        repeatMode: Int?
+    ) -> [String: Any] {
+        var body: [String: Any] = ["title": title]
+        if let description, !description.isEmpty { body["description"] = description }
+        if let dueDate {
+            body["due_date"] = ISO8601DateFormatter().string(from: applyDefaultTime(dueDate))
+        }
+        if let priority { body["priority"] = priority }
+        if !reminders.isEmpty {
+            body["reminders"] = reminders.map { ["reminder": ISO8601DateFormatter().string(from: $0)] }
+        }
+        if let repeatAfter, repeatAfter > 0 {
+            body["repeat_after"] = repeatAfter
+            body["repeat_mode"] = repeatMode ?? 0
+        }
+        return body
+    }
+
+    // MARK: - Bulk task creation (Vikunja 2.5.0+, v2 only)
+
+    /// One task in a bulk-create request. `Outbox`'s `CreatePayload` would be
+    /// the natural argument type, but `Outbox.swift` isn't in the Watch
+    /// targets' `VikunjaCore` include lists and `VikunjaAPI.swift` is, so the
+    /// API layer takes its own small value type and `TaskStore` maps into it.
+    struct NewTask {
+        let title: String
+        let description: String?
+        let dueDate: Date?
+        let priority: Int?
+        let reminders: [Date]
+        let repeatAfter: Int?
+        let repeatMode: Int?
+
+        init(title: String, description: String? = nil, dueDate: Date? = nil,
+             priority: Int? = nil, reminders: [Date] = [],
+             repeatAfter: Int? = nil, repeatMode: Int? = nil) {
+            self.title = title
+            self.description = description
+            self.dueDate = dueDate
+            self.priority = priority
+            self.reminders = reminders
+            self.repeatAfter = repeatAfter
+            self.repeatMode = repeatMode
+        }
+    }
+
+    /// The server's hard cap on one bulk-create request (`maxItems: 100` in the
+    /// 2.5.0 schema). Callers cap each batch at this, so a 250-task import
+    /// becomes three accepted requests rather than one rejected one.
+    static let bulkCreateMaxTasks = 100
+
+    private struct BulkCreateResponse: Decodable { let tasks: [VikunjaTask]? }
+
+    /// Creates up to `bulkCreateMaxTasks` tasks in one project in a single
+    /// atomic request. Returns the created tasks **in payload order**, which is
+    /// what the caller uses to remap placeholder ids.
+    ///
+    /// Atomicity is what lets this coexist with the "v2 mutations never
+    /// auto-retry" invariant: the server documents that if any task is invalid
+    /// none are created, so a non-2xx response means nothing landed and the
+    /// caller may fall back to per-task creates without risking duplicates. A
+    /// 201 means *all* of them landed.
+    ///
+    /// Labels are read-only at create time here too (same as the single-task
+    /// endpoint) — attach them afterwards with `setLabels`.
+    static func createTasksBulk(projectId: Int, tasks: [NewTask]) async throws -> [VikunjaTask] {
+        guard supportsBulkTaskCreate else { throw V2NotAvailable() }
+        let slice = Array(tasks.prefix(bulkCreateMaxTasks))
+        guard !slice.isEmpty else { return [] }
+        let entries = slice.map {
+            taskCreateBody(title: $0.title, description: $0.description, dueDate: $0.dueDate,
+                           priority: $0.priority, reminders: $0.reminders,
+                           repeatAfter: $0.repeatAfter, repeatMode: $0.repeatMode)
+        }
+        let data = try JSONSerialization.data(withJSONObject: ["tasks": entries])
+        let response = try await postV2("/projects/\(projectId)/tasks/bulk",
+                                        body: data, as: BulkCreateResponse.self)
+        return response.tasks ?? []
+    }
+
+    /// Replaces a task's entire label set in one request (2.5.0+). Used right
+    /// after `createTasksBulk`, where the task is brand new and has no labels
+    /// yet, so "replace" is simply "attach these" — one request instead of one
+    /// per label.
+    static func setLabels(taskId: Int, labelIds: [Int]) async throws {
+        guard supportsBulkTaskCreate else { throw V2NotAvailable() }
+        let body = try JSONSerialization.data(withJSONObject: ["labels": labelIds.map { ["id": $0] }])
+        try await putV2("/tasks/\(taskId)/labels/bulk", body: body)
     }
 
     // MARK: - Labels
@@ -591,6 +683,18 @@ enum VikunjaAPI {
             .bool(forKey: DiagnosticLog.serverSupportsV2DefaultsKey) ?? false
     }
 
+    /// `≥ 2.5.0` — the atomic bulk task-create endpoint and the bulk label
+    /// replace that goes with it. Strictly narrower than `supportsAPIv2`
+    /// (`≥ 2.4.0`), so it never has to be checked together with it. Cached the
+    /// same way and cleared by the same account switch. Not `private`:
+    /// `TaskStore` decides whether to coalesce a run of queued creates before
+    /// it calls the API. False until the launch's first `/info` probe lands,
+    /// which just means an early drain takes the per-task path.
+    static var supportsBulkTaskCreate: Bool {
+        UserDefaults(suiteName: VikunjaConfig.appGroupSuite)?
+            .bool(forKey: DiagnosticLog.serverSupportsBulkCreateDefaultsKey) ?? false
+    }
+
     private struct V2Page<T: Decodable>: Decodable {
         let items: [T]?
         let page: Int?
@@ -654,6 +758,11 @@ enum VikunjaAPI {
         let data = try JSONSerialization.data(withJSONObject: body)
         let request = makeRequest(path, method: "PATCH", body: data, base: v2BaseURL)
         _ = try await send(request, acceptingNotModified: true)
+    }
+
+    private static func putV2(_ path: String, body: Data) async throws {
+        let request = makeRequest(path, method: "PUT", body: body, base: v2BaseURL)
+        _ = try await send(request)
     }
 
     private static func deleteV2(_ path: String) async throws {

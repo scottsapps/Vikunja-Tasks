@@ -238,7 +238,8 @@ enum VikunjaConfig {
         defaults?.set("", forKey: "vikunja_api_token")
         invalidateTokenCache()
 
-        // `diag.serverVersion`/`diag.serverSupportsV2` are single App Group
+        // `diag.serverVersion`/`diag.serverSupportsV2`/
+        // `diag.serverSupportsBulkCreate` are single App Group
         // keys, but different accounts can point at servers on different
         // versions — switching from a v2-capable account to an old-server one
         // would otherwise leave the v2 flag true until the next `/info` probe
@@ -248,6 +249,7 @@ enum VikunjaConfig {
         // is back on v2 — a one-refresh window, not worth per-account keying.
         defaults?.removeObject(forKey: DiagnosticLog.serverVersionDefaultsKey)
         defaults?.removeObject(forKey: DiagnosticLog.serverSupportsV2DefaultsKey)
+        defaults?.removeObject(forKey: DiagnosticLog.serverSupportsBulkCreateDefaultsKey)
     }
 
     // MARK: - Migration (idempotent, safe to run in any process)

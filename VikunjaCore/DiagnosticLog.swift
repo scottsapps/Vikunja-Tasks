@@ -493,16 +493,19 @@ enum DiagnosticLog {
             ? "cloud" : "custom"
         let defaults = UserDefaults(suiteName: VikunjaConfig.appGroupSuite)
         guard let version = defaults?.string(forKey: serverVersionDefaultsKey) else {
-            return "\(kind) · Vikunja unknown · API v2 available: unknown"
+            return "\(kind) · Vikunja unknown · API v2 available: unknown · bulk create: unknown"
         }
         let supportsV2 = defaults?.bool(forKey: serverSupportsV2DefaultsKey) ?? false
+        let supportsBulk = defaults?.bool(forKey: serverSupportsBulkCreateDefaultsKey) ?? false
         return "\(kind) · Vikunja \(version) · API v2 available: \(supportsV2 ? "yes" : "no")"
+            + " · bulk create: \(supportsBulk ? "yes" : "no")"
     }
 
-    /// Shared with `VeyrnTelemetry`, which writes these two keys whenever
+    /// Shared with `VeyrnTelemetry`, which writes these three keys whenever
     /// `/info` succeeds so the header can read them without a network call.
     static let serverVersionDefaultsKey = "diag.serverVersion"
     static let serverSupportsV2DefaultsKey = "diag.serverSupportsV2"
+    static let serverSupportsBulkCreateDefaultsKey = "diag.serverSupportsBulkCreate"
 
     // MARK: - Breadcrumb storage
 

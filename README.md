@@ -20,7 +20,8 @@ Beta Builds Available on [TestFlight](https://testflight.apple.com/join/q8GhTkFz
 - **Project and label colors** — hex color tinting throughout the UI for projects and label chips
 - **WidgetKit extension** for macOS and iOS showing upcoming tasks grouped by date, including Lock Screen and StandBy widgets (accessory families: rectangular, circular, inline)
 - **Quick Add** with a natural-language parser: `*tag`, `+project`, `!priority`, dates like `tomorrow`, `next monday`, `in 3 days`, and recurrence like `every week` — with a reminder chip to set a reminder right at creation time
-- **Bulk import** — paste or drag in a plain-text list of tasks
+- **API v2 Compatible** — for instances on 2.4.0 or later, uses API v2, with fallback to API v1 
+- **Bulk import** — paste or drag in a plain-text list of tasks (uses API v2 for instances on 2.5.0 or later)
 - **Rich text notes** — Vikunja's HTML task descriptions, with bold/italic/links/bullets
 - **Offline mode** — an outbox queues changes and drains when you're back online
 - **Multiple accounts** — up to 5 Vikunja accounts (same server or different ones), switched from Settings

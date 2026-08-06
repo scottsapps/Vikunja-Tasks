@@ -25,6 +25,20 @@ enum VikunjaAPI {
         return URLSession(configuration: config)
     }()
 
+    /// Whether a failed v2 request should be re-thrown instead of retried on
+    /// v1. The fallback exists for servers that don't speak v2 — it can't help
+    /// with failures that aren't about the API version, and the second request
+    /// fails the same way a moment later.
+    ///
+    /// - Cancellation is our own doing (quitting, switching accounts); a
+    ///   second full fetch would paper over it.
+    /// - A gateway error (502/503/504) came from a proxy or CDN that couldn't
+    ///   reach Vikunja. The request never arrived, so it says nothing at all
+    ///   about v2 support.
+    private static func v1FallbackIsPointless(_ error: Error) -> Bool {
+        VeyrnError.isCancellation(error) || VeyrnError.isGatewayFailure(error)
+    }
+
     // MARK: - Projects
 
     static func createProject(title: String) async throws -> VikunjaProject {
@@ -49,7 +63,7 @@ enum VikunjaAPI {
             do {
                 return try await getV2Paged("/projects", perPage: 100)
             } catch {
-                if VeyrnError.isCancellation(error) { throw error }
+                if v1FallbackIsPointless(error) { throw error }
                 DiagnosticLog.warn("v2 fetchAllProjects failed (\(VeyrnError.logDescription(for: error))) — falling back to v1")
             }
         }
@@ -87,9 +101,7 @@ enum VikunjaAPI {
                 DiagnosticLog.info("fetch path: v2, \(tasks.count) undone")
                 return tasks
             } catch {
-                // Cancellation is our own doing — don't paper over it with a
-                // second full fetch.
-                if VeyrnError.isCancellation(error) { throw error }
+                if v1FallbackIsPointless(error) { throw error }
                 DiagnosticLog.warn("v2 task fetch failed (\(VeyrnError.logDescription(for: error))) — falling back to v1 fan-out")
             }
         }
@@ -156,7 +168,7 @@ enum VikunjaAPI {
                 let tasks = result.items ?? []
                 return tasks.sorted { ($0.updatedDate ?? .distantPast) > ($1.updatedDate ?? .distantPast) }
             } catch {
-                if VeyrnError.isCancellation(error) { throw error }
+                if v1FallbackIsPointless(error) { throw error }
                 DiagnosticLog.warn("v2 fetchDoneTasks failed (\(VeyrnError.logDescription(for: error))) — falling back to v1")
             }
         }
@@ -177,7 +189,7 @@ enum VikunjaAPI {
             do {
                 return try await getV2("/tasks/\(id)", as: VikunjaTask.self)
             } catch {
-                if VeyrnError.isCancellation(error) { throw error }
+                if v1FallbackIsPointless(error) { throw error }
                 DiagnosticLog.warn("v2 fetchTask failed (\(VeyrnError.logDescription(for: error))) — falling back to v1")
             }
         }
@@ -405,7 +417,7 @@ enum VikunjaAPI {
                 let path = search.isEmpty ? "/labels" : "/labels?q=\(encoded)"
                 return try await getV2Paged(path, perPage: 50)
             } catch {
-                if VeyrnError.isCancellation(error) { throw error }
+                if v1FallbackIsPointless(error) { throw error }
                 DiagnosticLog.warn("v2 fetchLabels failed (\(VeyrnError.logDescription(for: error))) — falling back to v1")
             }
         }

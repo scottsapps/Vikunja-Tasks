@@ -94,7 +94,11 @@ final class TaskStore {
     /// caller rather than looping here.
     private var coalescedRefreshReason: String?
 
-    func refresh(deferAlert: Bool = false, reason: String = "manual") async {
+    /// `background` marks a refresh nobody asked for — the 60s poll and the
+    /// post-drain catch-up. Nothing is waiting on the result and the cached
+    /// list stays on screen, so a server that's briefly unreachable is left to
+    /// the next poll instead of raising an alert.
+    func refresh(deferAlert: Bool = false, background: Bool = false, reason: String = "manual") async {
         guard VikunjaConfig.isConfigured else {
             DiagnosticLog.info("isConfigured=false")
             return
@@ -107,16 +111,16 @@ final class TaskStore {
         isRefreshing = true
         defer { isRefreshing = false }
 
-        await performRefresh(deferAlert: deferAlert, reason: reason)
+        await performRefresh(deferAlert: deferAlert, background: background, reason: reason)
 
         // Still inside `isRefreshing`, so this can't start a third pass.
         if let queued = coalescedRefreshReason {
             coalescedRefreshReason = nil
-            await performRefresh(deferAlert: deferAlert, reason: "\(queued), coalesced")
+            await performRefresh(deferAlert: deferAlert, background: background, reason: "\(queued), coalesced")
         }
     }
 
-    private func performRefresh(deferAlert: Bool, reason: String) async {
+    private func performRefresh(deferAlert: Bool, background: Bool, reason: String) async {
         isLoading = true
         error = nil
         transientRefreshFailure = false
@@ -154,6 +158,14 @@ final class TaskStore {
             } else if VeyrnError.isConnectivityOnly(error) {
                 // Nothing for the user to fix and the cached list is still on
                 // screen — show it in the pill, let the poll loop recover.
+                transientRefreshFailure = true
+                tier = "transient"
+            } else if background && VeyrnError.isGatewayFailure(error) {
+                // A proxy or CDN in front of Vikunja couldn't reach it for a
+                // moment. Nothing here is the user's to fix, the cached list is
+                // still on screen, and the next poll almost always succeeds —
+                // so this stays in the pill. A manual refresh still alerts:
+                // there, someone is waiting on an answer.
                 transientRefreshFailure = true
                 tier = "transient"
             } else if deferAlert && VeyrnError.isRetryable(error) {
@@ -220,13 +232,13 @@ final class TaskStore {
     /// Refreshes only if the last successful refresh is older than `maxAge`.
     /// Lets foreground/poll triggers pull server-side changes without
     /// hammering the API on every 60s outbox drain.
-    func refreshIfStale(maxAge: TimeInterval = 300, reason: String = "manual") async {
+    func refreshIfStale(maxAge: TimeInterval = 300, background: Bool = false, reason: String = "manual") async {
         if let last = lastRefreshAt, Date().timeIntervalSince(last) < maxAge {
             let age = Date().timeIntervalSince(last)
             DiagnosticLog.info("refreshIfStale skipped (age \(String(format: "%.0f", age)) s < \(Int(maxAge)) s)")
             return
         }
-        await refresh(reason: reason)
+        await refresh(background: background, reason: reason)
     }
 
     // MARK: - Account switching
@@ -653,7 +665,7 @@ final class TaskStore {
         }
         let elapsed = DiagnosticLog.elapsed(drainClock)
         DiagnosticLog.info("drain end: \(okCount) ok, \(droppedCount) dropped, \(elapsed) — queue depth \(outbox.ops.count)")
-        await refresh(reason: "outbox")
+        await refresh(background: true, reason: "outbox")
     }
 
     // MARK: - Bulk create (Vikunja 2.5.0+)
@@ -802,7 +814,7 @@ final class TaskStore {
                 try? await Task.sleep(for: .seconds(60))
                 guard !Task.isCancelled else { break }
                 await self?.drainOutbox()
-                await self?.refreshIfStale(reason: "poll")
+                await self?.refreshIfStale(background: true, reason: "poll")
             }
         }
     }

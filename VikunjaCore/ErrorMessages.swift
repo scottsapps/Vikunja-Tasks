@@ -152,6 +152,22 @@ enum VeyrnError {
         ].contains(ns.code)
     }
 
+    /// Gateway failures: something *in front of* Vikunja — a CDN edge or the
+    /// reverse proxy — answering for a server it briefly couldn't reach. The
+    /// request never arrives, so Vikunja's own log stays silent and the next
+    /// poll succeeds seconds later. An unattended refresh treats these like a
+    /// connectivity blip rather than interrupting with an alert.
+    ///
+    /// A 500 is deliberately excluded: that's Vikunja itself erroring, which
+    /// won't fix itself and is worth saying out loud. Confirmed in the wild
+    /// (2026-08-06): a Cloudflare edge 30 miles from the user returned 502 in
+    /// 2 ms — far too fast to have consulted the origin — and the same refresh
+    /// went through untouched 24 seconds later.
+    static func isGatewayFailure(_ error: Error) -> Bool {
+        guard let apiError = error as? VikunjaAPI.APIError else { return false }
+        return [502, 503, 504].contains(apiError.statusCode)
+    }
+
     /// `NSURLErrorCancelled` (-999) — the app cancelled its own request, by
     /// quitting mid-refresh, switching accounts, or tearing down a session.
     /// Nothing failed, so it must never alert and never light the offline

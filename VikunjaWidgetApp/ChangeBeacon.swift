@@ -22,7 +22,8 @@ enum ChangeBeacon {
     private static var defaults: UserDefaults? { UserDefaults(suiteName: VikunjaConfig.appGroupSuite) }
 
     private static let deviceIdKey = "veyrn.beacon.deviceId"
-    private static let subscribedFlagKey = "veyrn.beacon.subscribedV1"
+    private static let subscribedFlagKey = "veyrn.beacon.subscribedV2"
+    private static let staleSubscribedFlagKeyV1 = "veyrn.beacon.subscribedV1"
 
     /// Set once per session on an unrecoverable CloudKit condition (no iCloud
     /// account, push registration failure, or repeated `CKError`s). Once set,
@@ -44,6 +45,11 @@ enum ChangeBeacon {
     private static var deviceId: String {
         if let cached = cachedDeviceId { return cached }
         let d = defaults
+        // Build 72 could set this on a schema rejection it misread as
+        // "already installed", which then blocked every future retry — see
+        // `references/app.md`. The V2 key name plus this one-time removal is
+        // what lets those installs retry without a reinstall.
+        d?.removeObject(forKey: staleSubscribedFlagKeyV1)
         if let existing = d?.string(forKey: deviceIdKey) {
             cachedDeviceId = existing
             return existing
@@ -113,12 +119,18 @@ enum ChangeBeacon {
         #endif
 
         do {
-            _ = try await CKContainer.default().privateCloudDatabase.modifyRecords(
+            let (saveResults, _) = try await CKContainer.default().privateCloudDatabase.modifyRecords(
                 saving: [record], deleting: [], savePolicy: .allKeys
             )
+            // CloudKit reports per-record failures inside the result rather than by
+            // throwing, so a discarded result turns "record type not found" into a
+            // logged success (build 72). Rethrow into the catch below instead.
+            for (_, result) in saveResults {
+                if case .failure(let error) = result { throw error }
+            }
             DiagnosticLog.info("nudge sent (reason: \(reasons.joined(separator: ", ")))")
         } catch {
-            DiagnosticLog.warn("nudge send failed: \(VeyrnError.logDescription(for: error))")
+            DiagnosticLog.warn("nudge send failed: \(describe(error))")
             noteFailure(error)
         }
     }
@@ -137,6 +149,27 @@ enum ChangeBeacon {
         guard defaults?.bool(forKey: subscribedFlagKey) != true else { return }
 
         Task {
+            let database = CKContainer.default().privateCloudDatabase
+
+            // Ask rather than infer. Classifying CloudKit error codes to guess
+            // "already exists" is what let a schema rejection masquerade as a
+            // successful install in build 72 — and the sticky flag then made it
+            // permanent. `subscription(for:)` throws `.unknownItem` when absent
+            // rather than returning nil, so that specific error means "proceed
+            // to create it"; any other error means "we don't know, don't guess".
+            do {
+                _ = try await database.subscription(for: subscriptionId)
+                defaults?.set(true, forKey: subscribedFlagKey)
+                DiagnosticLog.info("nudge subscription already present")
+                return
+            } catch let ckError as CKError where ckError.code == .unknownItem {
+                // Absent — fall through and create it below.
+            } catch {
+                DiagnosticLog.warn("nudge subscription check failed: \(describe(error))")
+                noteFailure(error)
+                return
+            }
+
             let subscription = CKQuerySubscription(
                 recordType: recordType,
                 predicate: NSPredicate(value: true),
@@ -152,29 +185,16 @@ enum ChangeBeacon {
             subscription.notificationInfo = info
 
             do {
-                _ = try await CKContainer.default().privateCloudDatabase.save(subscription)
+                _ = try await database.save(subscription)
                 defaults?.set(true, forKey: subscribedFlagKey)
                 DiagnosticLog.info("nudge subscription installed")
             } catch {
-                if isBenignSubscriptionError(error) {
-                    defaults?.set(true, forKey: subscribedFlagKey)
-                    DiagnosticLog.info("nudge subscription installed")
-                } else {
-                    DiagnosticLog.warn("nudge subscription failed: \(VeyrnError.logDescription(for: error))")
-                    noteFailure(error)
-                }
+                // Never set the flag on failure: the retry on next launch is the
+                // whole recovery path once the schema is deployed.
+                DiagnosticLog.warn("nudge subscription failed: \(describe(error))")
+                noteFailure(error)
             }
         }
-    }
-
-    private static func isBenignSubscriptionError(_ error: Error) -> Bool {
-        guard let ckError = error as? CKError else { return false }
-        if ckError.code == .serverRejectedRequest { return true }
-        if ckError.code == .partialFailure,
-           let partial = ckError.partialErrorsByItemID {
-            return partial.values.contains { ($0 as? CKError)?.code == .serverRejectedRequest }
-        }
-        return false
     }
 
     // MARK: - Receive
@@ -218,6 +238,17 @@ enum ChangeBeacon {
         lastNudgeSyncAt = Date()
         DiagnosticLog.info("nudge received")
         return true
+    }
+
+    // MARK: - Error description
+
+    /// CKError's `localizedDescription` can carry container and account detail, so
+    /// it never reaches the log. The numeric code is what's actually diagnosable
+    /// (11 = unknownItem/missing record type, 15 = serverRejectedRequest — the two
+    /// most likely here, but log the number rather than hardcoding interpretations).
+    private static func describe(_ error: Error) -> String {
+        if let ck = error as? CKError { return "CKError \(ck.errorCode)" }
+        return VeyrnError.logDescription(for: error)
     }
 
     // MARK: - Failure bookkeeping

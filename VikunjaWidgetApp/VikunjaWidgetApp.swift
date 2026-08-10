@@ -28,10 +28,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didReceiveRemoteNotification userInfo: [AnyHashable: Any],
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
-        guard ChangeBeacon.shouldSync(forRemoteNotification: userInfo) else {
-            completionHandler(.noData); return
-        }
         Task {
+            guard await ChangeBeacon.shouldSync(forRemoteNotification: userInfo) else {
+                completionHandler(.noData); return
+            }
             do {
                 // Use `performSync` rather than `store.refresh()` even when the app
                 // happens to be foregrounded: a silent push can arrive with the
@@ -106,8 +106,10 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     // exist on macOS anyway).
     func application(_ application: NSApplication,
                      didReceiveRemoteNotification userInfo: [String: Any]) {
-        guard ChangeBeacon.shouldSync(forRemoteNotification: userInfo) else { return }
-        NotificationCenter.default.post(name: .veyrnNudgeReceived, object: nil)
+        Task {
+            guard await ChangeBeacon.shouldSync(forRemoteNotification: userInfo) else { return }
+            NotificationCenter.default.post(name: .veyrnNudgeReceived, object: nil)
+        }
     }
 
     func application(_ application: NSApplication,

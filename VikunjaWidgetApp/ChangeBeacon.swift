@@ -7,9 +7,11 @@ import Foundation
 /// completing a task on the Mac while the phone's already-armed reminder
 /// still fires (see plan §1). Lives entirely in the user's own private
 /// database (`CKContainer.default().privateCloudDatabase`, which CloudKit
-/// partitions per iCloud account); Veyrn never sees another user's beacons
-/// and Scott operates no server for this. Carries no task data — see the
-/// four fields below.
+/// partitions per iCloud account), in a custom zone (`VeyrnBeaconZone`) —
+/// database/zone subscriptions are refused outright in the default zone, see
+/// `references/app.md`. Veyrn never sees another user's beacons and Scott
+/// operates no server for this. Carries no task data — see the four fields
+/// below.
 ///
 /// Must never be able to break the app: every CloudKit call is wrapped so a
 /// throw here can't propagate into a mutation path, and `disabledForSession`
@@ -17,13 +19,22 @@ import Foundation
 enum ChangeBeacon {
 
     private static let recordType = "ChangeBeacon"
-    private static let subscriptionId = "veyrn-beacon-v1"
+    private static let subscriptionId = "veyrn-beacon-v2"
+    private static let staleSubscriptionIdV1 = "veyrn-beacon-v1"
+
+    private static let zoneName = "VeyrnBeaconZone"
+    private static var zoneID: CKRecordZone.ID {
+        CKRecordZone.ID(zoneName: zoneName, ownerName: CKCurrentUserDefaultName)
+    }
 
     private static var defaults: UserDefaults? { UserDefaults(suiteName: VikunjaConfig.appGroupSuite) }
 
     private static let deviceIdKey = "veyrn.beacon.deviceId"
-    private static let subscribedFlagKey = "veyrn.beacon.subscribedV2"
+    private static let subscribedFlagKey = "veyrn.beacon.subscribedV3"
     private static let staleSubscribedFlagKeyV1 = "veyrn.beacon.subscribedV1"
+    private static let staleSubscribedFlagKeyV2 = "veyrn.beacon.subscribedV2"
+    private static let v1SubscriptionCleanupDoneKey = "veyrn.beacon.v1SubscriptionCleanedUp"
+    private static let lastSeenAtKey = "veyrn.beacon.lastSeenAt"
 
     /// Set once per session on an unrecoverable CloudKit condition (no iCloud
     /// account, push registration failure, or repeated `CKError`s). Once set,
@@ -45,11 +56,14 @@ enum ChangeBeacon {
     private static var deviceId: String {
         if let cached = cachedDeviceId { return cached }
         let d = defaults
-        // Build 72 could set this on a schema rejection it misread as
-        // "already installed", which then blocked every future retry — see
-        // `references/app.md`. The V2 key name plus this one-time removal is
-        // what lets those installs retry without a reinstall.
+        // Build 72 could set the V1 flag on a schema rejection it misread as
+        // "already installed"; build 74's move to a custom zone + database
+        // subscription obsoletes V2 the same way. Both stale keys are removed
+        // once per launch so any install poisoned by either generation starts
+        // retrying against the current subscription without a reinstall — see
+        // `references/app.md`.
         d?.removeObject(forKey: staleSubscribedFlagKeyV1)
+        d?.removeObject(forKey: staleSubscribedFlagKeyV2)
         if let existing = d?.string(forKey: deviceIdKey) {
             cachedDeviceId = existing
             return existing
@@ -78,6 +92,31 @@ enum ChangeBeacon {
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 
+    // MARK: - Zone
+
+    /// One round trip per session — database/zone subscriptions and every
+    /// beacon record live in this zone, never the default zone (which
+    /// rejects them outright with `invalidArguments`, confirmed build 73).
+    /// Re-saving a zone that already exists succeeds like any other save, so
+    /// there's no separate "already exists" case to special-case here — the
+    /// same "ask, don't guess" rule as the subscription-existence check below.
+    private static var zoneVerified = false
+
+    private static func ensureZoneExists() async throws {
+        guard !zoneVerified else { return }
+        let zone = CKRecordZone(zoneID: zoneID)
+        let (saveResults, _) = try await CKContainer.default().privateCloudDatabase.modifyRecordZones(
+            saving: [zone], deleting: []
+        )
+        // Same trap as `modifyRecords`: a rejected zone save comes back as a
+        // `.failure` inside the result, not by throwing. Discarding it would
+        // repeat build 72's false "success" — see `references/app.md`.
+        for (_, result) in saveResults {
+            if case .failure(let error) = result { throw error }
+        }
+        zoneVerified = true
+    }
+
     // MARK: - Send (debounced)
 
     private static var pendingPublishTask: Task<Void, Never>?
@@ -103,12 +142,23 @@ enum ChangeBeacon {
         guard !reasons.isEmpty else { return }
         guard VikunjaConfig.isConfigured, !VikunjaConfig.host.isEmpty, !disabledForSession else { return }
 
+        do {
+            try await ensureZoneExists()
+        } catch {
+            DiagnosticLog.warn("nudge zone failed: \(describe(error))")
+            noteFailure(error)
+            return
+        }
+
         let key = accountKey(forHost: VikunjaConfig.host)
         // A fresh record + `.allKeys` savePolicy each time is the CloudKit
         // upsert pattern: it overwrites regardless of the existing record's
         // change tag, so concurrent writes from two devices can never surface
         // a conflict we'd have to resolve.
-        let record = CKRecord(recordType: recordType, recordID: CKRecord.ID(recordName: "beacon-\(key)"))
+        let record = CKRecord(
+            recordType: recordType,
+            recordID: CKRecord.ID(recordName: "beacon-\(key)", zoneID: zoneID)
+        )
         record["accountKey"] = key as CKRecordValue
         record["deviceId"] = deviceId as CKRecordValue
         record["changedAt"] = Date() as CKRecordValue
@@ -141,15 +191,32 @@ enum ChangeBeacon {
     /// (`content-available`) pushes don't require notification permission, so
     /// this must not be gated on `ReminderScheduler.requestPermission()`.
     ///
-    /// Expected to fail until Scott marks `ChangeBeacon.recordName` Queryable
-    /// in the CloudKit Console (plan §B1 step 3) — that's a normal, silent
-    /// degradation, not a bug to work around here.
+    /// A `CKDatabaseSubscription` scoped to `recordType` — no predicate, no
+    /// `desiredKeys`, no queryable index required. Database/zone subscriptions
+    /// only fire in a custom zone, hence `ensureZoneExists()` first.
     static func registerForNudges() {
         guard !disabledForSession else { return }
         guard defaults?.bool(forKey: subscribedFlagKey) != true else { return }
 
         Task {
+            do {
+                try await ensureZoneExists()
+            } catch {
+                DiagnosticLog.warn("nudge zone failed: \(describe(error))")
+                noteFailure(error)
+                return
+            }
+
             let database = CKContainer.default().privateCloudDatabase
+
+            // Best-effort, one time: any install that succeeded in creating the
+            // old query subscription would otherwise keep receiving its pushes
+            // forever alongside the new one. Scott's console shows none exists,
+            // but this covers any other install that did succeed.
+            if defaults?.bool(forKey: v1SubscriptionCleanupDoneKey) != true {
+                _ = try? await database.deleteSubscription(withID: staleSubscriptionIdV1)
+                defaults?.set(true, forKey: v1SubscriptionCleanupDoneKey)
+            }
 
             // Ask rather than infer. Classifying CloudKit error codes to guess
             // "already exists" is what let a schema rejection masquerade as a
@@ -170,18 +237,13 @@ enum ChangeBeacon {
                 return
             }
 
-            let subscription = CKQuerySubscription(
-                recordType: recordType,
-                predicate: NSPredicate(value: true),
-                subscriptionID: subscriptionId,
-                options: [.firesOnRecordCreation, .firesOnRecordUpdate]
-            )
+            let subscription = CKDatabaseSubscription(subscriptionID: subscriptionId)
+            subscription.recordType = recordType   // narrow it to our own records
             let info = CKSubscription.NotificationInfo()
-            info.shouldSendContentAvailable = true
+            info.shouldSendContentAvailable = true // silent push
             info.shouldBadge = false
-            // Carry the fields in the payload so the receiving device doesn't need a
-            // fetch round trip just to decide whether to ignore its own beacon.
-            info.desiredKeys = ["accountKey", "deviceId", "changedAt"]
+            // No desiredKeys: database subscriptions don't carry record fields.
+            // The receive path fetches the beacon instead (see `shouldSync`).
             subscription.notificationInfo = info
 
             do {
@@ -204,37 +266,64 @@ enum ChangeBeacon {
 
     /// Returns true if the payload was a Veyrn beacon this device should act on.
     /// Callers use the return value to decide whether to sync.
-    static func shouldSync(forRemoteNotification userInfo: [AnyHashable: Any]) -> Bool {
+    ///
+    /// A database subscription's push carries no record fields, so — unlike
+    /// the old query subscription — this must fetch the beacon record to
+    /// learn `deviceId`/`accountKey`/`changedAt`. That's one extra round trip,
+    /// only when something actually changed.
+    static func shouldSync(forRemoteNotification userInfo: [AnyHashable: Any]) async -> Bool {
         guard let notification = CKNotification(fromRemoteNotificationDictionary: userInfo),
-              let query = notification as? CKQueryNotification,
-              query.subscriptionID == subscriptionId else {
+              let databaseNotification = notification as? CKDatabaseNotification,
+              databaseNotification.subscriptionID == subscriptionId else {
             return false
         }
 
-        let fields = query.recordFields ?? [:]
-
-        // CloudKit's behaviour on notifying the originating device is not
-        // contractually guaranteed either way, so this is what prevents a
-        // self-wake loop — do not remove it as redundant.
-        if let remoteDeviceId = fields["deviceId"] as? String, remoteDeviceId == deviceId {
-            DiagnosticLog.info("nudge ignored (self)")
-            return false
-        }
-
-        // Missing/unreadable → fail open: an unnecessary refresh is harmless;
-        // a missed one is the bug this feature exists to fix.
-        if let remoteAccountKey = fields["accountKey"] as? String {
-            let ourKey = accountKey(forHost: VikunjaConfig.host)
-            if remoteAccountKey != ourKey {
-                DiagnosticLog.info("nudge ignored (other account)")
-                return false
-            }
-        }
-
+        // Rate limit first, before the network call — this is what keeps a
+        // burst from costing a round trip each.
         if let last = lastNudgeSyncAt, Date().timeIntervalSince(last) < 5 {
             DiagnosticLog.info("nudge ignored (rate limit)")
             return false
         }
+
+        let key = accountKey(forHost: VikunjaConfig.host)
+        let recordID = CKRecord.ID(recordName: "beacon-\(key)", zoneID: zoneID)
+
+        let record: CKRecord
+        do {
+            record = try await CKContainer.default().privateCloudDatabase.record(for: recordID)
+        } catch let ckError as CKError where ckError.code == .unknownItem {
+            // We have no beacon of our own for the active account, so this
+            // change can't be a change to our own record.
+            DiagnosticLog.info("nudge ignored (other account)")
+            return false
+        } catch {
+            // Fail open: an unnecessary refresh is harmless; a missed one is
+            // the bug this feature exists to fix. Do not call `noteFailure`
+            // here — a receive-side hiccup must not count toward disabling
+            // the whole feature.
+            DiagnosticLog.warn("nudge fetch failed: \(describe(error))")
+            return true
+        }
+
+        // CloudKit's behaviour on notifying the originating device is not
+        // contractually guaranteed either way, so this is what prevents a
+        // self-wake loop — do not remove it as redundant.
+        if let remoteDeviceId = record["deviceId"] as? String, remoteDeviceId == deviceId {
+            DiagnosticLog.info("nudge ignored (self)")
+            return false
+        }
+
+        // Stops a nudge triggered by *another* account's beacon (or by our
+        // own beacon write that we're the origin of) from making us re-sync
+        // on our own already-seen record.
+        if let changedAt = record["changedAt"] as? Date {
+            if let lastSeen = defaults?.object(forKey: lastSeenAtKey) as? Date, changedAt <= lastSeen {
+                DiagnosticLog.info("nudge ignored (no change)")
+                return false
+            }
+            defaults?.set(changedAt, forKey: lastSeenAtKey)
+        }
+
         lastNudgeSyncAt = Date()
         DiagnosticLog.info("nudge received")
         return true
@@ -243,12 +332,16 @@ enum ChangeBeacon {
     // MARK: - Error description
 
     /// CKError's `localizedDescription` can carry container and account detail, so
-    /// it never reaches the log. The numeric code is what's actually diagnosable
-    /// (11 = unknownItem/missing record type, 15 = serverRejectedRequest — the two
-    /// most likely here, but log the number rather than hardcoding interpretations).
+    /// it never reaches the log. CloudKit also returns a server-side explanation of
+    /// *why* under the `ServerErrorDescription` userInfo key — undocumented as a
+    /// named constant, but bounded API/schema text, not user content, and it's what
+    /// actually turns a bare "CKError 12" into an answer.
     private static func describe(_ error: Error) -> String {
-        if let ck = error as? CKError { return "CKError \(ck.errorCode)" }
-        return VeyrnError.logDescription(for: error)
+        guard let ck = error as? CKError else { return VeyrnError.logDescription(for: error) }
+        if let server = ck.userInfo["ServerErrorDescription"] as? String, !server.isEmpty {
+            return "CKError \(ck.errorCode): \(server.prefix(200))"
+        }
+        return "CKError \(ck.errorCode)"
     }
 
     // MARK: - Failure bookkeeping

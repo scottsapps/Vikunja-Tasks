@@ -724,6 +724,8 @@ struct QuickAddSheet: View {
                         VeyrnTelemetry.signal("SubtaskAdded")
                     }
                     VeyrnTelemetry.signal("TaskCreated")
+                    // Once for the parent + all its subtasks, not once per subtask.
+                    ChangeBeacon.publish(reason: "create task with subtasks")
                     await store.refresh()
                 } catch {
                     errorMessage = VeyrnError.message(for: error)

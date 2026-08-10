@@ -65,6 +65,9 @@ final class NotificationResponseHandler: NSObject, UNUserNotificationCenterDeleg
                     // being completed.
                     await ReminderStore.cancel(taskId: taskId, reason: "completed from notification")
                     WidgetCenter.shared.reloadAllTimelines()
+                    // Completing from a notification banner is exactly the
+                    // cross-device case this feature exists for.
+                    ChangeBeacon.publish(reason: "notification complete")
                 }
                 await finish(completionHandler)
             }

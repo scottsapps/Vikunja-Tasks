@@ -10,5 +10,15 @@
 	<array>
 		<string>$(AppIdentifierPrefix)net.angstreich.VikunjaWidgetApp</string>
 	</array>
+	<key>com.apple.developer.icloud-container-identifiers</key>
+	<array>
+		<string>iCloud.net.angstreich.VikunjaWidgetApp</string>
+	</array>
+	<key>com.apple.developer.icloud-services</key>
+	<array>
+		<string>CloudKit</string>
+	</array>
+	<key>aps-environment</key>
+	<string>development</string>
 </dict>
 </plist>

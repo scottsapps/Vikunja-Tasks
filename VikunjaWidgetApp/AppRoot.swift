@@ -121,6 +121,13 @@ struct AppRoot: View {
             }
         }
         #endif
+        #if os(macOS)
+        .onReceive(NotificationCenter.default.publisher(for: .veyrnNudgeReceived)) { _ in
+            // Nobody asked for this refresh, so nothing about it should ever
+            // raise a dialog — 502/503/504 route into the pill instead.
+            Task { await store.refresh(background: true, reason: "nudge") }
+        }
+        #endif
         .task {
             _ = await ReminderScheduler.requestPermission()
             guard VikunjaConfig.isConfigured else { return }

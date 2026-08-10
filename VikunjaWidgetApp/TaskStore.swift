@@ -453,6 +453,7 @@ final class TaskStore {
             let project = try await VikunjaAPI.createProject(title: title)
             projects.append(project)
             projects.sort { $0.title.localizedCompare($1.title) == .orderedAscending }
+            ChangeBeacon.publish(reason: "create project")
             await refresh()
         } catch {
             report(error)
@@ -465,6 +466,7 @@ final class TaskStore {
             projects.removeAll { $0.id == id }
             lastServerUndone.removeAll { $0.projectId == id }
             rebuildMergedTasks()
+            ChangeBeacon.publish(reason: "delete project")
             await refresh()
         } catch {
             report(error)
@@ -479,6 +481,9 @@ final class TaskStore {
         lastServerUndone.removeAll { $0.id == task.id }
         if task.id > 0 {
             try? await VikunjaAPI.deleteTask(id: task.id)
+            // A placeholder delete never reached the server, so only nudge
+            // when there was a real task id to delete.
+            ChangeBeacon.publish(reason: "delete")
         }
         await ReminderScheduler.cancel(taskId: task.id, reason: "deleted")
         WidgetCenter.shared.reloadAllTimelines()
@@ -675,6 +680,10 @@ final class TaskStore {
         }
         let elapsed = DiagnosticLog.elapsed(drainClock)
         DiagnosticLog.info("drain end: \(okCount) ok, \(droppedCount) dropped, \(elapsed) — queue depth \(outbox.ops.count)")
+        // Only when something actually landed server-side: a drain that
+        // dropped 4xx ops or paused on a network error changed nothing and
+        // must not nudge other devices.
+        if okCount > 0 { ChangeBeacon.publish(reason: "outbox") }
         await refresh(background: true, reason: "outbox")
     }
 

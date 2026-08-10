@@ -10,6 +10,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         BackgroundRefresh.register()
+        UIApplication.shared.registerForRemoteNotifications()
+        ChangeBeacon.registerForNudges()
         return true
     }
 
@@ -19,6 +21,39 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         let config = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
         config.delegateClass = SceneDelegate.self
         return config
+    }
+
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        guard ChangeBeacon.shouldSync(forRemoteNotification: userInfo) else {
+            completionHandler(.noData); return
+        }
+        Task {
+            do {
+                // Use `performSync` rather than `store.refresh()` even when the app
+                // happens to be foregrounded: a silent push can arrive with the
+                // process launched into the background where `TaskStore` state isn't
+                // meaningful. The foreground store catches up via the existing
+                // `scenePhase → active` → `refreshIfStale(60)`.
+                let count = try await BackgroundRefresh.performSync(reason: "nudge")
+                DiagnosticLog.info("nudge sync done: \(count) tasks")
+                completionHandler(.newData)
+            } catch {
+                DiagnosticLog.warn("nudge sync failed: \(VeyrnError.logDescription(for: error))")
+                completionHandler(.failed)
+            }
+        }
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        DiagnosticLog.warn("push registration failed: \(VeyrnError.logDescription(for: error))")
+        ChangeBeacon.disableForSession(reason: "push registration failed")
     }
 }
 
@@ -54,10 +89,42 @@ enum ShortcutRouting {
 }
 #endif
 
+#if os(macOS)
+extension Notification.Name {
+    static let veyrnNudgeReceived = Notification.Name("net.angstreich.VikunjaWidgetApp.nudgeReceived")
+}
+
+final class MacAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApplication.shared.registerForRemoteNotifications()
+        ChangeBeacon.registerForNudges()
+    }
+
+    // On macOS the app is by definition running to receive a push, so
+    // `TaskStore` *is* meaningful — hence posting for `AppRoot` to pick up
+    // rather than calling `BackgroundRefresh.performSync` (which doesn't
+    // exist on macOS anyway).
+    func application(_ application: NSApplication,
+                     didReceiveRemoteNotification userInfo: [String: Any]) {
+        guard ChangeBeacon.shouldSync(forRemoteNotification: userInfo) else { return }
+        NotificationCenter.default.post(name: .veyrnNudgeReceived, object: nil)
+    }
+
+    func application(_ application: NSApplication,
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        DiagnosticLog.warn("push registration failed: \(VeyrnError.logDescription(for: error))")
+        ChangeBeacon.disableForSession(reason: "push registration failed")
+    }
+}
+#endif
+
 @main
 struct VikunjaWidgetAppEntry: App {
     #if os(iOS)
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    #endif
+    #if os(macOS)
+    @NSApplicationDelegateAdaptor(MacAppDelegate.self) var appDelegate
     #endif
     @State private var store = TaskStore()
     #if os(macOS)

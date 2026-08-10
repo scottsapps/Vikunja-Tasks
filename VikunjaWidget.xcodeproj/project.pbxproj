@@ -19,8 +19,10 @@
 		0D11C0D3CF3FAEA401E14587 /* VikunjaAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */; };
 		0DE91F897CC393857D83DEFC /* CompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56EB3BD825210E0BC7DDD877 /* CompleteTaskIntent.swift */; };
 		0EB1B7DE0E9259C5FC459EB4 /* ErrorMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7331DC244DE0910F695C4 /* ErrorMessages.swift */; };
+		0EFF9069E528CF464ABE4CAA /* ChangeBeacon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C94753002F09FFB78914FA6 /* ChangeBeacon.swift */; };
 		0F2F790894D97DA6E0E52026 /* ProjectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BB9C870B4EF39EC432A03D /* ProjectView.swift */; };
 		0FEF59179333D4BD9FEB1F5B /* VeyrnTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55A53B67DF4D3C4E9B1789F8 /* VeyrnTelemetry.swift */; };
+		10679C23F3376838F57F9DFC /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC3F9516276D9763A9C0638D /* CloudKit.framework */; };
 		13432CFDA3F3F4FEAC708519 /* BulkImportParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4CA3A47F03EBF7AE5424D07 /* BulkImportParser.swift */; };
 		13859958B79E16B366B865E8 /* Outbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52749DF5C84EB8B6350FE276 /* Outbox.swift */; };
 		142533694A5C10A6FF160C31 /* VikunjaConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E9D00E1BD161F9B55FBB11 /* VikunjaConfig.swift */; };
@@ -190,6 +192,7 @@
 		E470C59271E6BC68F2EC6B1A /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FF9B209536157736A98A9B /* TokenStore.swift */; };
 		E553C0F4C22FDFE41056EFF1 /* ColorUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1254289BB5BBCBD170DCACE /* ColorUtils.swift */; };
 		E564F6DAB482EF7BE88FD653 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
+		E72D8ECD5C5DE6D91EB05D20 /* ChangeBeacon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C94753002F09FFB78914FA6 /* ChangeBeacon.swift */; };
 		E83930CD5B9016B8B53C5946 /* ShortcutRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6413699055632BF2AF310ADC /* ShortcutRouter.swift */; };
 		EA0C3FA4E09C85F0CAA34189 /* VikunjaWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5CFE29DC68AF948888033B9 /* VikunjaWidgetBundle.swift */; };
 		EB0EEF15984FD2AAF06921DD /* WatchWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12E8E2E9EA8446E0127CFE58 /* WatchWidgetBundle.swift */; };
@@ -203,6 +206,7 @@
 		FA749AD57488BEF5E52685DD /* RichTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CA81C31B42689E6607E4330 /* RichTextEditor.swift */; };
 		FBB2CBB1BB9E7F1F874BD5D9 /* AddTaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B63219D6BDD41CF316F5617F /* AddTaskView.swift */; };
 		FCBEF1F749FDE83E425B07CE /* ColorUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1254289BB5BBCBD170DCACE /* ColorUtils.swift */; };
+		FE06FC913A9C28EE4CDBA13B /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC3F9516276D9763A9C0638D /* CloudKit.framework */; };
 		FF7D63331B3B3E32C0796C08 /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
 /* End PBXBuildFile section */
 
@@ -325,6 +329,7 @@
 		653C8DAF2700721283A8A509 /* BugReportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BugReportSheet.swift; sourceTree = "<group>"; };
 		68C6E7BB60EBB7C6C225DFAE /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		6C10DDD003EFBE283E6DE288 /* VikunjaWidgetWatchExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = VikunjaWidgetWatchExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6C94753002F09FFB78914FA6 /* ChangeBeacon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeBeacon.swift; sourceTree = "<group>"; };
 		6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetEntryView.swift; sourceTree = "<group>"; };
 		75A0ED94DDF378FDDE88F157 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7656B4E05FA981BC6A515B75 /* HotkeyRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyRecorderView.swift; sourceTree = "<group>"; };
@@ -380,6 +385,7 @@
 		F8050180A5CB81868E0837EA /* VikunjaModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaModels.swift; sourceTree = "<group>"; };
 		FA38A15AD8E4DE861575A44A /* VikunjaWidgetExtensionIOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VikunjaWidgetExtensionIOS.entitlements; sourceTree = "<group>"; };
 		FB82D40CDF612A9CCA6F58D9 /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
+		FC3F9516276D9763A9C0638D /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		FD6802321CF98C91D0FC1142 /* LogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -389,6 +395,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				66830DEDFCEE3994EE19D447 /* TelemetryDeck in Frameworks */,
+				10679C23F3376838F57F9DFC /* CloudKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -416,6 +423,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F7DF7BB42EFB5A100385FC5A /* TelemetryDeck in Frameworks */,
+				FE06FC913A9C28EE4CDBA13B /* CloudKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -474,6 +482,7 @@
 				BDF5D7B53205EC9A9D91FC36 /* BugReportMail.swift */,
 				653C8DAF2700721283A8A509 /* BugReportSheet.swift */,
 				CDB4EF59CB974358A163128A /* BulkImportSheet.swift */,
+				6C94753002F09FFB78914FA6 /* ChangeBeacon.swift */,
 				C9F88B5A5977A4665065232F /* FlowLayout.swift */,
 				3D2233282108571CCBCFADE2 /* FontSizeEnvironment.swift */,
 				B4EAB5006E6FD9CE4BCD8B41 /* HangWatchdog.swift */,
@@ -580,6 +589,7 @@
 			isa = PBXGroup;
 			children = (
 				68C6E7BB60EBB7C6C225DFAE /* AppIntents.framework */,
+				FC3F9516276D9763A9C0638D /* CloudKit.framework */,
 				A3500B5442B30927185C99FA /* SwiftUI.framework */,
 				77E4BA4BD463D4E6942E3495 /* WidgetKit.framework */,
 			);
@@ -852,6 +862,7 @@
 				0A4C0E5ED794EE7206E621AE /* BugReportSheet.swift in Sources */,
 				13432CFDA3F3F4FEAC708519 /* BulkImportParser.swift in Sources */,
 				BBDAED74A2CE38A0D6CB6B3D /* BulkImportSheet.swift in Sources */,
+				E72D8ECD5C5DE6D91EB05D20 /* ChangeBeacon.swift in Sources */,
 				95081F050067C8886AB0A59D /* ColorUtils.swift in Sources */,
 				8B2F84901BACA6826FD0C4C5 /* DiagnosticLog.swift in Sources */,
 				86353261F9AF502792FDCEEA /* ErrorMessages.swift in Sources */,
@@ -938,6 +949,7 @@
 				C43390360528E40BCB2F4777 /* BugReportSheet.swift in Sources */,
 				557C43CFE255EBCE5CCB0D5B /* BulkImportParser.swift in Sources */,
 				F7A9AEBEDFC251D941B03C72 /* BulkImportSheet.swift in Sources */,
+				0EFF9069E528CF464ABE4CAA /* ChangeBeacon.swift in Sources */,
 				E553C0F4C22FDFE41056EFF1 /* ColorUtils.swift in Sources */,
 				6A469E41B898C387D75EA7F3 /* DiagnosticLog.swift in Sources */,
 				0EB1B7DE0E9259C5FC459EB4 /* ErrorMessages.swift in Sources */,

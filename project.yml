@@ -97,6 +97,7 @@ targets:
       - target: VikunjaWidgetExtension
         embed: true
       - package: TelemetryDeck
+      - sdk: CloudKit.framework
 
   VikunjaWidgetExtension:
     type: app-extension
@@ -153,6 +154,7 @@ targets:
       - target: VikunjaWidgetWatch
         embed: true
       - package: TelemetryDeck
+      - sdk: CloudKit.framework
 
   VikunjaWidgetExtensionIOS:
     type: app-extension

@@ -77,6 +77,16 @@ final class TaskStore {
 
     private var lastRefreshAt: Date?
 
+    /// True when a refresh is in flight and what's on screen predates it by enough
+    /// to be worth flagging. Cache-first rendering is deliberate (stale beats
+    /// blank), but a list that silently re-reconciles two seconds after you open
+    /// the app reads as a glitch — this labels it instead.
+    var isShowingStaleData: Bool {
+        guard isLoading else { return false }
+        guard let last = lastRefreshAt else { return true }
+        return Date().timeIntervalSince(last) > 90
+    }
+
     /// Launch fires two refreshes ~60 ms apart — `AppRoot.task` and the
     /// `scenePhase == .active` handler, which can't be stale-skipped because
     /// `lastRefreshAt` is still nil. That doubled the fan-out to ~24

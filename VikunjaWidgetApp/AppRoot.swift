@@ -8,16 +8,22 @@ private struct OfflinePill: View {
     /// The network says we're online but the last refresh timed out — show it
     /// here rather than as an alert; the cached list is still valid.
     var isReconnecting: Bool = false
+    /// A refresh is in flight and what's on screen predates it enough to be
+    /// worth labelling, rather than silently swapping under the user.
+    var isUpdating: Bool = false
 
     private enum State {
-        case offline, reconnecting, pending
+        case offline, reconnecting, pending, updating
     }
 
     var body: some View {
+        // Pending outranks updating: a queued write the user should know
+        // about beats a routine fetch.
         let state: State? = {
             if !isOnline { return .offline }
             if isReconnecting { return .reconnecting }
             if pendingCount > 0 { return .pending }
+            if isUpdating { return .updating }
             return nil
         }()
 
@@ -41,6 +47,7 @@ private struct OfflinePill: View {
         case .offline: return "wifi.slash"
         case .reconnecting: return "arrow.triangle.2.circlepath"
         case .pending: return "arrow.up.circle"
+        case .updating: return "arrow.clockwise"
         }
     }
 
@@ -49,12 +56,13 @@ private struct OfflinePill: View {
         case .offline: return "Offline"
         case .reconnecting: return "Reconnecting…"
         case .pending: return "\(pendingCount) pending"
+        case .updating: return "Updating…"
         }
     }
 
     private func tint(_ state: State) -> Color {
         switch state {
-        case .offline, .reconnecting: return .secondary
+        case .offline, .reconnecting, .updating: return .secondary
         case .pending: return .orange
         }
     }
@@ -253,7 +261,7 @@ struct AppRoot: View {
                     }
                 }
                 ToolbarItem(placement: .status) {
-                    OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count, isReconnecting: store.transientRefreshFailure)
+                    OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count, isReconnecting: store.transientRefreshFailure, isUpdating: store.isShowingStaleData)
                 }
             }
             .overlay {
@@ -332,7 +340,7 @@ struct AppRoot: View {
                 .help("Bulk Import Tasks")
             }
             ToolbarItem(placement: .status) {
-                OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count, isReconnecting: store.transientRefreshFailure)
+                OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count, isReconnecting: store.transientRefreshFailure, isUpdating: store.isShowingStaleData)
             }
         }
         #endif

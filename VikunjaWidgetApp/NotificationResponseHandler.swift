@@ -6,13 +6,32 @@ final class NotificationResponseHandler: NSObject, UNUserNotificationCenterDeleg
     static let shared = NotificationResponseHandler()
     private override init() {}
 
-    // Show banner + play sound even when the app is in the foreground
+    // Show banner + play sound even when the app is in the foreground — unless the
+    // task the reminder is for was already completed on another device, in which
+    // case there's nothing to remind about.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        completionHandler([.banner, .sound])
+        let userInfo = notification.request.content.userInfo
+        guard notification.request.identifier.hasPrefix("vikunja.reminder."),
+              let taskId = userInfo["taskId"] as? Int, taskId > 0 else {
+            completionHandler([.banner, .sound]); return
+        }
+        Task {
+            // Foreground only, and only when a reminder actually fires — a single
+            // extra request a few times a day at most. Anything other than a clean
+            // "yes, it's done" shows the banner: never swallow a reminder because
+            // the network hiccuped.
+            var options: UNNotificationPresentationOptions = [.banner, .sound]
+            if let task = try? await VikunjaAPI.fetchTask(id: taskId), task.done {
+                DiagnosticLog.info("reminder suppressed: task \(taskId) already done")
+                await ReminderStore.cancel(taskId: taskId, reason: "already done at fire time")
+                options = []
+            }
+            await finish(completionHandler, with: options)
+        }
     }
 
     func userNotificationCenter(
@@ -80,5 +99,14 @@ final class NotificationResponseHandler: NSObject, UNUserNotificationCenterDeleg
     @MainActor
     private func finish(_ completionHandler: @escaping () -> Void) {
         completionHandler()
+    }
+
+    /// Same hazard, same fix, for `willPresent`'s completion handler.
+    @MainActor
+    private func finish(
+        _ completionHandler: @escaping (UNNotificationPresentationOptions) -> Void,
+        with options: UNNotificationPresentationOptions
+    ) {
+        completionHandler(options)
     }
 }

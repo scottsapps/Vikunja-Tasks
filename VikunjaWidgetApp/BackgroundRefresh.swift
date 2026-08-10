@@ -13,10 +13,14 @@ enum BackgroundRefresh {
 
     static func schedule() {
         let request = BGAppRefreshTaskRequest(identifier: taskId)
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 30 * 60)
+        // A floor, not a promise — iOS decides when (or whether) to actually run this
+        // based on usage patterns. 15 min rather than 30 because this poll is the only
+        // backstop for changes made *outside* Veyrn (Vikunja's own web UI, another
+        // client), which the CloudKit nudge in ChangeBeacon.swift can't observe.
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
         do {
             try BGTaskScheduler.shared.submit(request)
-            DiagnosticLog.info("BGTask scheduled (earliest +30 m)")
+            DiagnosticLog.info("BGTask scheduled (earliest +15 m)")
         } catch {
             DiagnosticLog.warn("BGTask schedule failed: \(VeyrnError.logDescription(for: error))")
         }

@@ -36,13 +36,8 @@ enum BackgroundRefresh {
                 task.setTaskCompleted(success: true); return
             }
             do {
-                let projects = try await VikunjaAPI.fetchAllProjects()
-                let tasks = try await VikunjaAPI.fetchAllUndoneTasks(projects: projects)
-                WidgetCache.save(tasks: tasks, projects: projects)
-                await ReminderScheduler.sync(tasks: tasks)
-                WatchSessionProvider.shared.pushSnapshot(tasks: tasks, projects: projects)
-                WidgetCenter.shared.reloadAllTimelines()
-                DiagnosticLog.info("BGTask done: \(tasks.count) tasks, \(DiagnosticLog.elapsed(clock))")
+                let count = try await performSync(reason: "BGTask")
+                DiagnosticLog.info("BGTask done: \(count) tasks, \(DiagnosticLog.elapsed(clock))")
                 task.setTaskCompleted(success: true)
             } catch {
                 DiagnosticLog.warn("BGTask failed: \(VeyrnError.logDescription(for: error))")
@@ -53,6 +48,22 @@ enum BackgroundRefresh {
             DiagnosticLog.warn("BGTask expired")
             work.cancel()
         }
+    }
+
+    /// The full unattended sync: fetch, persist for the widget, reconcile reminders,
+    /// push to the Watch, reload timelines. Deliberately does not touch `TaskStore` —
+    /// a BGTask or push wake launches the whole app, and the foreground
+    /// `refreshIfStale` catches the store up later. Returns the task count.
+    @discardableResult
+    static func performSync(reason: String) async throws -> Int {
+        DiagnosticLog.info("sync start (reason: \(reason))")
+        let projects = try await VikunjaAPI.fetchAllProjects()
+        let tasks = try await VikunjaAPI.fetchAllUndoneTasks(projects: projects)
+        WidgetCache.save(tasks: tasks, projects: projects)
+        await ReminderScheduler.sync(tasks: tasks)
+        WatchSessionProvider.shared.pushSnapshot(tasks: tasks, projects: projects)
+        WidgetCenter.shared.reloadAllTimelines()
+        return tasks.count
     }
 }
 #endif

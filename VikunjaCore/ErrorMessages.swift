@@ -136,6 +136,17 @@ enum VeyrnError {
         ].contains(ns.code)
     }
 
+    /// The connection we were using died mid-request — classically a pooled
+    /// keep-alive the other end had already dropped. Distinct from the rest of
+    /// `isConnectivityOnly` in that it says nothing about whether the network
+    /// works: a fresh request builds a fresh connection and usually gets
+    /// straight through, which is why `send(_:)` retries a GET on it rather
+    /// than reporting it.
+    static func isConnectionLost(_ error: Error) -> Bool {
+        let ns = error as NSError
+        return ns.domain == NSURLErrorDomain && ns.code == NSURLErrorNetworkConnectionLost
+    }
+
     /// Failures worth retrying quietly on the launch path before saying
     /// anything: everything in `isConnectivityOnly`, plus name-resolution and
     /// connection failures, which are common while Wi-Fi or a VPN is still

@@ -117,6 +117,22 @@ enum DiagnosticLog {
         return formatSeconds(wall)
     }
 
+    /// Whether the process was frozen — macOS system sleep, or iOS suspending
+    /// a backgrounded app — at any point while `stopwatch` was running.
+    ///
+    /// Same two signals and the same thresholds as `elapsed(_:)`, deliberately:
+    /// a caller that acts on this can never contradict the duration printed
+    /// next to it. The reason anything wants to *act* on it is that a URL
+    /// request in flight when the machine sleeps comes back dead on wake —
+    /// `timeoutIntervalForResource` is a wall-clock deadline and it counts the
+    /// sleep — which is a request that needs asking again, not a failure worth
+    /// reporting.
+    static func wasFrozen(during stopwatch: Stopwatch) -> Bool {
+        let wall = Date().timeIntervalSince(stopwatch.wallStart)
+        let awake = ProcessInfo.processInfo.systemUptime - stopwatch.awakeStart
+        return (wall - awake) > 2 || suspensionEpoch != stopwatch.epochStart
+    }
+
     private static func formatSeconds(_ seconds: TimeInterval) -> String {
         seconds < 1
             ? String(format: "%.0f ms", seconds * 1000)

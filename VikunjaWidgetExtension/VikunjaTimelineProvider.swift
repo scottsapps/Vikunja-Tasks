@@ -224,14 +224,31 @@ struct VikunjaTimelineProvider: TimelineProvider {
 
 private struct WidgetTimeoutError: Error {}
 
+/// Races `op` against a **wall-clock** deadline.
+///
+/// The deadline has to be wall-clock because a single `Task.sleep` for the
+/// whole duration does not advance while the Mac is asleep, so it never fires
+/// for the one case that most needs it. On build 74 a timeline request that
+/// began just before a closed-lid sleep stayed outstanding for 17½ minutes
+/// against this supposed 10 s cap, and the extension was killed before it
+/// could fall back to the stale cache — so WidgetKit got no entry *and* no
+/// reload policy, which is a widget that stops updating until something else
+/// pokes it.
+///
+/// Sleeping in short hops instead fixes that: the tick doesn't advance during
+/// system sleep either, but the first one after the machine wakes compares
+/// against `Date()`, sees the deadline long gone, and gives up immediately.
 private func withTimeout<T: Sendable>(
     seconds: TimeInterval,
     _ op: @escaping @Sendable () async throws -> T
 ) async throws -> T {
-    try await withThrowingTaskGroup(of: T.self) { group in
+    let deadline = Date().addingTimeInterval(seconds)
+    return try await withThrowingTaskGroup(of: T.self) { group in
         group.addTask { try await op() }
         group.addTask {
-            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            while Date() < deadline {
+                try await Task.sleep(nanoseconds: 250_000_000)
+            }
             throw WidgetTimeoutError()
         }
         let result = try await group.next()!

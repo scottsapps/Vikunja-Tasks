@@ -35,8 +35,17 @@ enum VikunjaAPI {
     /// - A gateway error (502/503/504) came from a proxy or CDN that couldn't
     ///   reach Vikunja. The request never arrived, so it says nothing at all
     ///   about v2 support.
+    /// - A connectivity failure — overwhelmingly a request the machine slept
+    ///   through — likewise never reached a server that could have had an
+    ///   opinion about v2. Retrying it on v1 is actively harmful: it drops the
+    ///   refresh onto the per-project fan-out, 17–18 requests where v2 needs 4,
+    ///   which is the path with the whole stall history. Build 74's overnight
+    ///   log downgraded 21 times this way, and the fan-out then got caught by
+    ///   the *next* sleep, turning one dead request into a failed refresh.
     private static func v1FallbackIsPointless(_ error: Error) -> Bool {
-        VeyrnError.isCancellation(error) || VeyrnError.isGatewayFailure(error)
+        VeyrnError.isCancellation(error)
+            || VeyrnError.isGatewayFailure(error)
+            || VeyrnError.isConnectivityOnly(error)
     }
 
     // MARK: - Projects
@@ -844,45 +853,93 @@ enum VikunjaAPI {
     ) async throws -> (Data, HTTPURLResponse) {
         let method = request.httpMethod ?? "GET"
         let path = request.url?.path ?? "?"
-        let stopwatch = DiagnosticLog.Stopwatch()
-        // Per-request delegate purely to collect metrics; see `phaseSummary`.
-        let metrics = MetricsCollector()
 
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await session.data(for: request, delegate: metrics)
-        } catch {
-            let elapsed = DiagnosticLog.elapsed(stopwatch)
-            let line = "✗ \(VeyrnError.logDescription(for: error)) \(method) \(path) (\(elapsed)) \(metrics.phaseSummary())"
-            // A cancelled request is expected — we quit, switched accounts, or
-            // a task group tore down its siblings. Logging it at ERROR made
-            // routine teardown read as failure.
-            if VeyrnError.isCancellation(error) {
-                DiagnosticLog.info(line)
-            } else {
-                DiagnosticLog.error(line)
+        // Two failures here are not really failures, and both are repaired by
+        // simply asking again:
+        //
+        // 1. **We were frozen for it.** `timeoutIntervalForResource` is a
+        //    wall-clock deadline and it counts time the machine spent asleep,
+        //    so a request in flight when a Mac sleeps is failed the moment it
+        //    wakes, however healthy the network. Not a rare edge: build 74's
+        //    overnight Mac log had 94 of these and *not one* had spent 20 s of
+        //    awake time against the 25 s ceiling (longest 18.2 s, most under
+        //    6 s). A closed laptop on a dock hits it every poll cycle.
+        // 2. **The pooled connection died under us** (`networkConnectionLost`).
+        //    A fresh request builds a new connection and gets through; the same
+        //    iOS log shows one on a reused HTTP/3 connection, failing at 8.8 s
+        //    with the response never completing, immediately after which an
+        //    organic refresh succeeded in ~1 s.
+        //
+        // Deliberately **not** retried: a timeout that ran while awake. That
+        // one already spent the entire resource budget establishing that the
+        // network isn't answering, and a second pass just makes the user wait
+        // 50 s for the same answer instead of 25.
+        //
+        // **GETs only.** A mutation that failed may perfectly well have landed
+        // on the server; replaying it could double-create or double-toggle.
+        // Same reasoning that keeps v2 mutations from falling back to v1 — a
+        // transport failure says nothing about whether the write applied. One
+        // extra pass, too: failing the retry the same way is a real failure
+        // for the caller to handle.
+        let retryAllowed = (method == "GET")
+        var retried = false
+
+        while true {
+            let stopwatch = DiagnosticLog.Stopwatch()
+            // Per-request delegate purely to collect metrics; see `phaseSummary`.
+            let metrics = MetricsCollector()
+
+            let data: Data
+            let response: URLResponse
+            do {
+                (data, response) = try await session.data(for: request, delegate: metrics)
+            } catch {
+                let elapsed = DiagnosticLog.elapsed(stopwatch)
+                // The freeze check is what narrows case 1 from "any
+                // connectivity blip" to "we were frozen for it": both hold.
+                let frozenThroughIt = VeyrnError.isConnectivityOnly(error)
+                    && DiagnosticLog.wasFrozen(during: stopwatch)
+                let willRetry = (frozenThroughIt || VeyrnError.isConnectionLost(error))
+                    && retryAllowed && !retried
+
+                let line = "✗ \(VeyrnError.logDescription(for: error)) \(method) \(path) (\(elapsed)) \(metrics.phaseSummary())"
+                    + (willRetry ? " — retrying" : "")
+                // A cancelled request is expected — we quit, switched accounts,
+                // or a task group tore down its siblings. Logging it at ERROR
+                // made routine teardown read as failure. A request we're about
+                // to reissue isn't a failure either, and logging it as one
+                // buried the real errors in a night's worth of sleep noise.
+                if VeyrnError.isCancellation(error) || willRetry {
+                    DiagnosticLog.info(line)
+                } else {
+                    DiagnosticLog.error(line)
+                }
+
+                if willRetry {
+                    retried = true
+                    continue
+                }
+                throw error
             }
-            throw error
-        }
 
-        let elapsed = DiagnosticLog.elapsed(stopwatch)
-        guard let http = response as? HTTPURLResponse else {
-            DiagnosticLog.error("✗ non-HTTP response \(method) \(path) (\(elapsed))")
-            throw APIError.badStatus(-1)
-        }
-        let noChange = acceptingNotModified && http.statusCode == 304
-        guard (200...299).contains(http.statusCode) || noChange else {
-            DiagnosticLog.warn("← \(http.statusCode) \(method) \(path) (\(elapsed)) \(metrics.phaseSummary())")
-            throw APIError.badStatus(http.statusCode)
-        }
+            let elapsed = DiagnosticLog.elapsed(stopwatch)
+            guard let http = response as? HTTPURLResponse else {
+                DiagnosticLog.error("✗ non-HTTP response \(method) \(path) (\(elapsed))")
+                throw APIError.badStatus(-1)
+            }
+            let noChange = acceptingNotModified && http.statusCode == 304
+            guard (200...299).contains(http.statusCode) || noChange else {
+                DiagnosticLog.warn("← \(http.statusCode) \(method) \(path) (\(elapsed)) \(metrics.phaseSummary())")
+                throw APIError.badStatus(http.statusCode)
+            }
 
-        if method == "GET" {
-            bumpRequestCounter(bytes: data.count)
-        } else {
-            DiagnosticLog.info("← \(http.statusCode) \(method) \(path) (\(elapsed))\(noChange ? " no change" : "")")
+            if method == "GET" {
+                bumpRequestCounter(bytes: data.count)
+            } else {
+                DiagnosticLog.info("← \(http.statusCode) \(method) \(path) (\(elapsed))\(noChange ? " no change" : "")")
+            }
+            return (data, http)
         }
-        return (data, http)
     }
 
     // MARK: - Request batch counters (for TaskStore.refresh()'s summary line)

@@ -102,7 +102,18 @@ final class TaskStore {
     /// one extra task for a full poll cycle. One follow-up pass is enough;
     /// anything arriving during the follow-up sets the flag again for the next
     /// caller rather than looping here.
-    private var coalescedRefreshReason: String?
+    ///
+    /// **Carries the queued caller's own flags, not the in-flight one's.**
+    /// They genuinely differ — the 60 s poll, the post-drain catch-up and the
+    /// nudge are `background: true`, while pull-to-refresh, settings-save and
+    /// `scenePhase → active` are not — and reusing the running refresh's flags
+    /// got the alert policy backwards in both directions: an unattended poll
+    /// that landed during a manual refresh could raise a modal alert on a 502
+    /// (the `isGatewayFailure` invariant says it must not), and a manual
+    /// refresh that landed during a poll had its errors silently demoted to
+    /// the pill. Both are observable in the 2026-08-10 iOS log, which coalesces
+    /// scenePhase into poll and manual into scenePhase within one minute.
+    private var coalescedRefresh: (reason: String, deferAlert: Bool, background: Bool)?
 
     /// `background` marks a refresh nobody asked for — the 60s poll and the
     /// post-drain catch-up. Nothing is waiting on the result and the cached
@@ -114,7 +125,15 @@ final class TaskStore {
             return
         }
         guard !isRefreshing else {
-            coalescedRefreshReason = reason
+            // Several callers can queue behind one refresh, and the single
+            // follow-up pass stands in for all of them — so it may only stay
+            // quiet if *every* one of them was willing to be. The newest
+            // reason wins for the log line; the flags are the conjunction.
+            coalescedRefresh = (
+                reason: reason,
+                deferAlert: (coalescedRefresh?.deferAlert ?? true) && deferAlert,
+                background: (coalescedRefresh?.background ?? true) && background
+            )
             DiagnosticLog.info("refresh coalesced (reason: \(reason)) — one already in flight")
             return
         }
@@ -124,9 +143,13 @@ final class TaskStore {
         await performRefresh(deferAlert: deferAlert, background: background, reason: reason)
 
         // Still inside `isRefreshing`, so this can't start a third pass.
-        if let queued = coalescedRefreshReason {
-            coalescedRefreshReason = nil
-            await performRefresh(deferAlert: deferAlert, background: background, reason: "\(queued), coalesced")
+        if let queued = coalescedRefresh {
+            coalescedRefresh = nil
+            await performRefresh(
+                deferAlert: queued.deferAlert,
+                background: queued.background,
+                reason: "\(queued.reason), coalesced"
+            )
         }
     }
 

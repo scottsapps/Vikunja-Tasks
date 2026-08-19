@@ -28,3 +28,29 @@ extension Color {
         return L > 0.179 ? .black : .white
     }
 }
+
+/// Presentation for Vikunja's 1–5 priority scale, shared by the app's task rows
+/// and the widget rows so both name and color a priority identically.
+enum PriorityStyle {
+    /// Compact chip text ("" for priority 0 / unset, which callers should not render).
+    static func shortLabel(_ p: Int) -> String {
+        switch p {
+        case 1: return "Low"
+        case 2: return "Med"
+        case 3: return "High"
+        case 4: return "Urgent"
+        case 5: return "Critical"
+        default: return ""
+        }
+    }
+
+    static func color(_ p: Int) -> Color {
+        switch p {
+        case 1: return .secondary
+        case 2: return .blue
+        case 3: return .orange
+        case 4, 5: return .red
+        default: return .secondary
+        }
+    }
+}

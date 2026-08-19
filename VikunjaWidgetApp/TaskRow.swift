@@ -104,12 +104,12 @@ struct TaskRow: View {
                 }
 
                 if let pri = task.priority, pri > 0 {
-                    Text(priorityShortLabel(pri))
+                    Text(PriorityStyle.shortLabel(pri))
                         .font(.system(size: CGFloat(10 + max(fs, 0))))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
-                        .background(priorityColor(pri).opacity(0.12))
-                        .foregroundStyle(priorityColor(pri))
+                        .background(PriorityStyle.color(pri).opacity(0.12))
+                        .foregroundStyle(PriorityStyle.color(pri))
                         .clipShape(Capsule())
                 }
 
@@ -144,29 +144,6 @@ struct TaskRow: View {
         return Text(label)
             .font(.system(size: CGFloat(10 + max(fs, 0))))
             .foregroundStyle(isOverdue ? .red : .secondary)
-    }
-
-    // MARK: - Priority helpers
-
-    private func priorityShortLabel(_ p: Int) -> String {
-        switch p {
-        case 1: return "Low"
-        case 2: return "Med"
-        case 3: return "High"
-        case 4: return "Urgent"
-        case 5: return "Critical"
-        default: return ""
-        }
-    }
-
-    private func priorityColor(_ p: Int) -> Color {
-        switch p {
-        case 1: return .secondary
-        case 2: return .blue
-        case 3: return .orange
-        case 4, 5: return .red
-        default: return .secondary
-        }
     }
 
     // MARK: - Background

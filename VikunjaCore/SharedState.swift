@@ -7,6 +7,9 @@ struct PendingUndo: Codable {
     let tags: [String]
     let dueDate: Date
     let completedAt: Date
+    // Optional so undo entries written by an older build still decode after an update.
+    var priority: Int?
+    var hasReminder: Bool?
 }
 
 // Stores recently-completed tasks so the widget can show a brief undo window.

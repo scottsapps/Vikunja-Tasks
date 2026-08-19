@@ -12,6 +12,8 @@ struct CompleteTaskIntent: AppIntent {
     @Parameter(title: "Project") var projectName: String
     @Parameter(title: "Tags") var tags: [String]
     @Parameter(title: "Due Date") var dueDate: Date
+    @Parameter(title: "Priority") var priority: Int
+    @Parameter(title: "Has Reminder") var hasReminder: Bool
 
     init() {}
 
@@ -21,6 +23,8 @@ struct CompleteTaskIntent: AppIntent {
         self.projectName = item.projectName
         self.tags = item.tags
         self.dueDate = item.dueDate
+        self.priority = item.priority
+        self.hasReminder = item.hasReminder
     }
 
     func perform() async throws -> some IntentResult {
@@ -43,7 +47,9 @@ struct CompleteTaskIntent: AppIntent {
             projectName: projectName,
             tags: tags,
             dueDate: dueDate,
-            completedAt: Date()
+            completedAt: Date(),
+            priority: priority,
+            hasReminder: hasReminder
         ))
         WidgetCenter.shared.reloadAllTimelines()
         return .result()

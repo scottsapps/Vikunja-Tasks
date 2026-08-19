@@ -32,6 +32,13 @@ struct VikunjaTask: Codable {
         return ISO8601DateFormatter().date(from: str)
     }
 
+    /// True while at least one reminder is still ahead of us. Fired reminders stop
+    /// counting, so an overdue task doesn't keep advertising a ping that already came.
+    var hasFutureReminder: Bool {
+        let now = Date()
+        return reminders?.contains { ($0.date ?? .distantPast) > now } ?? false
+    }
+
     var updatedDate: Date? {
         guard let str = updated else { return nil }
         return ISO8601DateFormatter().date(from: str)

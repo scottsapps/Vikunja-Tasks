@@ -9,6 +9,10 @@ struct TaskEntryItem: Identifiable, Codable {
     let projectName: String
     let tags: [String]
     let dueDate: Date
+    /// Vikunja's 1–5 scale; 0 (or nil upstream) means no priority and draws no chip.
+    var priority: Int = 0
+    /// True when the task still has a reminder in the future — drives the bell glyph.
+    var hasReminder: Bool = false
     var isPendingUndo: Bool = false
 }
 
@@ -29,11 +33,11 @@ struct VikunjaEntry: TimelineEntry {
         date: Date(),
         taskGroups: [
             TaskGroup(label: "Today", tasks: [
-                TaskEntryItem(id: 1, title: "Review project proposal", projectName: "Work", tags: ["urgent"], dueDate: Date()),
+                TaskEntryItem(id: 1, title: "Review project proposal", projectName: "Work", tags: ["urgent"], dueDate: Date(), priority: 3, hasReminder: true),
                 TaskEntryItem(id: 2, title: "Schedule dentist", projectName: "Personal", tags: [], dueDate: Date()),
             ]),
             TaskGroup(label: "Tomorrow", tasks: [
-                TaskEntryItem(id: 3, title: "Call insurance company", projectName: "Finance", tags: [], dueDate: Date()),
+                TaskEntryItem(id: 3, title: "Call insurance company", projectName: "Finance", tags: [], dueDate: Date(), priority: 1),
             ]),
         ],
         error: nil,

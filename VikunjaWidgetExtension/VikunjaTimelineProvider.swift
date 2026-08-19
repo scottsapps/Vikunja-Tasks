@@ -142,13 +142,17 @@ struct VikunjaTimelineProvider: TimelineProvider {
                 title: task.title,
                 projectName: projectMap[task.projectId] ?? "Inbox",
                 tags: task.labels?.map(\.title) ?? [],
-                dueDate: dueDate
+                dueDate: dueDate,
+                priority: task.priority ?? 0,
+                hasReminder: task.hasFutureReminder
             )
         }
 
         let undoItems = pendingUndos.map {
             TaskEntryItem(id: $0.taskId, title: $0.title, projectName: $0.projectName,
-                          tags: $0.tags, dueDate: $0.dueDate, isPendingUndo: true)
+                          tags: $0.tags, dueDate: $0.dueDate,
+                          priority: $0.priority ?? 0, hasReminder: $0.hasReminder ?? false,
+                          isPendingUndo: true)
         }
         allItems.append(contentsOf: undoItems)
         return allItems

@@ -42,7 +42,15 @@ struct TaskRowView: View {
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
+            // Metadata line: bell (if a reminder is still pending), project, labels, priority.
             HStack(spacing: 5) {
+                if task.hasReminder {
+                    Image(systemName: "bell.fill")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("Reminder set")
+                }
+
                 Text(task.projectName)
                     .font(.system(size: 9))
                     .foregroundStyle(.secondary)
@@ -56,7 +64,18 @@ struct TaskRowView: View {
                         .foregroundStyle(Color.accentColor)
                         .clipShape(Capsule())
                 }
+
+                if task.priority > 0 {
+                    Text(PriorityStyle.shortLabel(task.priority))
+                        .font(.system(size: 8))
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(PriorityStyle.color(task.priority).opacity(0.12))
+                        .foregroundStyle(PriorityStyle.color(task.priority))
+                        .clipShape(Capsule())
+                }
             }
+            .lineLimit(1)
         }
     }
 }

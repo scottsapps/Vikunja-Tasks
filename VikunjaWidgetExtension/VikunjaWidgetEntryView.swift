@@ -22,15 +22,18 @@ struct VikunjaWidgetEntryView: View {
         return inset(by: 8, 8)
         #else
         switch family {
-        // The one family that spends some of the reclaimed margins rather than
-        // putting them all back. 12 pt is the balance point, measured: the
-        // system's own ~16 pt leaves room for only two tasks on a 338 x 158
-        // canvas, while going below ~8 pt buys a fourth task at the cost of
-        // margins visibly tighter than Weather's or Fantastical's. 12 pt reads
-        // as a normal widget and still fits three tasks on the smallest medium
-        // canvas and four on the largest — and the pager reaches the rest.
+        // Left and right match `.systemLarge` exactly — the wide gutter is what
+        // makes the large widget look right, and a medium widget that keeps its
+        // own tighter one next to it reads as a mistake. It costs a task per
+        // page (the narrower text column wraps more titles), which is a trade
+        // paging is here to cover.
+        //
+        // Vertical stays tighter, because that is the axis that buys rows:
+        // measured on a 364 x 170 canvas, 12 pt fits 3 tasks and the large
+        // widget's 24 pt fits 2. 12 pt top and bottom reads fine.
         case .systemMedium:
-            return EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)
+            return EdgeInsets(top: 12, leading: systemMargins.leading + 12,
+                              bottom: 12, trailing: systemMargins.trailing + 12)
         case .accessoryRectangular, .accessoryCircular, .accessoryInline:
             return systemMargins
         default:

@@ -11,6 +11,10 @@ skill/
 # Personal Claude Code tooling (skill drift check, hooks)
 .claude/
 
+# App Store screenshot rig (personal tooling; not for forks)
+screenshots/
+VeyrnShots.*
+
 # Xcode
 *.xcuserstate
 xcuserdata/

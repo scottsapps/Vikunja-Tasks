@@ -11,12 +11,17 @@ struct VikunjaWidget: Widget {
         .configurationDisplayName("Veyrn Tasks")
         .description("Upcoming tasks from your Veyrn instance.")
         .supportedFamilies(supportedFamilies)
+        // The system's default content margins (~16 pt a side) cost the medium
+        // widget more than a task row of height and enough width to wrap
+        // titles that would otherwise sit on one line. The entry view applies
+        // its own insets instead — see VikunjaWidgetEntryView.contentPadding,
+        // which re-applies the system values for every family but medium.
+        .contentMarginsDisabled()
     }
 
     private var supportedFamilies: [WidgetFamily] {
         #if os(iOS)
         return [
-            .systemSmall,
             .systemMedium,
             .systemLarge,
             .accessoryRectangular,

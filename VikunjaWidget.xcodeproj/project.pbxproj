@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		019D59D918213D3F9145465E /* NeedsSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87BF624222F4F03626A5979F /* NeedsSetupView.swift */; };
+		0552930DC4354AF4D1DD747B /* ShowPageIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCAB807C9E47E2B94A336D38 /* ShowPageIntent.swift */; };
 		06026FB1769E4DFB3D3207A1 /* CompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56EB3BD825210E0BC7DDD877 /* CompleteTaskIntent.swift */; };
 		06EC0B89C05871F841685153 /* FontSizeEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D2233282108571CCBCFADE2 /* FontSizeEnvironment.swift */; };
 		080972CD0F9BCBCF4AEC18EF /* RichTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CA81C31B42689E6607E4330 /* RichTextEditor.swift */; };
@@ -50,6 +51,7 @@
 		310718550B72AF290231DFB1 /* VeyrnWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8A7A2EFFA46669CADDC125B /* VeyrnWatchApp.swift */; };
 		33211BD2FE2B40D1ED2CD4B2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3DA4F4CFBB26B3E8AB8F9F4 /* SettingsView.swift */; };
 		34BE0CEDD53EE2181A01F21A /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F88B5A5977A4665065232F /* FlowLayout.swift */; };
+		3537CE2B2B27A5696BC8D110 /* WidgetPageState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D3D5CA4D4C4BC81BDF1AC44 /* WidgetPageState.swift */; };
 		35D67E2B2CFB22FE43F07F69 /* WatchWidgetProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB0B0D0A0BF988D3D00D46A /* WatchWidgetProvider.swift */; };
 		36D8F12A34013B52B603819F /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 68C6E7BB60EBB7C6C225DFAE /* AppIntents.framework */; };
 		371D2987193288C64379051C /* VeyrnTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55A53B67DF4D3C4E9B1789F8 /* VeyrnTelemetry.swift */; };
@@ -57,6 +59,7 @@
 		39D7FDFFA081DFF31787DBB8 /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
 		3A07D9BD742BFA923FE07562 /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02DFECBCB1BD52DDACF60742 /* BackgroundRefresh.swift */; };
 		3B1C3BDF5AF9E198D17FB79B /* LogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD6802321CF98C91D0FC1142 /* LogbookView.swift */; };
+		3D116DD903447E6F2B86551C /* ShowPageIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCAB807C9E47E2B94A336D38 /* ShowPageIntent.swift */; };
 		3D510CE375C0F14F755AC0C1 /* WatchRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F50C8AD74D69618B165D0A4 /* WatchRootView.swift */; };
 		3E1490212891E0F234F840AF /* RichTextUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E14A86ED969A63033CECCD3 /* RichTextUtils.swift */; };
 		426140361E8189D111CEC188 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
@@ -91,6 +94,7 @@
 		6DB17204AFD0DBEC7C3FDA3D /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A112CB4533D5AB9D9D4361D /* ReminderScheduler.swift */; };
 		6DCD794156056ABC0B0ED673 /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
 		6DF6675026F90FB69C086C79 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FF9B209536157736A98A9B /* TokenStore.swift */; };
+		6E741F0CFF30CD99F6CC9791 /* WidgetPageState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D3D5CA4D4C4BC81BDF1AC44 /* WidgetPageState.swift */; };
 		6F03EC65CB9B61738FA4D04D /* WatchTaskRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F649163D6741E497E12DA87 /* WatchTaskRow.swift */; };
 		718E10F7317C56D4E583A48D /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E38CA1B0723B492B073EAE3 /* SharedState.swift */; };
 		71B7452B98221EB08721646D /* LogViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58D5363164D9E1B03D079B04 /* LogViewerView.swift */; };
@@ -325,6 +329,7 @@
 		59CE9102E8DBF8AF63CD0CB4 /* AccountEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountEditorView.swift; sourceTree = "<group>"; };
 		5A112CB4533D5AB9D9D4361D /* ReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduler.swift; sourceTree = "<group>"; };
 		5D1C8F0A7257D6E7B0C47ED9 /* AccountListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountListView.swift; sourceTree = "<group>"; };
+		5D3D5CA4D4C4BC81BDF1AC44 /* WidgetPageState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPageState.swift; sourceTree = "<group>"; };
 		61D23F47FA0737597537CAE8 /* VikunjaWidgetWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VikunjaWidgetWatch.entitlements; sourceTree = "<group>"; };
 		6310D2E398EF259266307AA4 /* Reachability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reachability.swift; sourceTree = "<group>"; };
 		6413699055632BF2AF310ADC /* ShortcutRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRouter.swift; sourceTree = "<group>"; };
@@ -389,6 +394,7 @@
 		FA38A15AD8E4DE861575A44A /* VikunjaWidgetExtensionIOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VikunjaWidgetExtensionIOS.entitlements; sourceTree = "<group>"; };
 		FB82D40CDF612A9CCA6F58D9 /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
 		FC3F9516276D9763A9C0638D /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
+		FCAB807C9E47E2B94A336D38 /* ShowPageIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowPageIntent.swift; sourceTree = "<group>"; };
 		FD6802321CF98C91D0FC1142 /* LogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -554,6 +560,7 @@
 				56EB3BD825210E0BC7DDD877 /* CompleteTaskIntent.swift */,
 				CF8B4FEA6398C4A45FDC332F /* Info.plist */,
 				7E2A53ED8DB6BC3CCBC225B2 /* InfoIOS.plist */,
+				FCAB807C9E47E2B94A336D38 /* ShowPageIntent.swift */,
 				AC0EC5DA80C84EAC14606DF3 /* TaskRowView.swift */,
 				C4E12C5D7A535480216299E3 /* UndoCompleteTaskIntent.swift */,
 				E5AA1613FD9623F81CF2764F /* VikunjaTimelineProvider.swift */,
@@ -562,6 +569,7 @@
 				E9C99228536A9FE55ED18DA4 /* VikunjaWidgetExtension.entitlements */,
 				FA38A15AD8E4DE861575A44A /* VikunjaWidgetExtensionIOS.entitlements */,
 				29F335043FC5DF87CC85EE67 /* WidgetModels.swift */,
+				5D3D5CA4D4C4BC81BDF1AC44 /* WidgetPageState.swift */,
 			);
 			path = VikunjaWidgetExtension;
 			sourceTree = "<group>";
@@ -927,6 +935,7 @@
 				48A4464D2836251DD0D4CADE /* ReminderStore.swift in Sources */,
 				0D05C8A2A2215D665C51970A /* RichTextUtils.swift in Sources */,
 				718E10F7317C56D4E583A48D /* SharedState.swift in Sources */,
+				3D116DD903447E6F2B86551C /* ShowPageIntent.swift in Sources */,
 				97AAC28FA52B79FBC01E7E6B /* TaskMerger.swift in Sources */,
 				89EBCE16EFFEFDB7F95BEA06 /* TaskRowView.swift in Sources */,
 				6DF6675026F90FB69C086C79 /* TokenStore.swift in Sources */,
@@ -939,6 +948,7 @@
 				BE9D7675A68505B3AF04B593 /* VikunjaWidgetEntryView.swift in Sources */,
 				E564F6DAB482EF7BE88FD653 /* WidgetCache.swift in Sources */,
 				28BAB5903426413D3EF9FEA2 /* WidgetModels.swift in Sources */,
+				6E741F0CFF30CD99F6CC9791 /* WidgetPageState.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1015,6 +1025,7 @@
 				BAEFC3AB06153164511C1B37 /* ReminderStore.swift in Sources */,
 				A67288DFB2D8348FBD79AAB7 /* RichTextUtils.swift in Sources */,
 				6AE4426F1C4EA1A3091BDFCD /* SharedState.swift in Sources */,
+				0552930DC4354AF4D1DD747B /* ShowPageIntent.swift in Sources */,
 				088C68EEFC872A273BE81EF9 /* TaskMerger.swift in Sources */,
 				19869DC7FA0480C06F4BDC02 /* TaskRowView.swift in Sources */,
 				6155C1270C5CA6F128D0515B /* TokenStore.swift in Sources */,
@@ -1027,6 +1038,7 @@
 				72226A5E79207AE181B16849 /* VikunjaWidgetEntryView.swift in Sources */,
 				5697B9BF68F3C53AD38D84D1 /* WidgetCache.swift in Sources */,
 				484BCB3C1775B98410DFC6DE /* WidgetModels.swift in Sources */,
+				3537CE2B2B27A5696BC8D110 /* WidgetPageState.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1222,7 +1234,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 78;
+				CURRENT_PROJECT_VERSION = 79;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1452,7 +1464,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 78;
+				CURRENT_PROJECT_VERSION = 79;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;

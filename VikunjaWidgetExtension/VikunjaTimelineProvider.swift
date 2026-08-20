@@ -27,7 +27,8 @@ struct VikunjaTimelineProvider: TimelineProvider {
             if !active.isEmpty {
                 let earliestCompletion = active.map(\.completedAt).min()!
                 let cleanAt = earliestCompletion.addingTimeInterval(SharedState.undoWindow + 0.5)
-                entries.append(VikunjaEntry(date: cleanAt, taskGroups: entry.taskGroups, error: nil, todayCount: entry.todayCount))
+                entries.append(VikunjaEntry(date: cleanAt, taskGroups: entry.taskGroups, error: nil,
+                                            todayCount: entry.todayCount, pageOffset: entry.pageOffset))
                 policy = .after(cleanAt)
                 DiagnosticLog.info("reload policy: after \(String(format: "%.1f", SharedState.undoWindow + 0.5)) s (undo)")
             } else {
@@ -105,18 +106,32 @@ struct VikunjaTimelineProvider: TimelineProvider {
     private func entry(tasks: [VikunjaTask], projects: [VikunjaProject], family: WidgetFamily) -> VikunjaEntry {
         let allItems = makeItems(tasks: tasks, projects: projects)
         let grouped = group(allItems)
+
+        // Paging. The offset expires on its own (see WidgetPageState), and is
+        // clamped here as well: tasks completed on a later page can shrink the
+        // list out from under it, and a page past the end would render empty.
+        let familyKey = String(describing: family)
+        var offset = WidgetPageState.offset(for: familyKey)
+        if offset >= grouped.reduce(0, { $0 + $1.tasks.count }) {
+            if offset > 0 { WidgetPageState.reset(for: familyKey) }
+            offset = 0
+        }
+        let page = offset > 0 ? TaskGroup.drop(grouped, first: offset) : grouped
+
         return VikunjaEntry(
             date: Date(),
-            taskGroups: fit(grouped, family: family),
+            taskGroups: cap(page, family: family),
             error: nil,
-            todayCount: todayCount(allItems)
+            todayCount: todayCount(allItems),
+            pageOffset: offset
         )
     }
 
     private func loggedEntry(tasks: [VikunjaTask], projects: [VikunjaProject], family: WidgetFamily) -> VikunjaEntry {
         let e = entry(tasks: tasks, projects: projects, family: family)
         let itemCount = e.taskGroups.reduce(0) { $0 + $1.tasks.count }
-        DiagnosticLog.info("entry: \(itemCount) items in \(e.taskGroups.count) groups")
+        let page = e.pageOffset > 0 ? ", from offset \(e.pageOffset)" : ""
+        DiagnosticLog.info("entry: \(itemCount) items in \(e.taskGroups.count) groups\(page)")
         return e
     }
 
@@ -181,46 +196,24 @@ struct VikunjaTimelineProvider: TimelineProvider {
             if day == today { label = "Today" }
             else if day == tomorrow { label = "Tomorrow" }
             else { label = fmt.string(from: day) }
-            return TaskGroup(label: label, tasks: sorted)
+            return TaskGroup(label: label, tasks: sorted, isToday: day == today)
         }
     }
 
-    // The widget canvas is a fixed height, so cap by estimated points, not a
-    // flat task count: every section header costs ~a row and every wrapped
-    // (2-line) title costs ~1.5 rows. A flat cap overflowed the canvas
-    // whenever tasks spread across many date sections, blowing through the
-    // top/bottom margins (and an oversized layout can fail to render at all).
-    private func fit(_ groups: [TaskGroup], family: WidgetFamily) -> [TaskGroup] {
-        let budget: CGFloat
+    // Upper bound only. The canvas is a fixed height, but how much of it a
+    // task costs depends on the device's widget size and on whether the title
+    // wraps, so the *fitting* is done by the entry view with `ViewThatFits`,
+    // which measures real laid-out rows instead of estimating points. This
+    // just keeps the entry (and the archived view, which carries one candidate
+    // layout per count) from growing without bound: enough rows to overfill
+    // the largest canvas, and no more.
+    private func cap(_ groups: [TaskGroup], family: WidgetFamily) -> [TaskGroup] {
+        let maxItems: Int
         switch family {
-        case .systemSmall: budget = 108
-        case .systemMedium: budget = 118
-        default: budget = 296
+        case .systemMedium: maxItems = 8
+        default: maxItems = 12
         }
-        // Rough chars-per-line for the 12pt title before it wraps to 2 lines.
-        let wrapThreshold = family == .systemSmall ? 14 : 40
-
-        var used: CGFloat = 0
-        var result: [TaskGroup] = []
-        for group in groups {
-            let headerHeight: CGFloat = result.isEmpty ? 15 : 23
-            var visible: [TaskEntryItem] = []
-            for task in group.tasks {
-                let titleLines: CGFloat = task.title.count > wrapThreshold ? 2 : 1
-                let rowHeight = titleLines * 15 + 17  // title + spacing + project/tag line + row padding
-                let cost = visible.isEmpty ? headerHeight + rowHeight : rowHeight
-                if used + cost > budget {
-                    if !visible.isEmpty {
-                        result.append(TaskGroup(label: group.label, tasks: visible))
-                    }
-                    return result
-                }
-                used += cost
-                visible.append(task)
-            }
-            result.append(TaskGroup(label: group.label, tasks: visible))
-        }
-        return result
+        return TaskGroup.prefix(groups, limit: maxItems)
     }
 }
 

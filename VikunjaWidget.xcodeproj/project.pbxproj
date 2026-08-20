@@ -79,6 +79,7 @@
 		6345DDA30EF587C5BF734506 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */; };
 		641CD4F1D55148493E046E6C /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
 		6430B665E4290AADDF65373D /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
+		655A40F08CFE7B13401ABA9E /* TaskListToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7DC827A35B5C2F5E7545A65 /* TaskListToolbar.swift */; };
 		66830DEDFCEE3994EE19D447 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = 492A5C2F14D15C60B3380285 /* TelemetryDeck */; };
 		66A65A39450D46B75FFAFDDD /* VikunjaTimelineProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5AA1613FD9623F81CF2764F /* VikunjaTimelineProvider.swift */; };
 		6848CC6B84948D92D155FE3A /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
@@ -96,6 +97,7 @@
 		72226A5E79207AE181B16849 /* VikunjaWidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */; };
 		73A46D89CE623AB28A39F2E9 /* Sidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32CFE246FC70A61041EF6E4C /* Sidebar.swift */; };
 		770E0ED2F26991B6FAAF99E5 /* NotificationResponseHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 097AE4727EE099A83DE65940 /* NotificationResponseHandler.swift */; };
+		7721A374AB63FF1187107DFA /* TaskListToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7DC827A35B5C2F5E7545A65 /* TaskListToolbar.swift */; };
 		7A7C13B41F052C0A061CD460 /* QuickAddParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 575C0A574F52F869DB4CA643 /* QuickAddParser.swift */; };
 		7C1C97B0D5E7933FDEE49667 /* UndoCompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E12C5D7A535480216299E3 /* UndoCompleteTaskIntent.swift */; };
 		7C4457BE79D282FB1EB9FB65 /* NotificationResponseHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 097AE4727EE099A83DE65940 /* NotificationResponseHandler.swift */; };
@@ -348,6 +350,7 @@
 		A3500B5442B30927185C99FA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		A419351B8B970957D829770C /* QuickAddPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddPanelController.swift; sourceTree = "<group>"; };
 		A4CA3A47F03EBF7AE5424D07 /* BulkImportParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkImportParser.swift; sourceTree = "<group>"; };
+		A7DC827A35B5C2F5E7545A65 /* TaskListToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListToolbar.swift; sourceTree = "<group>"; };
 		A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA24B83963A30DBD2EBED4CA /* WatchSessionProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionProvider.swift; sourceTree = "<group>"; };
 		AC0EC5DA80C84EAC14606DF3 /* TaskRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRowView.swift; sourceTree = "<group>"; };
@@ -504,6 +507,7 @@
 				B3DA4F4CFBB26B3E8AB8F9F4 /* SettingsView.swift */,
 				6413699055632BF2AF310ADC /* ShortcutRouter.swift */,
 				32CFE246FC70A61041EF6E4C /* Sidebar.swift */,
+				A7DC827A35B5C2F5E7545A65 /* TaskListToolbar.swift */,
 				E16AE11103FB52473BC36206 /* TaskListView.swift */,
 				4C26881923D0CBAD74E43300 /* TaskRow.swift */,
 				E24B7CA47255D8E039D92036 /* TaskStore.swift */,
@@ -891,6 +895,7 @@
 				A81C8CEA6CA7E7396B8FB6F4 /* SharedState.swift in Sources */,
 				43132B240033ACD09D9D4A45 /* ShortcutRouter.swift in Sources */,
 				73A46D89CE623AB28A39F2E9 /* Sidebar.swift in Sources */,
+				655A40F08CFE7B13401ABA9E /* TaskListToolbar.swift in Sources */,
 				E14BBE3DEA30D6706DC1A4EC /* TaskListView.swift in Sources */,
 				2889CDB285A07A4CDE62B914 /* TaskMerger.swift in Sources */,
 				CEF7A6817B639A02C19E842A /* TaskRow.swift in Sources */,
@@ -978,6 +983,7 @@
 				1CF0C1FDEB04527CA786B784 /* SharedState.swift in Sources */,
 				E83930CD5B9016B8B53C5946 /* ShortcutRouter.swift in Sources */,
 				814CA279B7E092879D42A777 /* Sidebar.swift in Sources */,
+				7721A374AB63FF1187107DFA /* TaskListToolbar.swift in Sources */,
 				27A58F28CAE31001E2C24D27 /* TaskListView.swift in Sources */,
 				D1049B52368E223631ADEC46 /* TaskMerger.swift in Sources */,
 				308235EBA3ADB547172A1689 /* TaskRow.swift in Sources */,
@@ -1216,7 +1222,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 77;
+				CURRENT_PROJECT_VERSION = 78;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1446,7 +1452,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 77;
+				CURRENT_PROJECT_VERSION = 78;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;

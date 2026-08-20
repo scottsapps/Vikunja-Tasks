@@ -170,7 +170,7 @@ struct AppRoot: View {
             SettingsView(store: store, onSave: { Task { await store.refresh(reason: "settings") } })
         }
         .sheet(isPresented: $showQuickAdd) {
-            QuickAddSheet(store: store)
+            QuickAddSheet(store: store, defaultProjectId: currentProjectId)
         }
         .sheet(isPresented: $showBulkImport) {
             BulkImportSheet(store: store)
@@ -376,6 +376,16 @@ struct AppRoot: View {
     }
 
     // MARK: - Helpers
+
+    /// The project currently on screen, if the user is inside one — a task
+    /// started from the toolbar (or ⌘N) then begins in that project instead of
+    /// the Inbox. The Mac's global quick-add panel is deliberately not part of
+    /// this: it fires from other apps, where there is no view to inherit from.
+    private var currentProjectId: Int? {
+        let item: SidebarItem? = sizeClass == .compact ? navPath.last : selection
+        if case .project(let id) = item { return id }
+        return nil
+    }
 
     private var visibleProjects: [VikunjaProject] {
         store.projects

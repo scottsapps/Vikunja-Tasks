@@ -2,6 +2,10 @@ import SwiftUI
 
 struct QuickAddSheet: View {
     var store: TaskStore
+    /// Where the task lands when the typed text names no project — set when the
+    /// sheet is opened from inside a project, so a task added there stays there.
+    /// An explicit `*project` in the text still wins.
+    var defaultProjectId: Int? = nil
     var onExpandToggle: ((Bool) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var cs
@@ -49,6 +53,13 @@ struct QuickAddSheet: View {
             || !p.labelTitles.isEmpty
             || p.projectName != nil
             || p.repeatAfter != nil
+            || defaultProject != nil
+    }
+
+    /// The project this sheet was opened from, if it still exists.
+    private var defaultProject: VikunjaProject? {
+        guard let id = defaultProjectId else { return nil }
+        return store.projects.first { $0.id == id }
     }
 
     // MARK: - Design tokens
@@ -161,7 +172,7 @@ struct QuickAddSheet: View {
                     $0.title.lowercased().hasPrefix(name.lowercased())
                 }?.id ?? store.inboxProject?.id
             } else {
-                expandedProjectId = store.inboxProject?.id
+                expandedProjectId = defaultProjectId ?? store.inboxProject?.id
             }
             expandedLabelIds = Set(p.labelTitles.compactMap { title in
                 store.labels.first { $0.title.lowercased() == title.lowercased() }?.id
@@ -572,6 +583,8 @@ struct QuickAddSheet: View {
                 }
                 if let project = parsed.projectName {
                     previewChip(icon: "circle.dashed", text: project)
+                } else if let project = defaultProject {
+                    previewChip(icon: "folder.fill", text: project.title)
                 }
                 if parsed.repeatAfter != nil {
                     previewChip(icon: "repeat", text: "Repeating")
@@ -650,6 +663,8 @@ struct QuickAddSheet: View {
                 targetProject = store.projects.first {
                     $0.title.lowercased().hasPrefix(name.lowercased())
                 } ?? store.inboxProject
+            } else if let defaultProject {
+                targetProject = defaultProject
             } else {
                 targetProject = store.inboxProject
             }

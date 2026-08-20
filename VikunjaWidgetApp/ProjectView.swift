@@ -25,9 +25,7 @@ struct ProjectView: View {
         .navigationTitle(project.title)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
-        #endif
         .toolbar {
-            #if os(iOS)
             if let color = Color(vikunjaHex: project.hexColor) {
                 ToolbarItem(placement: .principal) {
                     Label(project.title, systemImage: "folder.fill")
@@ -36,16 +34,10 @@ struct ProjectView: View {
                         .labelStyle(.titleAndIcon)
                 }
             }
-            #endif
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    Task { await store.refresh() }
-                } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
-                }
-                .disabled(store.isLoading)
-            }
         }
+        #endif
+        .quickAddToolbarItem(store: store, defaultProject: project)
+        .taskListRefreshToolbar(store: store)
         .refreshable {
             await store.refresh()
         }

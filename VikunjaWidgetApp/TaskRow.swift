@@ -67,7 +67,17 @@ struct TaskRow: View {
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
+            // Metadata line: bell (only while a reminder is still ahead of us),
+            // project, note, labels, subtasks, priority, due — the same order
+            // the widget rows use.
             HStack(spacing: 6) {
+                if task.hasFutureReminder {
+                    Image(systemName: "bell.fill")
+                        .font(.system(size: CGFloat(9 + max(fs, 0))))
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("Reminder set")
+                }
+
                 Text(projectName)
                     .font(.system(size: CGFloat(11 + fs)))
                     .foregroundStyle(.secondary)

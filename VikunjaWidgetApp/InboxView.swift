@@ -2,7 +2,6 @@ import SwiftUI
 
 struct InboxView: View {
     var store: TaskStore
-    @State private var isRefreshing = false
 
     var body: some View {
         TaskListView(
@@ -13,11 +12,8 @@ struct InboxView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                refreshButton
-            }
-        }
+        .quickAddToolbarItem(store: store)
+        .taskListRefreshToolbar(store: store)
         .refreshable {
             await store.refresh()
         }
@@ -26,18 +22,5 @@ struct InboxView: View {
                 ProgressView()
             }
         }
-    }
-
-    private var refreshButton: some View {
-        Button {
-            Task {
-                isRefreshing = true
-                await store.refresh()
-                isRefreshing = false
-            }
-        } label: {
-            Label("Refresh", systemImage: "arrow.clockwise")
-        }
-        .disabled(isRefreshing || store.isLoading)
     }
 }

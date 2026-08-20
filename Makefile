@@ -1,4 +1,36 @@
-.PHONY: gen
+.PHONY: gen fix-widget
+
+LSREGISTER := /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+
+# Fixes the Mac widget when it shows grey placeholder bars instead of tasks.
+# Cause: LaunchServices resolves the widget extension to whichever registered
+# copy has the highest CFBundleVersion. An Xcode build carries the bumped
+# CURRENT_PROJECT_VERSION immediately, so it outranks the installed app and the
+# widget host reads the wrong bundle. This unregisters every Veyrn copy except
+# /Applications and re-registers that one. Xcode re-registers its build products
+# on the next build; that is expected and harmless.
+# Do NOT "killall chronod" — it deletes the cached archives and makes it worse.
+fix-widget:
+	@echo "Pruning stale Veyrn registrations…"
+	@"$(LSREGISTER)" -dump 2>/dev/null \
+		| sed -n 's/^[[:space:]]*path:[[:space:]]*//p' \
+		| sed 's/ (0x[0-9a-fA-F]*)$$//' \
+		| grep -i '/Veyrn\.app$$' | sort -u \
+		| while IFS= read -r p; do \
+			if [ "$$p" != "/Applications/Veyrn.app" ]; then \
+				"$(LSREGISTER)" -u "$$p" >/dev/null 2>&1 && echo "  unregistered  $$p"; \
+			fi; \
+		done || true
+	@"$(LSREGISTER)" -f /Applications/Veyrn.app
+	@echo "  re-registered /Applications/Veyrn.app"
+	@n=$$("$(LSREGISTER)" -dump 2>/dev/null | grep -ciE '^[[:space:]]*path:.*VikunjaWidgetExtension\.appex'); \
+	if [ "$$n" -eq 1 ]; then \
+		echo "✓ Exactly one bundle claims the widget extension — healthy."; \
+		echo "  The widget refills on its own within ~2 minutes. Don't kill chronod."; \
+	else \
+		echo "⚠ $$n bundles still claim the widget extension (expected 1):"; \
+		"$(LSREGISTER)" -dump 2>/dev/null | grep -iE '^[[:space:]]*path:.*VikunjaWidgetExtension\.appex'; \
+	fi
 
 gen:
 	xcodegen generate

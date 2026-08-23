@@ -980,6 +980,28 @@ enum VikunjaAPI {
             (400...499).contains(statusCode)
         }
 
+        /// The credential was refused. **Vikunja answers 401 for an
+        /// under-scoped API token, not 403** — a token missing "Tasks →
+        /// Update" reads tasks fine and 401s every write — so these two are
+        /// one case, never distinguishable as "bad token" vs "bad
+        /// permissions". A queued write that hits this is still perfectly
+        /// good and must be kept: it lands once the token is fixed.
+        var isAuthFailure: Bool {
+            statusCode == 401 || statusCode == 403
+        }
+
+        /// The task really is gone server-side — the only 4xx where silently
+        /// discarding a queued edit is the right answer.
+        var isGone: Bool {
+            statusCode == 404 || statusCode == 410
+        }
+
+        /// Server asking us to slow down. Transient, so a queued write waits
+        /// rather than being thrown away.
+        var isRateLimited: Bool {
+            statusCode == 429
+        }
+
         var errorDescription: String? {
             switch self {
             case .badStatus(let code): return "Server returned HTTP \(code)"

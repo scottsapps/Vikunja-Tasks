@@ -599,6 +599,12 @@ final class TaskStore {
 
     private var isDraining = false
 
+    /// Message for the write failure most recently alerted from a drain, so a
+    /// queued op that keeps failing alerts once instead of on every poll.
+    /// Cleared by the first drain that gets anything through — which is also
+    /// the moment the user has fixed whatever it was.
+    private var lastDrainFailureMessage: String?
+
     func drainOutbox() async {
         guard !isDraining else { return }
         isDraining = true
@@ -609,6 +615,10 @@ final class TaskStore {
         let drainClock = DiagnosticLog.Stopwatch()
         var okCount = 0
         var droppedCount = 0
+        // Set when a write fails for a reason the *user* has to clear — an
+        // under-scoped or revoked token. Reported after the trailing refresh,
+        // not here; see below.
+        var blockingFailure: Error?
         // Index walk rather than `for op in snapshot`: on a 2.5.0+ server a run
         // of consecutive same-project creates (a bulk import, or a batch added
         // offline) is swallowed by one atomic request instead of one round trip
@@ -629,11 +639,21 @@ final class TaskStore {
                     okCount += run.count
                     index += run.count
                     continue
+                } catch let error as VikunjaAPI.APIError where error.isAuthFailure || error.isRateLimited {
+                    // Same credential, same answer for every op behind this
+                    // one — so stop here rather than falling back and
+                    // re-earning the identical rejection one task at a time.
+                    // Bulk create is atomic: nothing was created, and the
+                    // whole run stays queued for when the token is fixed.
+                    DiagnosticLog.warn("drain paused: bulk create ×\(run.count) → \(error.statusCode) (ops kept)")
+                    blockingFailure = error
+                    break
                 } catch let error as VikunjaAPI.APIError where error.isClient4xx {
                     // Bulk create is atomic — a 4xx means *nothing* was created,
                     // so replaying these as single creates can't duplicate
-                    // anything. Falling back also restores per-op 4xx dropping,
-                    // so one bad task can't wedge the queue behind it.
+                    // anything. Falling back also isolates the bad task: the
+                    // per-op path drops whichever one the server refuses on its
+                    // merits, so it can't wedge the queue behind it.
                     DiagnosticLog.warn("bulk create ×\(run.count) → \(error.statusCode), falling back to per-task creates")
                     bulkDisabled = true
                 } catch {
@@ -690,9 +710,33 @@ final class TaskStore {
                 }
                 outbox.remove(id: op.id)
                 okCount += 1
-            } catch let error as VikunjaAPI.APIError where error.isClient4xx {
-                // Task likely deleted server-side — drop op silently
+            } catch let error as VikunjaAPI.APIError where error.isAuthFailure || error.isRateLimited {
+                // Nothing is wrong with the edit — the credential is. Keeping
+                // the op means it lands by itself once the token is fixed;
+                // dropping it (which every 4xx used to do) threw the user's
+                // change away and, because the editor had already closed
+                // saying "saved", looked exactly like a successful save until
+                // the next refresh snapped the task back.
+                //
+                // Stop the drain rather than working down the queue: every
+                // remaining op carries the same credential and would fail the
+                // same way, and one alert beats one per queued op.
+                DiagnosticLog.warn("drain paused: \(opLabel(op)) → \(error.statusCode) (op kept)")
+                blockingFailure = error
+                break
+            } catch let error as VikunjaAPI.APIError where error.isGone {
+                // Task deleted server-side — the edit has nothing left to
+                // apply to, so drop it.
                 DiagnosticLog.warn("op \(opLabel(op)) → dropped (\(error.statusCode), task gone)")
+                outbox.remove(id: op.id)
+                droppedCount += 1
+            } catch let error as VikunjaAPI.APIError where error.isClient4xx {
+                // Malformed or otherwise refused on its merits (400, 422 …).
+                // Replaying can only fail identically, so drop it rather than
+                // wedging every later op behind it — but say so, because
+                // unlike the two cases above this one means we built a bad
+                // request and the log is the only place that shows up.
+                DiagnosticLog.warn("op \(opLabel(op)) → dropped (\(error.statusCode), rejected)")
                 outbox.remove(id: op.id)
                 droppedCount += 1
             } catch {
@@ -708,6 +752,26 @@ final class TaskStore {
         // must not nudge other devices.
         if okCount > 0 { ChangeBeacon.publish(reason: "outbox") }
         await refresh(background: true, reason: "outbox")
+
+        // Deliberately after the refresh. `performRefresh` clears `error` on
+        // entry, and for the case this exists to catch — a token that reads
+        // fine and can't write — that refresh *succeeds*, so an alert raised
+        // before it would be wiped by the very next line and the user would
+        // once again be told nothing.
+        //
+        // The message guard is what keeps this to one alert: the op stays
+        // queued now, so every later drain retries it and fails again, and
+        // without the guard a permanently-under-scoped token would alert on
+        // every 60s poll.
+        if let blockingFailure {
+            let message = VeyrnError.message(for: blockingFailure)
+            if message != lastDrainFailureMessage {
+                lastDrainFailureMessage = message
+                report(blockingFailure)
+            }
+        } else if okCount > 0 {
+            lastDrainFailureMessage = nil
+        }
     }
 
     // MARK: - Bulk create (Vikunja 2.5.0+)

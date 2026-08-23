@@ -31,19 +31,22 @@ enum VeyrnError {
 
     private static func message(forStatus code: Int) -> String {
         switch code {
-        case 401:
+        // Vikunja returns 401 for a token that is missing a permission just
+        // as readily as for one that is expired or mistyped — an API token
+        // without "Tasks → Update" loads every task and then 401s every save.
+        // So this message can't lead with "your token is invalid": for the
+        // commonest version of this, the token is fine and only the
+        // permissions are wrong, and sending someone to check for a typo
+        // leaves them stuck. Both fixes start in the same place, so name both.
+        case 401, 403:
             return """
-            Your API token isn't valid — the server didn't recognize it. \
-            The token may have been revoked, expired, or pasted \
-            incompletely. In Vikunja, go to Settings → API Tokens, create a \
-            new token, then paste it into Veyrn's Settings.
-            """
-        case 403:
-            return """
-            Your API token was recognized, but it doesn't have permission \
-            for this. In Vikunja, check the token's permissions under \
-            Settings → API Tokens — it needs read and write access to \
-            projects, tasks, and labels.
+            Your Vikunja server refused Veyrn's API token. Most often the \
+            token is missing a permission: in Vikunja, go to Settings → API \
+            Tokens and check that it grants read *and* write access to \
+            tasks, projects, and labels — read-only access lets Veyrn show \
+            your tasks but not save changes to them. If the permissions look \
+            right, the token may have been revoked or pasted incompletely; \
+            create a fresh one and paste it into Veyrn's Settings.
             """
         case 404:
             return """

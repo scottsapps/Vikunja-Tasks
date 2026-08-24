@@ -23,6 +23,9 @@ struct SettingsView: View {
 
     @Environment(\.dismiss) private var dismiss
     @AppStorage("vikunja_font_size_offset") private var fontSizeOffset: Int = 0
+    @AppStorage(TaskSortPreferences.fieldKey) private var sortField: TaskSortField = .alphabetical
+    @AppStorage(TaskSortPreferences.projectTieBreakKey) private var projectTieBreak: ProjectTieBreak = .alphabetical
+    @AppStorage(TaskSortPreferences.undatedKey) private var undatedPlacement: UndatedPlacement = .bottom
     @AppStorage("vikunja_telemetry_opt_in") private var telemetryOptIn: Bool = true
 
     #if os(iOS)
@@ -68,6 +71,11 @@ struct SettingsView: View {
                         openingPageSection
                     }
                     #endif
+
+                    // Nothing to order until there's an account to order.
+                    if !isOnboarding {
+                        taskOrderSection
+                    }
 
                     // Font size
                     VStack(alignment: .leading, spacing: 6) {
@@ -186,6 +194,61 @@ struct SettingsView: View {
         }
     }
     #endif
+
+    // MARK: - Task order
+
+    private var taskOrderSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Task Order")
+                .font(.headline)
+
+            Picker("Sort tasks by", selection: $sortField) {
+                ForEach(TaskSortField.allCases) { field in
+                    Text(field.title).tag(field)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            if sortField == .project {
+                Picker("Within each project", selection: $projectTieBreak) {
+                    ForEach(ProjectTieBreak.allCases) { tieBreak in
+                        Text(tieBreak.title).tag(tieBreak)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text("Projects run in alphabetical order; this orders the tasks inside each one.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            HStack {
+                Text("Tasks with no date")
+                Spacer()
+                Picker("Tasks with no date", selection: $undatedPlacement) {
+                    ForEach(UndatedPlacement.allCases) { placement in
+                        Text(placement.title).tag(placement)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+            }
+
+            Text(orderExplanation)
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private var orderExplanation: String {
+        let within: String
+        switch sortField {
+        case .alphabetical: within = "by title"
+        case .priority:     within = "highest priority first, then by title"
+        case .project:      within = "by project, then "
+            + (projectTieBreak == .priority ? "by priority" : "by title")
+        }
+        let undated = undatedPlacement == .top ? "above" : "below"
+        return "Scheduled and project lists stay grouped by day, with each day ordered \(within). "
+            + "Tasks with no due date sit \(undated) the dated ones. The Inbox uses the same order without the day grouping."
+    }
 
     // MARK: - Accounts section (already configured)
 

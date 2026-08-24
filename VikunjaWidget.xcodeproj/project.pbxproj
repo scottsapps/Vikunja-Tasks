@@ -16,6 +16,7 @@
 		096DAC80C49C5D35B8469747 /* RichTextToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE1E2473B28773FB31C83C53 /* RichTextToolbar.swift */; };
 		09B9990AA282D81B80385485 /* Outbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52749DF5C84EB8B6350FE276 /* Outbox.swift */; };
 		0A4C0E5ED794EE7206E621AE /* BugReportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653C8DAF2700721283A8A509 /* BugReportSheet.swift */; };
+		0AC7976863E321783DB801BB /* TaskSortOrder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C250522BE5FFAAABE854298E /* TaskSortOrder.swift */; };
 		0D05C8A2A2215D665C51970A /* RichTextUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E14A86ED969A63033CECCD3 /* RichTextUtils.swift */; };
 		0D11C0D3CF3FAEA401E14587 /* VikunjaAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */; };
 		0DE91F897CC393857D83DEFC /* CompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56EB3BD825210E0BC7DDD877 /* CompleteTaskIntent.swift */; };
@@ -78,6 +79,7 @@
 		56FE7A9BF4B07565205949DF /* QuickAddPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A419351B8B970957D829770C /* QuickAddPanelController.swift */; };
 		5846187C648674E9EC5F9EA2 /* AccountListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D1C8F0A7257D6E7B0C47ED9 /* AccountListView.swift */; };
 		5B2D2D4F2E6D3D858F13A078 /* ErrorMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7331DC244DE0910F695C4 /* ErrorMessages.swift */; };
+		5EDBEB2B7C5CA663514A3561 /* TaskSortOrder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C250522BE5FFAAABE854298E /* TaskSortOrder.swift */; };
 		609A48F82D13122F708F6D86 /* LaunchPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D33A058D68A85E430540D0B /* LaunchPage.swift */; };
 		6155C1270C5CA6F128D0515B /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FF9B209536157736A98A9B /* TokenStore.swift */; };
 		6345DDA30EF587C5BF734506 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */; };
@@ -376,6 +378,7 @@
 		C1254289BB5BBCBD170DCACE /* ColorUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorUtils.swift; sourceTree = "<group>"; };
 		C1938B254B547B170A850D02 /* WatchWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidget.swift; sourceTree = "<group>"; };
 		C19BA8BB693A0D3B77D8FD25 /* AppRoot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoot.swift; sourceTree = "<group>"; };
+		C250522BE5FFAAABE854298E /* TaskSortOrder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSortOrder.swift; sourceTree = "<group>"; };
 		C4E12C5D7A535480216299E3 /* UndoCompleteTaskIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoCompleteTaskIntent.swift; sourceTree = "<group>"; };
 		C5CFE29DC68AF948888033B9 /* VikunjaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetBundle.swift; sourceTree = "<group>"; };
 		C9F88B5A5977A4665065232F /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
@@ -520,6 +523,7 @@
 				A7DC827A35B5C2F5E7545A65 /* TaskListToolbar.swift */,
 				E16AE11103FB52473BC36206 /* TaskListView.swift */,
 				4C26881923D0CBAD74E43300 /* TaskRow.swift */,
+				C250522BE5FFAAABE854298E /* TaskSortOrder.swift */,
 				E24B7CA47255D8E039D92036 /* TaskStore.swift */,
 				2E8B866134A71528ACC14C76 /* TodayView.swift */,
 				55A53B67DF4D3C4E9B1789F8 /* VeyrnTelemetry.swift */,
@@ -912,6 +916,7 @@
 				E14BBE3DEA30D6706DC1A4EC /* TaskListView.swift in Sources */,
 				2889CDB285A07A4CDE62B914 /* TaskMerger.swift in Sources */,
 				CEF7A6817B639A02C19E842A /* TaskRow.swift in Sources */,
+				5EDBEB2B7C5CA663514A3561 /* TaskSortOrder.swift in Sources */,
 				22EFFF073CD996D7953DDC2F /* TaskStore.swift in Sources */,
 				A63E777EDE70A2D04544AABA /* TodayView.swift in Sources */,
 				91EF38FBFF43A558C0D9260A /* TokenStore.swift in Sources */,
@@ -1003,6 +1008,7 @@
 				27A58F28CAE31001E2C24D27 /* TaskListView.swift in Sources */,
 				D1049B52368E223631ADEC46 /* TaskMerger.swift in Sources */,
 				308235EBA3ADB547172A1689 /* TaskRow.swift in Sources */,
+				0AC7976863E321783DB801BB /* TaskSortOrder.swift in Sources */,
 				18E754A4A0A728C787B384CA /* TaskStore.swift in Sources */,
 				B73FB8EBDF00BB4796B8F614 /* TodayView.swift in Sources */,
 				869F2E0889E882F50F4B5BC7 /* TokenStore.swift in Sources */,
@@ -1240,7 +1246,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 82;
+				CURRENT_PROJECT_VERSION = 83;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1470,7 +1476,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 82;
+				CURRENT_PROJECT_VERSION = 83;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;

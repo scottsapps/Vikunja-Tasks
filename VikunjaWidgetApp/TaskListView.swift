@@ -19,6 +19,16 @@ struct TaskListView: View {
     var activeTagFilter: Set<String> = []
     var suppressUpcomingDueDate: Bool = false
 
+    // Ordering preference — @AppStorage rather than a plain read so the list
+    // redraws the moment it changes in Settings.
+    @AppStorage(TaskSortPreferences.fieldKey) private var sortField: TaskSortField = .alphabetical
+    @AppStorage(TaskSortPreferences.projectTieBreakKey) private var projectTieBreak: ProjectTieBreak = .alphabetical
+    @AppStorage(TaskSortPreferences.undatedKey) private var undatedPlacement: UndatedPlacement = .bottom
+
+    private var sortOrder: TaskSortOrder {
+        TaskSortOrder(field: sortField, projectTieBreak: projectTieBreak, undated: undatedPlacement)
+    }
+
     // Sheet editor state
     @State private var editingTask: VikunjaTask? = nil
     @State private var taskToDelete: VikunjaTask? = nil
@@ -142,7 +152,7 @@ struct TaskListView: View {
 
     private var flatContent: some View {
         List {
-            ForEach(filteredTasks.sorted { $0.title.localizedCompare($1.title) == .orderedAscending }, id: \.id) { task in
+            ForEach(sortOrder.sorted(filteredTasks, projectNames: store.projectMap), id: \.id) { task in
                 taskRowOrEditor(task)
                     .listRowInsets(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
                     .listRowSeparator(.hidden)
@@ -208,6 +218,12 @@ struct TaskListView: View {
         let today = cal.startOfDay(for: Date())
         let tomorrow = cal.date(byAdding: .day, value: 1, to: today)!
 
+        // The undated bucket rides the same date sort as every other group, so
+        // moving it to the top is a matter of keying it before every real day
+        // instead of after. Overdue tasks are folded into `today` above, so
+        // nothing else can ever land on .distantPast.
+        let noDateKey: Date = undatedPlacement == .top ? .distantPast : .distantFuture
+
         var buckets: [Date: [VikunjaTask]] = [:]
 
         for task in tasks {
@@ -216,8 +232,7 @@ struct TaskListView: View {
                 let bucket = day < today ? today : day
                 buckets[bucket, default: []].append(task)
             } else {
-                // Tasks without due date go into a "No Date" bucket keyed by .distantFuture
-                buckets[.distantFuture, default: []].append(task)
+                buckets[noDateKey, default: []].append(task)
             }
         }
 
@@ -228,9 +243,9 @@ struct TaskListView: View {
         let currentYear = cal.component(.year, from: today)
 
         return buckets.keys.sorted().compactMap { day -> DateGroup? in
-            let sorted = buckets[day]!.sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
+            let sorted = sortOrder.sorted(buckets[day]!, projectNames: store.projectMap)
             let label: String
-            if day == .distantFuture { label = "No Date" }
+            if day == noDateKey { label = "No Date" }
             else if day == today { label = "Today" }
             else if day == tomorrow { label = "Tomorrow" }
             else {

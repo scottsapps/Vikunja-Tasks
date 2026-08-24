@@ -19,6 +19,7 @@ VeyrnShots.*
 *.xcuserstate
 xcuserdata/
 DerivedData/
+build/
 *.ipa
 *.dSYM.zip
 *.dSYM

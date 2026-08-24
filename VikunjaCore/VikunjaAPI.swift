@@ -776,9 +776,23 @@ enum VikunjaAPI {
     /// output: merge-patch needs an *explicit* `NSNull()` for a clear and an
     /// *absent* key for "no change", a distinction `Codable` can't express.
     private static func patchV2(_ path: String, body: [String: Any]) async throws {
-        let data = try JSONSerialization.data(withJSONObject: body)
-        let request = makeRequest(path, method: "PATCH", body: data, base: v2BaseURL)
+        let request = try makeMergePatchRequest(path, body: body)
         _ = try await send(request, acceptingNotModified: true)
+    }
+
+    static func makeMergePatchRequest(
+        _ path: String,
+        body: [String: Any],
+        base: String? = nil
+    ) throws -> URLRequest {
+        let data = try JSONSerialization.data(withJSONObject: body)
+        return makeRequest(
+            path,
+            method: "PATCH",
+            body: data,
+            base: base ?? v2BaseURL,
+            contentType: "application/merge-patch+json"
+        )
     }
 
     private static func putV2(_ path: String, body: Data) async throws {
@@ -821,13 +835,19 @@ enum VikunjaAPI {
         return result.items ?? []
     }
 
-    private static func makeRequest(_ path: String, method: String = "GET", body: Data? = nil, base: String? = nil) -> URLRequest {
+    private static func makeRequest(
+        _ path: String,
+        method: String = "GET",
+        body: Data? = nil,
+        base: String? = nil,
+        contentType: String = "application/json"
+    ) -> URLRequest {
         let baseURL = base ?? self.baseURL
         var request = URLRequest(url: URL(string: "\(baseURL)\(path)")!, timeoutInterval: 20)
         request.httpMethod = method
         request.setValue("Bearer \(VikunjaConfig.apiToken)", forHTTPHeaderField: "Authorization")
         if let body {
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(contentType, forHTTPHeaderField: "Content-Type")
             request.httpBody = body
         }
         return request

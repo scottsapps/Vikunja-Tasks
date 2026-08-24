@@ -133,6 +133,7 @@
 		95081F050067C8886AB0A59D /* ColorUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1254289BB5BBCBD170DCACE /* ColorUtils.swift */; };
 		950BD0C66AAC8B38D8A50D71 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646D37E52F94B16B7960FD4 /* WidgetCache.swift */; };
 		95ACD4AB52AF0FEF6716FB2C /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A88F453140ABF753FB449C /* DiagnosticLog.swift */; };
+		96A9B902EDD23A7FBED8BE23 /* VikunjaAPIRequestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF72BF558B5C3997B1AFDF9D /* VikunjaAPIRequestTests.swift */; };
 		9760739F1921EFE07139E83C /* UndoCompleteTaskIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E12C5D7A535480216299E3 /* UndoCompleteTaskIntent.swift */; };
 		97AAC28FA52B79FBC01E7E6B /* TaskMerger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775BB9BC7FF3DF58DFDDBD96 /* TaskMerger.swift */; };
 		99248E0B0E92BD4F33A7E065 /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02DFECBCB1BD52DDACF60742 /* BackgroundRefresh.swift */; };
@@ -227,6 +228,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 1F02847C6D308FF7D45A21A7;
 			remoteInfo = VikunjaWidgetExtension;
+		};
+		10D2401A149522024CBE871A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F0707309F68A7FEA5FBF037E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1F53CB9A95EE058BF7773B4B;
+			remoteInfo = VikunjaWidgetApp;
 		};
 		24C6544BA2D2991A0B01D091 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -365,6 +373,7 @@
 		AA24B83963A30DBD2EBED4CA /* WatchSessionProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionProvider.swift; sourceTree = "<group>"; };
 		AC0EC5DA80C84EAC14606DF3 /* TaskRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRowView.swift; sourceTree = "<group>"; };
 		AE1E2473B28773FB31C83C53 /* RichTextToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextToolbar.swift; sourceTree = "<group>"; };
+		B14D61FAE50901A5B2408AB3 /* VikunjaWidgetAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VikunjaWidgetAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B16569443230F1F6C58E4DD9 /* ReminderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderStore.swift; sourceTree = "<group>"; };
 		B189E2189A5C4A68E826A0BC /* VikunjaWidgetApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetApp.swift; sourceTree = "<group>"; };
 		B3BB9C870B4EF39EC432A03D /* ProjectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectView.swift; sourceTree = "<group>"; };
@@ -374,6 +383,7 @@
 		BBB0B0D0A0BF988D3D00D46A /* WatchWidgetProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidgetProvider.swift; sourceTree = "<group>"; };
 		BDB2CBC26BADD19ED549207B /* VikunjaWidgetApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VikunjaWidgetApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BDF5D7B53205EC9A9D91FC36 /* BugReportMail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BugReportMail.swift; sourceTree = "<group>"; };
+		BF72BF558B5C3997B1AFDF9D /* VikunjaAPIRequestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaAPIRequestTests.swift; sourceTree = "<group>"; };
 		C0FF9B209536157736A98A9B /* TokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStore.swift; sourceTree = "<group>"; };
 		C1254289BB5BBCBD170DCACE /* ColorUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorUtils.swift; sourceTree = "<group>"; };
 		C1938B254B547B170A850D02 /* WatchWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidget.swift; sourceTree = "<group>"; };
@@ -469,6 +479,7 @@
 				BCCB1884FA56BEC5635FF7C7 /* VikunjaCore */,
 				1FFE98D62C37DE8550B1EE9A /* VikunjaWidget */,
 				27A31AAA3E9CBEDF1D336C73 /* VikunjaWidgetApp */,
+				B6D095907B73871B55F4CBE6 /* VikunjaWidgetAppTests */,
 				8C5FFA15540FB600A0E22245 /* VikunjaWidgetExtension */,
 				F76B21BFF3DFB7E42686F231 /* VikunjaWidgetWatch */,
 				3ECC6F58DDDA21CACB54679C /* VikunjaWidgetWatchExtension */,
@@ -554,6 +565,7 @@
 			children = (
 				BDB2CBC26BADD19ED549207B /* VikunjaWidgetApp.app */,
 				94A79F734B4FA3F1B7F71059 /* VikunjaWidgetAppIOS.app */,
+				B14D61FAE50901A5B2408AB3 /* VikunjaWidgetAppTests.xctest */,
 				30D8862B6CFF3E3E06B26ACA /* VikunjaWidgetExtension.appex */,
 				31047F6BFB8F2F00A7627426 /* VikunjaWidgetExtensionIOS.appex */,
 				79B09FCA9032E9C475309927 /* VikunjaWidgetWatch.app */,
@@ -580,6 +592,14 @@
 				5D3D5CA4D4C4BC81BDF1AC44 /* WidgetPageState.swift */,
 			);
 			path = VikunjaWidgetExtension;
+			sourceTree = "<group>";
+		};
+		B6D095907B73871B55F4CBE6 /* VikunjaWidgetAppTests */ = {
+			isa = PBXGroup;
+			children = (
+				BF72BF558B5C3997B1AFDF9D /* VikunjaAPIRequestTests.swift */,
+			);
+			path = VikunjaWidgetAppTests;
 			sourceTree = "<group>";
 		};
 		BCCB1884FA56BEC5635FF7C7 /* VikunjaCore */ = {
@@ -745,6 +765,24 @@
 			productReference = 79B09FCA9032E9C475309927 /* VikunjaWidgetWatch.app */;
 			productType = "com.apple.product-type.application";
 		};
+		95560EDEFCF98E06593EAC53 /* VikunjaWidgetAppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5F4D19496A6BEE8FE02911AB /* Build configuration list for PBXNativeTarget "VikunjaWidgetAppTests" */;
+			buildPhases = (
+				1F9893B7FED8044328D34F61 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				1920093128342BE77C4FA145 /* PBXTargetDependency */,
+			);
+			name = VikunjaWidgetAppTests;
+			packageProductDependencies = (
+			);
+			productName = VikunjaWidgetAppTests;
+			productReference = B14D61FAE50901A5B2408AB3 /* VikunjaWidgetAppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		A0698B744356C9C9BF163D6D /* VikunjaWidgetExtensionIOS */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 03795ED8FDF1D28E1A9B41C9 /* Build configuration list for PBXNativeTarget "VikunjaWidgetExtensionIOS" */;
@@ -793,6 +831,9 @@
 						DevelopmentTeam = VEB4GCTC3B;
 						ProvisioningStyle = Automatic;
 					};
+					95560EDEFCF98E06593EAC53 = {
+						ProvisioningStyle = Automatic;
+					};
 					A0698B744356C9C9BF163D6D = {
 						DevelopmentTeam = VEB4GCTC3B;
 						ProvisioningStyle = Automatic;
@@ -816,6 +857,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				95560EDEFCF98E06593EAC53 /* VikunjaWidgetAppTests */,
 				1F53CB9A95EE058BF7773B4B /* VikunjaWidgetApp */,
 				1F02847C6D308FF7D45A21A7 /* VikunjaWidgetExtension */,
 				5089A31E80CF606C44D1424F /* VikunjaWidgetAppIOS */,
@@ -927,6 +969,14 @@
 				7D23D0A203B4397E740C4534 /* VikunjaWidgetApp.swift in Sources */,
 				8539E404CFA5AED9E7EE80C6 /* WatchSessionProvider.swift in Sources */,
 				426140361E8189D111CEC188 /* WidgetCache.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1F9893B7FED8044328D34F61 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				96A9B902EDD23A7FBED8BE23 /* VikunjaAPIRequestTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1109,6 +1159,11 @@
 			target = 0F7E0CF84A988BC300A48423 /* VikunjaWidgetWatchExtension */;
 			targetProxy = 24C6544BA2D2991A0B01D091 /* PBXContainerItemProxy */;
 		};
+		1920093128342BE77C4FA145 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1F53CB9A95EE058BF7773B4B /* VikunjaWidgetApp */;
+			targetProxy = 10D2401A149522024CBE871A /* PBXContainerItemProxy */;
+		};
 		3A482F59F63B77FB7F175B05 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 93A8A8EF93CAD82843BD97D9 /* VikunjaWidgetWatch */;
@@ -1127,6 +1182,23 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		0976B156ABA036445D680718 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetAppTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Veyrn.app/Contents/MacOS/Veyrn";
+			};
+			name = Debug;
+		};
 		10CB846D00092EEDE03CCF35 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1280,6 +1352,23 @@
 				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Debug;
+		};
+		4B194518A3870728191C9C74 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetAppTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Veyrn.app/Contents/MacOS/Veyrn";
+			};
+			name = Release;
 		};
 		517D5F063D290ABF7B050B0B /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -1521,6 +1610,15 @@
 			buildConfigurations = (
 				96B15628B226E582B92AD9D3 /* Debug */,
 				69021C3734E8C262088C6202 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5F4D19496A6BEE8FE02911AB /* Build configuration list for PBXNativeTarget "VikunjaWidgetAppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0976B156ABA036445D680718 /* Debug */,
+				4B194518A3870728191C9C74 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

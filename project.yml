@@ -38,6 +38,8 @@ schemes:
       config: Debug
     test:
       config: Debug
+      targets:
+        - VikunjaWidgetAppTests
     profile:
       config: Release
     analyze:
@@ -73,6 +75,19 @@ schemes:
 
 targets:
   # ── macOS ────────────────────────────────────────────────────────────────
+
+  VikunjaWidgetAppTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: VikunjaWidgetAppTests
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VikunjaWidgetAppTests
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
+      TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Veyrn.app/Contents/MacOS/Veyrn"
+      BUNDLE_LOADER: "$(TEST_HOST)"
+    dependencies:
+      - target: VikunjaWidgetApp
 
   VikunjaWidgetApp:
     type: application

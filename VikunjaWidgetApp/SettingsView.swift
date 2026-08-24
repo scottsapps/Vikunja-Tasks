@@ -25,6 +25,13 @@ struct SettingsView: View {
     @AppStorage("vikunja_font_size_offset") private var fontSizeOffset: Int = 0
     @AppStorage("vikunja_telemetry_opt_in") private var telemetryOptIn: Bool = true
 
+    #if os(iOS)
+    // iPhone only: iPad and Mac keep the root list in a permanent sidebar, so
+    // there is no opening page to pick (`LaunchPreferences.isSupported`).
+    @AppStorage(LaunchPreferences.pageKey) private var launchPage: LaunchPage = .main
+    @AppStorage(LaunchPreferences.projectKey) private var launchProjectKey: String = SidebarItem.inbox.storageKey
+    #endif
+
     #if os(macOS)
     @State private var hotkeyKeyCode: UInt32 = VikunjaConfig.quickAddKeyCode
     @State private var hotkeyModifiers: UInt32 = VikunjaConfig.quickAddModifiers
@@ -53,6 +60,14 @@ struct SettingsView: View {
                     } else {
                         accountsSection
                     }
+
+                    #if os(iOS)
+                    // Nothing to open to before there's an account, and the
+                    // project list is empty at that point anyway.
+                    if !isOnboarding && LaunchPreferences.isSupported {
+                        openingPageSection
+                    }
+                    #endif
 
                     // Font size
                     VStack(alignment: .leading, spacing: 6) {
@@ -138,6 +153,39 @@ struct SettingsView: View {
             BugReportSheet()
         }
     }
+
+    // MARK: - Opening page (iOS)
+
+    #if os(iOS)
+    private var openingPageSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Opening Page")
+                .font(.headline)
+
+            Picker("Opening Page", selection: $launchPage) {
+                ForEach(LaunchPage.allCases) { page in
+                    Text(page.title).tag(page)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+
+            if launchPage == .project {
+                Picker("Project", selection: $launchProjectKey) {
+                    Text("Inbox").tag(SidebarItem.inbox.storageKey)
+                    ForEach(store.visibleProjects) { project in
+                        Text(project.title).tag(SidebarItem.project(project.id).storageKey)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+            }
+
+            Text("Where Veyrn goes when you open it, every time. Main is the list of Inbox, Scheduled, Logbook and your projects; Last Used leaves you where you were.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+    #endif
 
     // MARK: - Accounts section (already configured)
 
@@ -281,6 +329,16 @@ struct SettingsView: View {
 
     private func reload() {
         accounts = VikunjaConfig.accounts
+        #if os(iOS)
+        // A chosen project can disappear underneath the setting — deleted, or
+        // the choice was made on another account. Without this the menu picker
+        // renders blank on a tag it can't find.
+        if case .project(let id) = SidebarItem(storageKey: launchProjectKey),
+           !store.projects.isEmpty,
+           !store.projects.contains(where: { $0.id == id }) {
+            launchProjectKey = SidebarItem.inbox.storageKey
+        }
+        #endif
     }
 
     #if os(macOS)

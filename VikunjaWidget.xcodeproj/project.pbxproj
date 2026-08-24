@@ -78,6 +78,7 @@
 		56FE7A9BF4B07565205949DF /* QuickAddPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A419351B8B970957D829770C /* QuickAddPanelController.swift */; };
 		5846187C648674E9EC5F9EA2 /* AccountListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D1C8F0A7257D6E7B0C47ED9 /* AccountListView.swift */; };
 		5B2D2D4F2E6D3D858F13A078 /* ErrorMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7331DC244DE0910F695C4 /* ErrorMessages.swift */; };
+		609A48F82D13122F708F6D86 /* LaunchPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D33A058D68A85E430540D0B /* LaunchPage.swift */; };
 		6155C1270C5CA6F128D0515B /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FF9B209536157736A98A9B /* TokenStore.swift */; };
 		6345DDA30EF587C5BF734506 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A807C739BC26F7BE61AEA3B1 /* Assets.xcassets */; };
 		641CD4F1D55148493E046E6C /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
@@ -211,6 +212,7 @@
 		F7DF7BB42EFB5A100385FC5A /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = A3974D558323FBA6B087B47D /* TelemetryDeck */; };
 		FA749AD57488BEF5E52685DD /* RichTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CA81C31B42689E6607E4330 /* RichTextEditor.swift */; };
 		FBB2CBB1BB9E7F1F874BD5D9 /* AddTaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B63219D6BDD41CF316F5617F /* AddTaskView.swift */; };
+		FC1DF4E8A888FFEB02005570 /* LaunchPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D33A058D68A85E430540D0B /* LaunchPage.swift */; };
 		FCBEF1F749FDE83E425B07CE /* ColorUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1254289BB5BBCBD170DCACE /* ColorUtils.swift */; };
 		FE06FC913A9C28EE4CDBA13B /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC3F9516276D9763A9C0638D /* CloudKit.framework */; };
 		FF7D63331B3B3E32C0796C08 /* VikunjaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8050180A5CB81868E0837EA /* VikunjaModels.swift */; };
@@ -337,6 +339,7 @@
 		68C6E7BB60EBB7C6C225DFAE /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		6C10DDD003EFBE283E6DE288 /* VikunjaWidgetWatchExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = VikunjaWidgetWatchExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6C94753002F09FFB78914FA6 /* ChangeBeacon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeBeacon.swift; sourceTree = "<group>"; };
+		6D33A058D68A85E430540D0B /* LaunchPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchPage.swift; sourceTree = "<group>"; };
 		6F567D81975C96ADB4BF7629 /* VikunjaWidgetEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetEntryView.swift; sourceTree = "<group>"; };
 		75A0ED94DDF378FDDE88F157 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7656B4E05FA981BC6A515B75 /* HotkeyRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyRecorderView.swift; sourceTree = "<group>"; };
@@ -500,6 +503,7 @@
 				166859B301206500B9AE0420 /* Info.plist */,
 				7EAD0BC89662C3B29128BFEC /* InfoIOS.plist */,
 				DB39CB6616D672184062F00A /* InlineTaskEditor.swift */,
+				6D33A058D68A85E430540D0B /* LaunchPage.swift */,
 				FD6802321CF98C91D0FC1142 /* LogbookView.swift */,
 				58D5363164D9E1B03D079B04 /* LogViewerView.swift */,
 				097AE4727EE099A83DE65940 /* NotificationResponseHandler.swift */,
@@ -884,6 +888,7 @@
 				47110862A580A698D5DCC51E /* HotkeyRecorderView.swift in Sources */,
 				DB38C05911F489759F92739A /* InboxView.swift in Sources */,
 				BBB629FBE31DC715BE9BEEF5 /* InlineTaskEditor.swift in Sources */,
+				609A48F82D13122F708F6D86 /* LaunchPage.swift in Sources */,
 				B00CF08FBBD4DC4F34BA3ED6 /* LogViewerView.swift in Sources */,
 				EDD77C1F97806905078A8173 /* LogbookView.swift in Sources */,
 				7C4457BE79D282FB1EB9FB65 /* NotificationResponseHandler.swift in Sources */,
@@ -974,6 +979,7 @@
 				1EDD136852120DECD2DA7518 /* HotkeyRecorderView.swift in Sources */,
 				D3B5C46929A34AA8A6B2465A /* InboxView.swift in Sources */,
 				A11C5F4AD5A24673789AD261 /* InlineTaskEditor.swift in Sources */,
+				FC1DF4E8A888FFEB02005570 /* LaunchPage.swift in Sources */,
 				71B7452B98221EB08721646D /* LogViewerView.swift in Sources */,
 				3B1C3BDF5AF9E198D17FB79B /* LogbookView.swift in Sources */,
 				770E0ED2F26991B6FAAF99E5 /* NotificationResponseHandler.swift in Sources */,
@@ -1127,7 +1133,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.1.1;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1149,7 +1155,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 3.1.1;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -1170,7 +1176,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 3.1.1;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = macosx;
@@ -1188,7 +1194,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.1.1;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.watchkitapp.widget;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1234,7 +1240,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 81;
+				CURRENT_PROJECT_VERSION = 82;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1283,7 +1289,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 3.1.1;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = macosx;
@@ -1304,7 +1310,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 3.1.1;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -1324,7 +1330,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.1.1;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = iphoneos;
@@ -1339,7 +1345,7 @@
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetWatch/VikunjaWidgetWatch.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetWatch/Info.plist;
-				MARKETING_VERSION = 3.1.1;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.watchkitapp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = watchos;
@@ -1360,7 +1366,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.1.1;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.watchkitapp.widget;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1376,7 +1382,7 @@
 				CODE_SIGN_ENTITLEMENTS = VikunjaWidgetWatch/VikunjaWidgetWatch.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VikunjaWidgetWatch/Info.plist;
-				MARKETING_VERSION = 3.1.1;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.watchkitapp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = watchos;
@@ -1399,7 +1405,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.1.1;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp;
 				PRODUCT_NAME = Veyrn;
 				SDKROOT = iphoneos;
@@ -1419,7 +1425,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.1.1;
+				MARKETING_VERSION = 3.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.angstreich.VikunjaWidgetApp.VikunjaWidgetExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1464,7 +1470,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 81;
+				CURRENT_PROJECT_VERSION = 82;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;

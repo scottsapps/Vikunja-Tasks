@@ -60,6 +60,15 @@ final class TaskStore {
         projects.first { $0.title.lowercased() == "inbox" }
     }
 
+    /// The projects listed under the "Projects" heading — everything except
+    /// the Inbox, which has its own row. Sidebar, iPhone root list and the
+    /// launch-page picker all show this same list.
+    var visibleProjects: [VikunjaProject] {
+        projects
+            .filter { $0.title.lowercased() != "inbox" }
+            .sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
+    }
+
     func tasks(for project: VikunjaProject) -> [VikunjaTask] {
         undoneTasks.filter { $0.projectId == project.id && !$0.isSubtask }
     }

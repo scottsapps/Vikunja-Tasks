@@ -103,9 +103,7 @@ struct Sidebar: View {
     // MARK: - Helpers
 
     private var visibleProjects: [VikunjaProject] {
-        store.projects
-            .filter { $0.title.lowercased() != "inbox" }
-            .sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
+        store.visibleProjects
     }
 
     private var inboxCount: Int {

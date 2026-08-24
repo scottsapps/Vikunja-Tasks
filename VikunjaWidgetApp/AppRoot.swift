@@ -95,6 +95,26 @@ struct AppRoot: View {
 
     @AppStorage("vikunja_font_size_offset") private var fontSizeOffset: Int = 0
     @Environment(\.horizontalSizeClass) private var sizeClass
+    #if os(iOS)
+    @Environment(\.scenePhase) private var scenePhase
+    #endif
+
+    init(store: TaskStore) {
+        self.store = store
+        #if os(iOS)
+        // Seeded here rather than in `.task`/`.onAppear` so the chosen page is
+        // the first thing drawn — no visible jump from the root list. Both
+        // slots are set because the size class isn't known this early; the
+        // layout in use reads one of them. On anything but an iPhone
+        // `destination` is nil, i.e. exactly the defaults these had before.
+        let destination = LaunchPreferences.destination
+        _navPath = State(initialValue: destination.map { [$0] } ?? [])
+        // The split layout (a large iPhone in landscape) always shows the root
+        // list in its sidebar, so "Main" leaves the detail pane on its
+        // long-standing default instead of an empty placeholder.
+        _selection = State(initialValue: destination ?? .today)
+        #endif
+    }
 
     var body: some View {
         Group {
@@ -129,6 +149,11 @@ struct AppRoot: View {
         }
         #endif
         .task {
+            // The launch page may name a project this account no longer has
+            // (deleted, or the choice was made on another account) — the
+            // cached project list is already loaded, so catch it before the
+            // "Project not found" placeholder shows.
+            if !store.projects.isEmpty { pruneVanishedProject(from: store.projects) }
             _ = await ReminderScheduler.requestPermission()
             guard VikunjaConfig.isConfigured else { return }
             #if os(iOS)
@@ -150,14 +175,31 @@ struct AppRoot: View {
         .onDisappear { store.stopPolling() }
         .onOpenURL { handleDeepLink($0) }
         .onChange(of: store.projects) { _, projects in
-            if case .project(let id) = selection, !projects.contains(where: { $0.id == id }) {
-                selection = .inbox
-            }
-            if let last = navPath.last, case .project(let id) = last,
-               !projects.contains(where: { $0.id == id }) {
-                navPath = Array(navPath.dropLast())
-            }
+            pruneVanishedProject(from: projects)
         }
+        #if os(iOS)
+        .onChange(of: scenePhase) { _, phase in
+            // The opening page is applied on the way *out*, not on the way
+            // back: the app is then already on it when it reappears, and
+            // anything that arrives with the return — a deep link, a Quick
+            // Action, a tapped reminder — runs afterwards and wins, instead of
+            // racing a reset that could stomp it.
+            if phase == .background { applyOpeningPage() }
+        }
+        // Last used is whatever is on screen, however it got there — a tap, a
+        // Quick Action or a deep link. Each layout records only its own state
+        // so the idle one can't overwrite it, and neither records while
+        // backgrounding, where `applyOpeningPage()` would otherwise file the
+        // opening page itself as the page the user was last on.
+        .onChange(of: navPath) { _, path in
+            guard scenePhase == .active, sizeClass == .compact else { return }
+            LaunchPreferences.recordLastUsed(path.last)
+        }
+        .onChange(of: selection) { _, item in
+            guard scenePhase == .active, sizeClass != .compact else { return }
+            LaunchPreferences.recordLastUsed(item)
+        }
+        #endif
         .alert("Error", isPresented: Binding(
             get: { store.error != nil },
             set: { if !$0 { store.error = nil } }
@@ -388,9 +430,34 @@ struct AppRoot: View {
     }
 
     private var visibleProjects: [VikunjaProject] {
-        store.projects
-            .filter { $0.title.lowercased() != "inbox" }
-            .sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
+        store.visibleProjects
+    }
+
+    #if os(iOS)
+    /// Returns the app to the user's chosen opening page. Runs every time the
+    /// app leaves the foreground, so the setting isn't a launch-only curiosity
+    /// — "Last Used" is the option for staying put. A no-op on iPad and for
+    /// "Last Used", where the destination is already what's on screen.
+    private func applyOpeningPage() {
+        // Not just belt-and-braces: without this an iPad would have its
+        // selection reset to Scheduled on every trip through the background.
+        guard LaunchPreferences.isSupported else { return }
+        let destination = LaunchPreferences.destination
+        let path = destination.map { [$0] } ?? []
+        if navPath != path { navPath = path }
+        if selection != (destination ?? .today) { selection = destination ?? .today }
+    }
+    #endif
+
+    /// Drops a selection pointing at a project that isn't in `projects`.
+    private func pruneVanishedProject(from projects: [VikunjaProject]) {
+        if case .project(let id) = selection, !projects.contains(where: { $0.id == id }) {
+            selection = .inbox
+        }
+        if let last = navPath.last, case .project(let id) = last,
+           !projects.contains(where: { $0.id == id }) {
+            navPath = Array(navPath.dropLast())
+        }
     }
 
     private var todayCount: Int {

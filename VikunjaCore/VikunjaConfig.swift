@@ -20,7 +20,7 @@ enum VikunjaConfig {
     static let appGroupSuite = "group.net.angstreich.VikunjaWidgetApp"
     static let vikunjaCloudHost = "https://app.vikunja.cloud"
     static let maxAccounts = 5
-    static let maxAccountNameLength = 10
+    static let maxAccountNameLength = 32
 
     private static var defaults: UserDefaults? { UserDefaults(suiteName: appGroupSuite) }
 

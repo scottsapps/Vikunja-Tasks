@@ -32,7 +32,6 @@ Beta Builds Available on [TestFlight](https://testflight.apple.com/join/q8GhTkFz
 - **Apple Watch app** — Scheduled (7-day window) and Inbox views, tap to complete, dictation/Scribble Quick Add with confirm-chips screen; credentials pushed from the phone over WatchConnectivity
 - **Apple Watch Smart Stack widget** — complications and Smart Stack widget showing upcoming tasks
 - **Report a Bug** — in-app bug reports with an optional diagnostic log, readable in full before sending; the log never contains hosts, tokens, or task content
-- **Vikunja API v2** used for the task fetch when the server supports it (2.4.0+), with automatic fallback to v1
 - **Opt-out analytics** — TelemetryDeck integration (on by default; user-toggled in Settings)
 
 ## Requirements

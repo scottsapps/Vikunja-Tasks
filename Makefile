@@ -1,4 +1,4 @@
-.PHONY: gen fix-widget
+.PHONY: gen fix-widget strings
 
 LSREGISTER := /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 
@@ -47,3 +47,30 @@ gen:
 	@printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n\t<key>com.apple.security.application-groups</key>\n\t<array>\n\t\t<string>group.net.angstreich.VikunjaWidgetApp</string>\n\t</array>\n\t<key>keychain-access-groups</key>\n\t<array>\n\t\t<string>$$(AppIdentifierPrefix)net.angstreich.VikunjaWidgetApp</string>\n\t</array>\n</dict>\n</plist>\n' \
 		> VikunjaWidgetWatchExtension/VikunjaWidgetWatchExtension.entitlements
 	@echo "✓ Entitlements restored (six files)"
+
+# Refreshes VikunjaCore/Localizable.xcstrings from the strings actually used in
+# source. Xcode does this itself when you build in the IDE; `xcodebuild` does
+# not, so a CLI-only session leaves the table stale. Builds all three schemes
+# first because the catalog is shared by every target — syncing from one
+# platform's .stringsdata alone would mark the other platforms' strings stale.
+strings:
+	@set -e; \
+	for s in VikunjaWidgetApp:platform=macOS \
+	         VikunjaWidgetAppIOS:generic/platform=iOS \
+	         VikunjaWidgetWatch:generic/platform=watchOS; do \
+		scheme=$${s%%:*}; dest=$${s#*:}; \
+		echo "Building $$scheme…"; \
+		xcodebuild -project VikunjaWidget.xcodeproj -scheme "$$scheme" \
+			-configuration Debug -destination "$$dest" build \
+			CODE_SIGNING_ALLOWED=NO >/dev/null; \
+	done; \
+	intermediates=$$(xcodebuild -project VikunjaWidget.xcodeproj \
+		-scheme VikunjaWidgetApp -showBuildSettings 2>/dev/null \
+		| awk -F' = ' '/ BUILD_DIR =/{print $$2; exit}' \
+		| sed 's|/Build/Products|/Build/Intermediates.noindex|'); \
+	args=$$(find "$$intermediates" -name '*.stringsdata' \
+		-not -path '*/TelemetryDeck.build/*' \
+		-exec printf -- '--stringsdata %s ' {} +); \
+	xcrun xcstringstool sync VikunjaCore/Localizable.xcstrings $$args; \
+	echo "✓ Catalog synced: $$(python3 -c \
+		"import json;print(len(json.load(open('VikunjaCore/Localizable.xcstrings'))['strings']))") strings"

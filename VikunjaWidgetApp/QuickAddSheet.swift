@@ -481,14 +481,7 @@ struct QuickAddSheet: View {
     // MARK: - Chip label helpers
 
     private func dateChipLabel(_ date: Date) -> String {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-        let day = cal.startOfDay(for: date)
-        if day < today { return "Overdue" }
-        if day == today { return "Today" }
-        if day == cal.date(byAdding: .day, value: 1, to: today)! { return "Tomorrow" }
-        let fmt = DateFormatter(); fmt.dateFormat = "MMM d"
-        return fmt.string(from: date)
+        DayLabel.compact(date)
     }
 
     private func repeatChipLabel() -> String {

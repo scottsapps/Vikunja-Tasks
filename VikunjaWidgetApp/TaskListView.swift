@@ -216,7 +216,6 @@ struct TaskListView: View {
     private func dateGroups(_ tasks: [VikunjaTask]) -> [DateGroup] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
-        let tomorrow = cal.date(byAdding: .day, value: 1, to: today)!
 
         // The undated bucket rides the same date sort as every other group, so
         // moving it to the top is a matter of keying it before every real day
@@ -236,22 +235,9 @@ struct TaskListView: View {
             }
         }
 
-        let fmt = DateFormatter()
-        fmt.dateFormat = "EEE, MMM d"
-        let fmtWithYear = DateFormatter()
-        fmtWithYear.dateFormat = "EEE, MMM d, yyyy"
-        let currentYear = cal.component(.year, from: today)
-
         return buckets.keys.sorted().compactMap { day -> DateGroup? in
             let sorted = sortOrder.sorted(buckets[day]!, projectNames: store.projectMap)
-            let label: String
-            if day == noDateKey { label = "No Date" }
-            else if day == today { label = "Today" }
-            else if day == tomorrow { label = "Tomorrow" }
-            else {
-                let dayYear = cal.component(.year, from: day)
-                label = dayYear == currentYear ? fmt.string(from: day) : fmtWithYear.string(from: day)
-            }
+            let label = day == noDateKey ? DayLabel.noDate : DayLabel.groupHeader(day)
             return DateGroup(label: label, sortKey: day, tasks: sorted)
         }
     }

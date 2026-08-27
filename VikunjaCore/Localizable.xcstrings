@@ -1,0 +1,541 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    "%lld" : {
+
+    },
+    "%lld due" : {
+
+    },
+    "%lld due today" : {
+
+    },
+    "%lld line(s) could not be parsed and will be skipped." : {
+
+    },
+    "%lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "%lld task(s) queued for creation." : {
+
+    },
+    "%lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "%lld/%lld characters" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld characters"
+          }
+        }
+      }
+    },
+    "+%lld" : {
+
+    },
+    "API Token" : {
+
+    },
+    "Aa" : {
+
+    },
+    "Account Name" : {
+
+    },
+    "Accounts" : {
+
+    },
+    "Active Account" : {
+
+    },
+    "Add" : {
+
+    },
+    "Add Account" : {
+
+    },
+    "Add Link" : {
+
+    },
+    "Add Task" : {
+
+    },
+    "Add subtask…" : {
+
+    },
+    "All done" : {
+
+    },
+    "All tasks in this project will be permanently deleted." : {
+
+    },
+    "Attach diagnostic log?" : {
+
+    },
+    "Bulk Import" : {
+
+    },
+    "Bulk Import Tasks" : {
+
+    },
+    "Buy milk *groceries +Home !2 tomorrow" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Choose Different File" : {
+
+    },
+    "Choose File" : {
+
+    },
+    "Clear" : {
+
+    },
+    "Clear due date" : {
+
+    },
+    "Clear reminder" : {
+
+    },
+    "Clear repeat" : {
+
+    },
+    "Click to record a new global shortcut (default: ⌃Space)" : {
+
+    },
+    "Close" : {
+
+    },
+    "Collapse" : {
+
+    },
+    "Complete Task" : {
+
+    },
+    "Connect to your Vikunja instance." : {
+
+    },
+    "Copied" : {
+
+    },
+    "Copy All" : {
+
+    },
+    "Couldn't load tasks" : {
+
+    },
+    "Create" : {
+
+    },
+    "Custom server" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete \"%@\"?" : {
+
+    },
+    "Delete %@" : {
+
+    },
+    "Delete Account" : {
+
+    },
+    "Delete Project and All Tasks" : {
+
+    },
+    "Delete Project…" : {
+
+    },
+    "Delete Task" : {
+
+    },
+    "Diagnostic Log" : {
+
+    },
+    "Done" : {
+
+    },
+    "Due Date" : {
+
+    },
+    "Edit" : {
+
+    },
+    "Edit %@" : {
+
+    },
+    "Edit Account" : {
+
+    },
+    "Error" : {
+
+    },
+    "Every" : {
+
+    },
+    "Expected file format:" : {
+
+    },
+    "Extra Large" : {
+
+    },
+    "Family" : {
+
+    },
+    "Font Size" : {
+
+    },
+    "Forward" : {
+
+    },
+    "From completion date" : {
+
+    },
+    "Get Started" : {
+
+    },
+    "Has Reminder" : {
+
+    },
+    "Help" : {
+
+    },
+    "Import %lld Task%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import %1$lld Task%2$@"
+          }
+        }
+      }
+    },
+    "Inbox" : {
+
+    },
+    "Label" : {
+
+    },
+    "Labels" : {
+
+    },
+    "Large" : {
+
+    },
+    "Line 1: project name  ·  Line 2: comma-separated labels (leave blank if none)  ·  Remaining lines: yyyy-mm-dd followed by task title" : {
+
+    },
+    "Logbook" : {
+
+    },
+    "Maximum of 5 accounts." : {
+
+    },
+    "Medium" : {
+
+    },
+    "More options" : {
+
+    },
+    "Name" : {
+
+    },
+    "New Project" : {
+
+    },
+    "New Task" : {
+
+    },
+    "New Task (⌘N)" : {
+
+    },
+    "New task" : {
+
+    },
+    "Next due date is calculated from the original due date." : {
+
+    },
+    "Next due date is calculated from when you complete the task." : {
+
+    },
+    "No Date" : {
+      "comment" : "Section header grouping tasks that have no due date"
+    },
+    "No labels yet" : {
+
+    },
+    "No tasks due today" : {
+
+    },
+    "No upcoming tasks" : {
+
+    },
+    "None" : {
+
+    },
+    "Notes…" : {
+
+    },
+    "OK" : {
+
+    },
+    "Offset" : {
+
+    },
+    "Open Veyrn on your iPhone and sign in to sync your Watch." : {
+
+    },
+    "Opening Page" : {
+
+    },
+    "Overdue" : {
+      "comment" : "Shown on a task whose due date has already passed"
+    },
+    "Paste or type a URL. Selected text will become the link; otherwise the URL is inserted." : {
+
+    },
+    "Personal" : {
+
+    },
+    "Priority" : {
+
+    },
+    "Project" : {
+
+    },
+    "Project '%@' not found in your Vikunja account." : {
+
+    },
+    "Project name" : {
+
+    },
+    "Project not found" : {
+
+    },
+    "Projects" : {
+
+    },
+    "Projects run in alphabetical order; this orders the tasks inside each one." : {
+
+    },
+    "Quick Add Shortcut" : {
+
+    },
+    "Recommended: set a long expiration (1 year or more) and grant all permissions." : {
+
+    },
+    "Refresh" : {
+
+    },
+    "Refresh Options" : {
+
+    },
+    "Refresh Widget" : {
+
+    },
+    "Refresh Widget Now — fetches your latest tasks and tells the widget to redraw immediately." : {
+
+    },
+    "Refreshing…" : {
+
+    },
+    "Remind me at" : {
+
+    },
+    "Reminder" : {
+
+    },
+    "Reminder set" : {
+
+    },
+    "Reopen task" : {
+
+    },
+    "Repeat" : {
+
+    },
+    "Report a Bug" : {
+
+    },
+    "Review" : {
+
+    },
+    "Save" : {
+
+    },
+    "Scheduled" : {
+
+    },
+    "Search Results" : {
+
+    },
+    "Search tasks" : {
+
+    },
+    "Select a list" : {
+
+    },
+    "Send With Log" : {
+
+    },
+    "Send Without Log" : {
+
+    },
+    "Sends a report to %@. You choose whether to attach the diagnostic log, and you can read it first." : {
+
+    },
+    "Server" : {
+
+    },
+    "Settings" : {
+
+    },
+    "Share anonymous usage analytics" : {
+
+    },
+    "Show %lld more of today's tasks" : {
+
+    },
+    "Show More Tasks" : {
+
+    },
+    "Show the previous tasks" : {
+
+    },
+    "Small" : {
+
+    },
+    "Sort tasks by" : {
+
+    },
+    "Subtasks" : {
+
+    },
+    "Tags" : {
+
+    },
+    "Task Font Size" : {
+
+    },
+    "Task ID" : {
+
+    },
+    "Task Order" : {
+
+    },
+    "Task title" : {
+
+    },
+    "Tasks" : {
+
+    },
+    "Tasks with no date" : {
+
+    },
+    "The log records what Veyrn did — app launches, sync results, errors. It never includes your server address, your API token, or anything about your tasks: no titles, projects, labels, or dates.\n%@" : {
+
+    },
+    "Title" : {
+
+    },
+    "Today" : {
+      "comment" : "Stands in for today's date on a task or section header"
+    },
+    "Tomorrow" : {
+      "comment" : "Stands in for tomorrow's date on a task or section header"
+    },
+    "Undo" : {
+
+    },
+    "Undo Complete Task" : {
+
+    },
+    "Unit" : {
+
+    },
+    "Upcoming tasks from your Veyrn instance." : {
+
+    },
+    "Veyrn" : {
+
+    },
+    "Veyrn Tasks" : {
+
+    },
+    "View Log" : {
+
+    },
+    "Vikunja Cloud" : {
+
+    },
+    "Vikunja → Profile → Settings → API Tokens" : {
+
+    },
+    "Welcome to Veyrn" : {
+
+    },
+    "Where Veyrn goes when you open it, every time. Main is the list of Inbox, Scheduled, Logbook and your projects; Last Used leaves you where you were." : {
+
+    },
+    "Within each project" : {
+
+    },
+    "Work\nurgent, feature\n2024-04-01 Fix the login bug\n2024-04-03 Write release notes" : {
+
+    },
+    "Your Vikunja server — without /api/v1" : {
+
+    },
+    "Your next tasks at a glance." : {
+
+    },
+    "due" : {
+
+    },
+    "e.g. Home" : {
+
+    },
+    "https://example.com" : {
+
+    },
+    "https://tasks.example.com" : {
+
+    },
+    "or drag & drop a file anywhere in this window" : {
+
+    },
+    "task due today" : {
+
+    },
+    "tasks due today" : {
+
+    },
+    "tk_…" : {
+
+    }
+  },
+  "version" : "1.0"
+}

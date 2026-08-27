@@ -72,11 +72,11 @@ struct VikunjaEntry: TimelineEntry {
     static let placeholder = VikunjaEntry(
         date: Date(),
         taskGroups: [
-            TaskGroup(label: "Today", tasks: [
+            TaskGroup(label: DayLabel.today, tasks: [
                 TaskEntryItem(id: 1, title: "Review project proposal", projectName: "Work", tags: ["urgent"], dueDate: Date(), priority: 3, hasReminder: true),
                 TaskEntryItem(id: 2, title: "Schedule dentist", projectName: "Personal", tags: [], dueDate: Date()),
             ], isToday: true),
-            TaskGroup(label: "Tomorrow", tasks: [
+            TaskGroup(label: DayLabel.tomorrow, tasks: [
                 TaskEntryItem(id: 3, title: "Call insurance company", projectName: "Finance", tags: [], dueDate: Date(), priority: 1),
             ]),
         ],

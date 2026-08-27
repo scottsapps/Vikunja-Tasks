@@ -44,10 +44,15 @@ enum BulkImportParser {
 
         let taskLines = lines.dropFirst(2).filter { !$0.isEmpty }
 
-        let eastern = TimeZone(identifier: "America/New_York")!
+        // The date column is ISO 8601 (yyyy-MM-dd), so the formatter is pinned to a
+        // fixed locale — otherwise a device on a non-Gregorian calendar (Thai
+        // Buddhist, Japanese imperial) reads the year in its own era. The calendar
+        // day it yields is the user's own: due times are 8 PM local everywhere else
+        // in the app, and an import is no different.
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
-        fmt.timeZone = eastern
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+        fmt.timeZone = .current
 
         var tasks: [BulkImportSpec.TaskEntry] = []
         var skipped: [String] = []
@@ -65,8 +70,7 @@ enum BulkImportParser {
                 continue
             }
 
-            // Midnight Eastern + 20 h = 8 PM Eastern (DST-safe).
-            let dueDate = midnight.addingTimeInterval(20 * 3_600)
+            let dueDate = VikunjaAPI.applyDefaultTime(midnight)
             tasks.append(BulkImportSpec.TaskEntry(title: title, dueDate: dueDate))
         }
 

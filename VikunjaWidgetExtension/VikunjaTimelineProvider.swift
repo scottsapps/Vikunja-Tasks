@@ -178,7 +178,6 @@ struct VikunjaTimelineProvider: TimelineProvider {
     private func group(_ tasks: [TaskEntryItem]) -> [TaskGroup] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
-        let tomorrow = cal.date(byAdding: .day, value: 1, to: today)!
 
         var buckets: [Date: [TaskEntryItem]] = [:]
         for task in tasks {
@@ -187,16 +186,9 @@ struct VikunjaTimelineProvider: TimelineProvider {
             buckets[bucket, default: []].append(task)
         }
 
-        let fmt = DateFormatter()
-        fmt.dateFormat = "EEE, MMM d"
-
         return buckets.keys.sorted().compactMap { day -> TaskGroup? in
             let sorted = buckets[day]!.sorted { $0.title.lowercased() < $1.title.lowercased() }
-            let label: String
-            if day == today { label = "Today" }
-            else if day == tomorrow { label = "Tomorrow" }
-            else { label = fmt.string(from: day) }
-            return TaskGroup(label: label, tasks: sorted, isToday: day == today)
+            return TaskGroup(label: DayLabel.groupHeader(day), tasks: sorted, isToday: day == today)
         }
     }
 

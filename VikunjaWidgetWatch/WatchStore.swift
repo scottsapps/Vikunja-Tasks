@@ -69,12 +69,7 @@ final class WatchStore {
     }
 
     private static func dayTitle(_ day: Date, today: Date, cal: Calendar) -> String {
-        if cal.isDate(day, inSameDayAs: today) { return "Today" }
-        if let tom = cal.date(byAdding: .day, value: 1, to: today),
-           cal.isDate(day, inSameDayAs: tom) { return "Tomorrow" }
-        let f = DateFormatter()
-        f.dateFormat = "EEEE"
-        return f.string(from: day)
+        DayLabel.weekday(day, now: today, calendar: cal)
     }
 
     func inboxTasks() -> [VikunjaTask] {

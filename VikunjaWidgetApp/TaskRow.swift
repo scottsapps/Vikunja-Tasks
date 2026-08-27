@@ -141,17 +141,7 @@ struct TaskRow: View {
         let taskDay = cal.startOfDay(for: date)
         let isOverdue = taskDay < today
 
-        let label: String
-        if taskDay == today { label = "Today" }
-        else if taskDay == cal.date(byAdding: .day, value: 1, to: today)! { label = "Tomorrow" }
-        else if isOverdue { label = "Overdue" }
-        else {
-            let fmt = DateFormatter()
-            fmt.dateFormat = "MMM d"
-            label = fmt.string(from: date)
-        }
-
-        return Text(label)
+        return Text(DayLabel.compact(date))
             .font(.system(size: CGFloat(10 + max(fs, 0))))
             .foregroundStyle(isOverdue ? .red : .secondary)
     }

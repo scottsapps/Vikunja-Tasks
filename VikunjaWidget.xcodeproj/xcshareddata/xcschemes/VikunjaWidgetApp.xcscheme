@@ -51,6 +51,17 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "95560EDEFCF98E06593EAC53"
+               BuildableName = "VikunjaWidgetAppTests.xctest"
+               BlueprintName = "VikunjaWidgetAppTests"
+               ReferencedContainer = "container:VikunjaWidget.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

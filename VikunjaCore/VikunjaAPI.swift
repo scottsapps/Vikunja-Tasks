@@ -511,15 +511,45 @@ enum VikunjaAPI {
     /// The headline v2 win: merge-patch means only the changed fields are ever
     /// sent, so omitted fields structurally can't be clobbered — no pre-fetch
     /// needed for the patch itself (V-2). This eliminates the 2.7.1 bug class
-    /// on v2 servers. No v1 fallback on failure (mutations route by flag).
+    /// on v2 servers. A definitive 422 falls back to the existing v1 path;
+    /// ambiguous transport failures still never replay a mutation.
     static func updateTask(id: Int, update: TaskUpdate) async throws -> VikunjaTask {
         if supportsAPIv2 {
-            try await updateTaskV2(id: id, update: update)
-            // Re-fetch so the returned task includes updated labels — same
-            // contract as v1 below.
-            return try await fetchTask(id: id)
+            return try await performV2TaskUpdate(
+                updateV2: { try await updateTaskV2(id: id, update: update) },
+                fetchUpdated: { try await fetchTask(id: id) },
+                updateV1: { try await updateTaskV1(id: id, update: update) }
+            )
         }
         return try await updateTaskV1(id: id, update: update)
+    }
+
+    struct V2TaskPatchRejected: Error {}
+
+    static func performV2TaskUpdate<T>(
+        updateV2: () async throws -> Void,
+        fetchUpdated: () async throws -> T,
+        updateV1: () async throws -> T
+    ) async throws -> T {
+        do {
+            try await updateV2()
+        } catch {
+            guard error is V2TaskPatchRejected else { throw error }
+            DiagnosticLog.warn(
+                "v2 task update returned 422; falling back to v1"
+            )
+            return try await updateV1()
+        }
+        return try await fetchUpdated()
+    }
+
+    /// Vikunja 2.4.0 can reject AutoPatch's internally merged task when a
+    /// read-only response field does not match the PUT schema. A 422 proves
+    /// the PATCH was rejected before mutation, so retrying the existing v1
+    /// full-update path cannot double-apply the edit.
+    static func v2TaskPatchIsUnprocessable(_ error: Error) -> Bool {
+        guard let apiError = error as? APIError else { return false }
+        return apiError.statusCode == 422
     }
 
     private static func updateTaskV2(id: Int, update: TaskUpdate) async throws {
@@ -560,7 +590,14 @@ enum VikunjaAPI {
         }
 
         if !body.isEmpty {
-            try await patchV2("/tasks/\(id)", body: body)
+            do {
+                try await patchV2("/tasks/\(id)", body: body)
+            } catch {
+                if v2TaskPatchIsUnprocessable(error) {
+                    throw V2TaskPatchRejected()
+                }
+                throw error
+            }
         }
 
         if let labelIds = update.labelIds {
@@ -776,9 +813,23 @@ enum VikunjaAPI {
     /// output: merge-patch needs an *explicit* `NSNull()` for a clear and an
     /// *absent* key for "no change", a distinction `Codable` can't express.
     private static func patchV2(_ path: String, body: [String: Any]) async throws {
-        let data = try JSONSerialization.data(withJSONObject: body)
-        let request = makeRequest(path, method: "PATCH", body: data, base: v2BaseURL)
+        let request = try makeMergePatchRequest(path, body: body)
         _ = try await send(request, acceptingNotModified: true)
+    }
+
+    static func makeMergePatchRequest(
+        _ path: String,
+        body: [String: Any],
+        base: String? = nil
+    ) throws -> URLRequest {
+        let data = try JSONSerialization.data(withJSONObject: body)
+        return makeRequest(
+            path,
+            method: "PATCH",
+            body: data,
+            base: base ?? v2BaseURL,
+            contentType: "application/merge-patch+json"
+        )
     }
 
     private static func putV2(_ path: String, body: Data) async throws {
@@ -821,13 +872,19 @@ enum VikunjaAPI {
         return result.items ?? []
     }
 
-    private static func makeRequest(_ path: String, method: String = "GET", body: Data? = nil, base: String? = nil) -> URLRequest {
+    private static func makeRequest(
+        _ path: String,
+        method: String = "GET",
+        body: Data? = nil,
+        base: String? = nil,
+        contentType: String = "application/json"
+    ) -> URLRequest {
         let baseURL = base ?? self.baseURL
         var request = URLRequest(url: URL(string: "\(baseURL)\(path)")!, timeoutInterval: 20)
         request.httpMethod = method
         request.setValue("Bearer \(VikunjaConfig.apiToken)", forHTTPHeaderField: "Authorization")
         if let body {
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(contentType, forHTTPHeaderField: "Content-Type")
             request.httpBody = body
         }
         return request

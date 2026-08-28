@@ -14,6 +14,13 @@ final class TaskStore {
     var isLoading = false
     var error: String?
 
+    /// A reassuring, non-blocking heads-up — nothing failed. Presented as its
+    /// own gently-titled alert, separate from `error`, and only set when
+    /// `error` is clear so the two can't fight over the screen. Currently the
+    /// one user: an import that fell back off the bulk endpoint because the
+    /// API token predates it.
+    var advisory: String?
+
     /// True while the most recent refresh failed for a transient network
     /// reason (timeout, host unreachable, radio not up yet). Drives the
     /// offline pill — never an alert, since there's nothing to act on and the
@@ -345,6 +352,7 @@ final class TaskStore {
         labels = []
         lastServerUndone = []
         error = nil
+        advisory = nil
         lastReportedFailure = nil
         lastRefreshError = nil
         transientRefreshFailure = false
@@ -606,13 +614,17 @@ final class TaskStore {
 
     // MARK: - Drain outbox
 
-    private var isDraining = false
+    /// Read by the Pending Changes sheet to disable its buttons while a drain
+    /// is walking the queue — see `discard(opId:)` for why mutating underneath
+    /// a running drain is unsafe.
+    private(set) var isDraining = false
 
     /// Message for the write failure most recently alerted from a drain, so a
     /// queued op that keeps failing alerts once instead of on every poll.
     /// Cleared by the first drain that gets anything through — which is also
-    /// the moment the user has fixed whatever it was.
-    private var lastDrainFailureMessage: String?
+    /// the moment the user has fixed whatever it was. Also surfaced verbatim
+    /// as the Pending Changes sheet's "why it's stuck" header.
+    private(set) var lastDrainFailureMessage: String?
 
     func drainOutbox() async {
         guard !isDraining else { return }
@@ -638,6 +650,12 @@ final class TaskStore {
         // drain, so a systematically-rejected queue doesn't burn a wasted
         // request per run before falling back.
         var bulkDisabled = false
+        // Set when the bulk endpoint 401s but the per-task fallback then
+        // works — the signature of an API token minted before the server
+        // gained the bulk-create permission (Vikunja 2.5.0). Used only to
+        // show a one-time, reassuring "make a fresh token" note after the
+        // drain; the import itself has already gone through.
+        var staleTokenSuspected = false
         while index < snapshot.count {
             let op = snapshot[index]
 
@@ -648,15 +666,25 @@ final class TaskStore {
                     okCount += run.count
                     index += run.count
                     continue
-                } catch let error as VikunjaAPI.APIError where error.isAuthFailure || error.isRateLimited {
-                    // Same credential, same answer for every op behind this
-                    // one — so stop here rather than falling back and
-                    // re-earning the identical rejection one task at a time.
-                    // Bulk create is atomic: nothing was created, and the
-                    // whole run stays queued for when the token is fixed.
-                    DiagnosticLog.warn("drain paused: bulk create ×\(run.count) → \(error.statusCode) (ops kept)")
+                } catch let error as VikunjaAPI.APIError where error.isRateLimited {
+                    // "Slow down" applies to every op behind this one too —
+                    // stop here and let the next drain pick it up. Bulk create
+                    // is atomic: nothing was created, the run stays queued.
+                    DiagnosticLog.warn("drain paused: bulk create ×\(run.count) → 429 (ops kept)")
                     blockingFailure = error
                     break
+                } catch let error as VikunjaAPI.APIError where error.isAuthFailure {
+                    // A 401/403 from the *bulk* endpoint alone doesn't mean the
+                    // token is bad: an API token created before the server
+                    // gained the bulk-create permission (Vikunja 2.5.0) reads
+                    // and single-creates fine but can't call this route. Fall
+                    // back to per-task creates rather than blocking — if those
+                    // also 401, the per-op handler below raises the real auth
+                    // alert. Bulk create is atomic, so nothing was created and
+                    // the fallback can't duplicate.
+                    DiagnosticLog.warn("bulk create ×\(run.count) → \(error.statusCode), falling back to per-task creates (token may predate bulk support)")
+                    bulkDisabled = true
+                    staleTokenSuspected = true
                 } catch let error as VikunjaAPI.APIError where error.isClient4xx {
                     // Bulk create is atomic — a 4xx means *nothing* was created,
                     // so replaying these as single creates can't duplicate
@@ -780,6 +808,246 @@ final class TaskStore {
             }
         } else if okCount > 0 {
             lastDrainFailureMessage = nil
+        }
+
+        // The bulk endpoint refused this token but the per-task fallback got
+        // every task through — an old token missing the 2.5.0 bulk-create
+        // permission. Nothing is broken, so this is a one-time heads-up, not
+        // an error, and only when the fallback actually succeeded.
+        if staleTokenSuspected, okCount > 0, blockingFailure == nil {
+            adviseStaleTokenOnce()
+        }
+    }
+
+    /// One-time, reassuring note shown after a bulk import went through on the
+    /// per-task fallback because the API token predates the server's
+    /// bulk-create permission (Vikunja 2.5.0). Not an error — everything
+    /// imported — so it uses the separate `advisory` channel, and a persisted
+    /// flag keeps it to a single appearance ever.
+    private func adviseStaleTokenOnce() {
+        let key = "veyrn.advisory.bulkTokenStale.shown"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        DiagnosticLog.info("advisory: bulk create fell back to per-task (token predates 2.5.0 bulk permission)")
+        // Don't burn the one-shot if an error alert is already on screen —
+        // try again next time rather than losing the note.
+        guard error == nil else { return }
+        UserDefaults.standard.set(true, forKey: key)
+        advisory = """
+        All your tasks were imported. One note: this API token was created \
+        before your Vikunja server could create tasks in batches, so Veyrn \
+        added them one at a time. Everything works as-is — but if you make a \
+        fresh API token in Vikunja (Settings → API Tokens) and paste it into \
+        Veyrn's Settings, large imports will be faster.
+        """
+    }
+
+    // MARK: - Pending Changes sheet
+
+    /// The queued outbox ops as display rows, in queue order. `TaskStore`
+    /// builds these because it is the only place that can resolve a `TaskRef`
+    /// to a task title.
+    var pendingChanges: [PendingChange] {
+        outbox.ops.map { op in
+            switch op.kind {
+            case .create(let payload, _):
+                return PendingChange(
+                    id: op.id,
+                    icon: "plus.circle",
+                    kindLabel: String(localized: "New task", comment: "Pending Changes row: a queued task creation"),
+                    taskTitle: payload.title,
+                    queuedAt: op.timestamp,
+                    // A queued create exists nowhere but this queue, so
+                    // discarding it deletes the task outright.
+                    deletesTask: true
+                )
+            case .update:
+                return PendingChange(
+                    id: op.id, icon: "pencil",
+                    kindLabel: String(localized: "Edit", comment: "Pending Changes row: a queued edit to a task"),
+                    taskTitle: title(for: op.ref), queuedAt: op.timestamp, deletesTask: false
+                )
+            case .complete:
+                return PendingChange(
+                    id: op.id, icon: "checkmark.circle",
+                    kindLabel: String(localized: "Completed", comment: "Pending Changes row: a queued task completion"),
+                    taskTitle: title(for: op.ref), queuedAt: op.timestamp, deletesTask: false
+                )
+            case .reopen:
+                return PendingChange(
+                    id: op.id, icon: "arrow.uturn.backward",
+                    kindLabel: String(localized: "Reopened", comment: "Pending Changes row: a queued task reopen"),
+                    taskTitle: title(for: op.ref), queuedAt: op.timestamp, deletesTask: false
+                )
+            case .relation(let parentRef, _, _, _):
+                return PendingChange(
+                    id: op.id, icon: "link",
+                    kindLabel: String(localized: "Subtask link", comment: "Pending Changes row: a queued subtask relation change"),
+                    taskTitle: title(for: parentRef), queuedAt: op.timestamp, deletesTask: false
+                )
+            }
+        }
+    }
+
+    /// Raw op counts for the "Discard All" confirmation: `creates` become task
+    /// deletions, everything else is an undo.
+    var pendingDiscardSummary: (creates: Int, others: Int) {
+        var creates = 0
+        var others = 0
+        for op in outbox.ops {
+            if case .create = op.kind { creates += 1 } else { others += 1 }
+        }
+        return (creates, others)
+    }
+
+    /// Human-readable title for a queued op's target task. Searches the live
+    /// undone list, then the logbook, by the ref's resolved id. **A miss is
+    /// expected** — a reopened task is briefly in neither list, and a
+    /// `.complete`'s task can be mid-transition — so this falls back to a
+    /// neutral label and never surfaces a negative placeholder id.
+    private func title(for ref: TaskRef) -> String {
+        switch ref {
+        case .server(let id):
+            if let task = undoneTasks.first(where: { $0.id == id })
+                ?? doneTasks.first(where: { $0.id == id }) {
+                return task.title
+            }
+            return String(localized: "Task #\(id)", comment: "Pending Changes row fallback when the task isn't in the loaded lists")
+        case .client(let uuid):
+            if let placeholderId = outbox.placeholderId(forClient: uuid),
+               let task = undoneTasks.first(where: { $0.id == placeholderId })
+                ?? doneTasks.first(where: { $0.id == placeholderId }) {
+                return task.title
+            }
+            // The merged row isn't there — fall back to the queued create's
+            // own title before giving up. Never show the placeholder id.
+            for op in outbox.ops {
+                if case .client(let opUUID) = op.ref, opUUID == uuid,
+                   case .create(let payload, _) = op.kind {
+                    return payload.title
+                }
+            }
+            return String(localized: "New task", comment: "Pending Changes row: a queued task creation")
+        }
+    }
+
+    /// Resolves a ref to the id its task carries in the *local* merged lists —
+    /// a real server id, or the negative placeholder id for an offline create.
+    private func localId(for ref: TaskRef) -> Int? {
+        switch ref {
+        case .server(let id): return id
+        case .client(let uuid): return outbox.placeholderId(forClient: uuid)
+        }
+    }
+
+    /// Removes a single queued change — and, for a queued offline `.create`,
+    /// every later op that depends on it — then undoes whatever local side
+    /// effect enqueuing those ops performed. Called only from the Pending
+    /// Changes sheet.
+    @MainActor
+    func discard(opId: UUID) async {
+        guard let op = outbox.ops.first(where: { $0.id == opId }) else { return }
+        // The drain walks a snapshot and removes ops as they land; mutating the
+        // queue underneath it risks cancelling a change already on the wire.
+        // The sheet also disables its buttons while `isDraining`, but a poll
+        // can start one between the tap and here.
+        guard !isDraining else {
+            DiagnosticLog.info("discard ignored — drain in progress")
+            return
+        }
+
+        // Cascade: discarding an offline create must also discard every op that
+        // targets the same not-yet-created task. `drainOutbox` skips any op
+        // whose `.client` ref can't resolve to a server id (`serverId(for:)
+        // == nil` → `continue`), so a stranded `.update`/`.complete`/
+        // `.relation` would sit in the queue forever — never sent, never
+        // failed, never removed — leaving a permanent "N pending" that no
+        // retry and no discard could clear.
+        var doomed: Set<UUID> = [op.id]
+        if case .create = op.kind, case .client(let uuid) = op.ref {
+            for other in outbox.ops where other.id != op.id {
+                if case .client(let otherUUID) = other.ref, otherUUID == uuid {
+                    doomed.insert(other.id)
+                    continue
+                }
+                if case .relation(let parentRef, let childRef, _, _) = other.kind {
+                    if case .client(let u) = parentRef, u == uuid { doomed.insert(other.id) }
+                    if case .client(let u) = childRef, u == uuid { doomed.insert(other.id) }
+                }
+            }
+        }
+
+        let discarded = outbox.ops.filter { doomed.contains($0.id) }
+        await applyDiscard(of: discarded, logHead: "discard op \(opLabel(op))", cascadeExtra: doomed.count - 1)
+    }
+
+    /// Removes every queued change at once, undoing each one's local side
+    /// effect — the "Discard All" path.
+    @MainActor
+    func discardAll() async {
+        guard !isDraining else {
+            DiagnosticLog.info("discardAll ignored — drain in progress")
+            return
+        }
+        guard !outbox.ops.isEmpty else { return }
+        let summary = pendingDiscardSummary
+        await applyDiscard(
+            of: outbox.ops,
+            logHead: "discard all: \(summary.creates) create, \(summary.others) other",
+            cascadeExtra: 0
+        )
+    }
+
+    /// Shared body of `discard`/`discardAll`: undo the per-kind local side
+    /// effects, drop the ops, rebuild, and re-arm anything the enqueue tore
+    /// down. Everything up to the trailing `await`s runs synchronously on the
+    /// main actor, so a concurrent drain can't observe a half-updated queue;
+    /// by the time those awaits suspend, the queue is already settled.
+    @MainActor
+    private func applyDiscard(of discarded: [PendingOp], logHead: String, cascadeExtra: Int) async {
+        let hadComplete = discarded.contains { if case .complete = $0.kind { return true } else { return false } }
+        let hadReopen = discarded.contains { if case .reopen = $0.kind { return true } else { return false } }
+
+        for op in discarded {
+            switch op.kind {
+            case .complete:
+                // `commitCompletion` moved the task into `doneTasks` and
+                // cancelled its reminders. Take it back out here;
+                // `rebuildMergedTasks()` re-derives it into `undoneTasks` from
+                // the untouched server list, and the reminder is re-armed below.
+                if let id = localId(for: op.ref) {
+                    doneTasks.removeAll { $0.id == id }
+                }
+            case .reopen:
+                // `reopen` removed the task from `doneTasks` and kept no local
+                // copy. `refreshLogbook()` at the tail rebuilds `doneTasks`
+                // from the server (which still reports it done) now the op is
+                // gone; offline, it returns on the next Logbook sync.
+                break
+            case .create, .update, .relation:
+                // No explicit undo — `rebuildMergedTasks()` re-derives the
+                // correct state from `lastServerUndone` once the op is gone.
+                break
+            }
+        }
+
+        if discarded.count == outbox.ops.count {
+            outbox.removeAll()          // one write instead of one per op
+        } else {
+            for op in discarded { outbox.remove(id: op.id) }
+        }
+        if hadComplete { saveDoneCache() }
+        rebuildMergedTasks()
+
+        // The blocking condition no longer has anything to block.
+        if outbox.ops.isEmpty { lastDrainFailureMessage = nil }
+        WidgetCenter.shared.reloadAllTimelines()
+        DiagnosticLog.info("\(logHead)\(cascadeExtra > 0 ? " (+\(cascadeExtra) dependent)" : "")")
+
+        if hadComplete {
+            await ReminderScheduler.sync(tasks: undoneTasks)
+        }
+        if hadReopen {
+            await refreshLogbook()
         }
     }
 

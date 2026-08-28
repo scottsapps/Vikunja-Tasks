@@ -4,6 +4,12 @@
     "" : {
 
     },
+    "\"%@\" was never uploaded to your server, so discarding it deletes it permanently." : {
+
+    },
+    "%@ This cannot be undone." : {
+
+    },
     "%lld" : {
 
     },
@@ -25,6 +31,9 @@
           }
         }
       }
+    },
+    "%lld pending changes. Tap to review." : {
+
     },
     "%lld task(s) queued for creation." : {
 
@@ -82,6 +91,9 @@
     "Add subtask…" : {
 
     },
+    "All changes synced" : {
+
+    },
     "All done" : {
 
     },
@@ -133,6 +145,9 @@
     "Complete Task" : {
 
     },
+    "Completed" : {
+      "comment" : "Pending Changes row: a queued task completion"
+    },
     "Connect to your Vikunja instance." : {
 
     },
@@ -172,7 +187,25 @@
     "Delete Task" : {
 
     },
+    "Delete this task?" : {
+
+    },
     "Diagnostic Log" : {
+
+    },
+    "Discard" : {
+
+    },
+    "Discard All" : {
+
+    },
+    "Discard Change" : {
+
+    },
+    "Discard all pending changes?" : {
+
+    },
+    "Discard this change?" : {
 
     },
     "Done" : {
@@ -182,7 +215,7 @@
 
     },
     "Edit" : {
-
+      "comment" : "Pending Changes row: a queued edit to a task"
     },
     "Edit %@" : {
 
@@ -194,6 +227,9 @@
 
     },
     "Every" : {
+
+    },
+    "Everything on this device has reached your server." : {
 
     },
     "Expected file format:" : {
@@ -273,7 +309,7 @@
 
     },
     "New task" : {
-
+      "comment" : "Pending Changes row: a queued task creation"
     },
     "Next due date is calculated from the original due date." : {
 
@@ -315,6 +351,9 @@
       "comment" : "Shown on a task whose due date has already passed"
     },
     "Paste or type a URL. Selected text will become the link; otherwise the URL is inserted." : {
+
+    },
+    "Pending Changes" : {
 
     },
     "Personal" : {
@@ -374,6 +413,9 @@
     "Reopen task" : {
 
     },
+    "Reopened" : {
+      "comment" : "Pending Changes row: a queued task reopen"
+    },
     "Repeat" : {
 
     },
@@ -381,6 +423,9 @@
 
     },
     "Review" : {
+
+    },
+    "Review pending changes" : {
 
     },
     "Save" : {
@@ -431,11 +476,17 @@
     "Sort tasks by" : {
 
     },
+    "Subtask link" : {
+      "comment" : "Pending Changes row: a queued subtask relation change"
+    },
     "Subtasks" : {
 
     },
     "Tags" : {
 
+    },
+    "Task #%lld" : {
+      "comment" : "Pending Changes row fallback when the task isn't in the loaded lists"
     },
     "Task Font Size" : {
 
@@ -452,10 +503,32 @@
     "Tasks" : {
 
     },
+    "Tasks Imported" : {
+
+    },
     "Tasks with no date" : {
 
     },
     "The log records what Veyrn did — app launches, sync results, errors. It never includes your server address, your API token, or anything about your tasks: no titles, projects, labels, or dates.\n%@" : {
+
+    },
+    "The task will go back to the version on your server. Your change will be lost." : {
+
+    },
+    "This will delete ^[%lld new task](inflect: true) and undo ^[%lld change](inflect: true). This cannot be undone." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will delete ^[%1$lld new task](inflect: true) and undo ^[%2$lld change](inflect: true). This cannot be undone."
+          }
+        }
+      }
+    },
+    "This will delete ^[%lld new task](inflect: true). This cannot be undone." : {
+
+    },
+    "This will undo ^[%lld change](inflect: true). This cannot be undone." : {
 
     },
     "Title" : {
@@ -466,6 +539,9 @@
     },
     "Tomorrow" : {
       "comment" : "Stands in for tomorrow's date on a task or section header"
+    },
+    "Try Again" : {
+
     },
     "Undo" : {
 

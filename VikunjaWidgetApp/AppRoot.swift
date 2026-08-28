@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 // MARK: - Offline indicator
 
@@ -11,35 +14,84 @@ private struct OfflinePill: View {
     /// A refresh is in flight and what's on screen predates it enough to be
     /// worth labelling, rather than silently swapping under the user.
     var isUpdating: Bool = false
+    /// Invoked when the pill is tapped in the `.pending` state — the only
+    /// state that is interactive. Every other state renders exactly as before.
+    var onTapPending: () -> Void = {}
+
+    #if os(macOS)
+    /// Whether *we* currently own a pushed cursor. `NSCursor` keeps a global
+    /// stack, so every push needs exactly one matching pop — see `.onHover`.
+    @SwiftUI.State private var didPushCursor = false
+    #endif
 
     private enum State {
         case offline, reconnecting, pending, updating
     }
 
-    var body: some View {
-        // Pending outranks updating: a queued write the user should know
-        // about beats a routine fetch.
-        let state: State? = {
-            if !isOnline { return .offline }
-            if isReconnecting { return .reconnecting }
-            if pendingCount > 0 { return .pending }
-            if isUpdating { return .updating }
-            return nil
-        }()
+    // Pending outranks updating: a queued write the user should know about
+    // beats a routine fetch.
+    private var state: State? {
+        if !isOnline { return .offline }
+        if isReconnecting { return .reconnecting }
+        if pendingCount > 0 { return .pending }
+        if isUpdating { return .updating }
+        return nil
+    }
 
+    var body: some View {
         if let state {
-            HStack(spacing: 4) {
-                Image(systemName: icon(state))
-                    .font(.system(size: 11, weight: .semibold))
-                Text(title(state))
-                    .font(.system(size: 11, weight: .semibold))
+            if state == .pending {
+                Button(action: onTapPending) {
+                    capsule(state, interactive: true)
+                }
+                .buttonStyle(.plain)
+                // A bare capsule is dead in the middle — hit-test the whole
+                // stroked shape (app.md).
+                .contentShape(Capsule())
+                .accessibilityLabel("\(pendingCount) pending changes. Tap to review.")
+                #if os(macOS)
+                .help("Review pending changes")
+                // `NSCursor` is a global stack, so an unmatched push leaks the
+                // pointing hand over the whole window. Two hazards here: rapid
+                // movement can deliver repeated same-value hovers, and SwiftUI
+                // does not reliably send `onHover(false)` when a view is
+                // *removed* — which is this pill's entire job the moment the
+                // queue drains, usually with the cursor still on it. So track
+                // ownership and pop on disappear too.
+                .onHover { inside in
+                    guard inside != didPushCursor else { return }
+                    didPushCursor = inside
+                    if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                }
+                .onDisappear {
+                    if didPushCursor {
+                        NSCursor.pop()
+                        didPushCursor = false
+                    }
+                }
+                #endif
+            } else {
+                capsule(state, interactive: false)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(tint(state).opacity(0.18))
-            .foregroundStyle(tint(state))
-            .clipShape(Capsule())
         }
+    }
+
+    /// The capsule itself. `interactive` only grows the vertical padding into a
+    /// usable tap target — the non-`.pending` states must look exactly as they
+    /// did in 3.2.1, so they stay at 4.
+    @ViewBuilder
+    private func capsule(_ state: State, interactive: Bool) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon(state))
+                .font(.system(size: 11, weight: .semibold))
+            Text(title(state))
+                .font(.system(size: 11, weight: .semibold))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, interactive ? 6 : 4)
+        .background(tint(state).opacity(0.18))
+        .foregroundStyle(tint(state))
+        .clipShape(Capsule())
     }
 
     private func icon(_ state: State) -> String {
@@ -85,6 +137,7 @@ struct AppRoot: View {
     @State private var showSettings = false
     @State private var showQuickAdd = false
     @State private var showBulkImport = false
+    @State private var showPendingChanges = false
     @State private var searchText = ""
     @State private var showNewProject = false
     @State private var newProjectTitle = ""
@@ -208,6 +261,14 @@ struct AppRoot: View {
         } message: {
             Text(store.error ?? "")
         }
+        .alert("Tasks Imported", isPresented: Binding(
+            get: { store.advisory != nil },
+            set: { if !$0 { store.advisory = nil } }
+        )) {
+            Button("OK", role: .cancel) { store.advisory = nil }
+        } message: {
+            Text(store.advisory ?? "")
+        }
         .sheet(isPresented: $showSettings) {
             SettingsView(store: store, onSave: { Task { await store.refresh(reason: "settings") } })
         }
@@ -216,6 +277,9 @@ struct AppRoot: View {
         }
         .sheet(isPresented: $showBulkImport) {
             BulkImportSheet(store: store)
+        }
+        .sheet(isPresented: $showPendingChanges) {
+            PendingChangesSheet(store: store)
         }
         .environment(store)
     }
@@ -310,7 +374,7 @@ struct AppRoot: View {
                     }
                 }
                 ToolbarItem(placement: .status) {
-                    OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count, isReconnecting: store.transientRefreshFailure, isUpdating: store.isShowingStaleData)
+                    OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count, isReconnecting: store.transientRefreshFailure, isUpdating: store.isShowingStaleData, onTapPending: { showPendingChanges = true })
                 }
             }
             .overlay {
@@ -389,7 +453,7 @@ struct AppRoot: View {
                 .help("Bulk Import Tasks")
             }
             ToolbarItem(placement: .status) {
-                OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count, isReconnecting: store.transientRefreshFailure, isUpdating: store.isShowingStaleData)
+                OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count, isReconnecting: store.transientRefreshFailure, isUpdating: store.isShowingStaleData, onTapPending: { showPendingChanges = true })
             }
         }
         #endif

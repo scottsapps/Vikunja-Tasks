@@ -95,6 +95,13 @@ final class Outbox {
         persist()
     }
 
+    /// Drops every queued op in one write — the "Discard All" path. Looping
+    /// `remove(id:)` would re-encode and re-persist once per op.
+    func removeAll() {
+        ops.removeAll()
+        persist()
+    }
+
     func remap(client uuid: UUID, toServer id: Int) {
         for index in ops.indices {
             if case .client(let opUUID) = ops[index].ref, opUUID == uuid {
@@ -118,6 +125,19 @@ final class Outbox {
             if case .create(_, let pid) = op.kind, pid == taskId,
                case .client(let uuid) = op.ref {
                 return uuid
+            }
+        }
+        return nil
+    }
+
+    /// Forward-lookup helper: the negative placeholder id reserved for an
+    /// offline-created task, by its client UUID. Used when resolving a queued
+    /// op back to the row it targets in the merged task list.
+    func placeholderId(forClient uuid: UUID) -> Int? {
+        for op in ops {
+            if case .client(let opUUID) = op.ref, opUUID == uuid,
+               case .create(_, let pid) = op.kind {
+                return pid
             }
         }
         return nil

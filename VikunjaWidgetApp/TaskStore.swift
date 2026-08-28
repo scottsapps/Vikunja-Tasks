@@ -44,6 +44,11 @@ final class TaskStore {
     // MARK: - Offline infrastructure
 
     private(set) var outbox: Outbox
+
+    /// Per-account expansion state for the nested project lists. Replaced on
+    /// account switch alongside `outbox` (see `resetPerAccountState`).
+    private(set) var projectExpansion: ProjectExpansion
+
     let reachability = Reachability.shared
 
     /// Last server-fetched undone tasks before merger is applied.
@@ -52,7 +57,9 @@ final class TaskStore {
     // MARK: - Init
 
     init() {
-        outbox = Outbox(accountId: VikunjaConfig.activeAccount?.id)
+        let accountId = VikunjaConfig.activeAccount?.id
+        outbox = Outbox(accountId: accountId)
+        projectExpansion = ProjectExpansion(accountId: accountId)
         loadCache()
         observeReachability()
     }
@@ -87,6 +94,140 @@ final class TaskStore {
 
     func upcomingTasks() -> [VikunjaTask] {
         undoneTasks.filter { $0.effectiveDueDate != nil && !$0.isSubtask }
+    }
+
+    // MARK: - Project tree
+
+    /// One row in a rendered project list: a project plus how deep to indent
+    /// it. `depth` is the true tree depth — render sites cap the *visual*
+    /// indent, not this.
+    struct ProjectTreeRow: Identifiable {
+        let project: VikunjaProject
+        let depth: Int
+        let hasChildren: Bool
+        let expanded: Bool
+        var id: Int { project.id }
+    }
+
+    /// Latches once per account so a malformed hierarchy logs a single line
+    /// rather than one per view render. Not observed — it's toggled from
+    /// `projectTree`, which runs during view evaluation.
+    @ObservationIgnored private var loggedProjectCycle = false
+
+    /// `visibleProjects` (already Inbox-less and title-sorted) split into its
+    /// roots and a parent-id → children map. A project whose `parentId` names
+    /// something **not** in `visibleProjects` is a root: a child of the Inbox,
+    /// of a project the token can't read, or of one deleted server-side but
+    /// still in a stale cache would otherwise hang off a parent that never
+    /// renders and vanish from the list entirely. Siblings keep
+    /// `visibleProjects`' order.
+    private func projectHierarchy() -> (roots: [VikunjaProject], children: [Int: [VikunjaProject]]) {
+        let visible = visibleProjects
+        let ids = Set(visible.map(\.id))
+        var children: [Int: [VikunjaProject]] = [:]
+        var roots: [VikunjaProject] = []
+        for project in visible {
+            if let parent = project.parentId, ids.contains(parent) {
+                children[parent, default: []].append(project)
+            } else {
+                roots.append(project)
+            }
+        }
+        return (roots, children)
+    }
+
+    /// The visible projects as a depth-first flattened list — each project
+    /// immediately followed by its children, descending into a project only
+    /// when `expanded` contains its id.
+    ///
+    /// Two failure modes with hand-edited data are handled so a project can
+    /// never disappear or hang the app: a chain that loops back on itself
+    /// (A → B → A) is cut by the ancestor set carried down the walk, and a
+    /// pure cycle with no external root — whose members no walk ever reaches —
+    /// is swept up at the end and shown flat at the top level.
+    func projectTree(expanded: Set<Int>) -> [ProjectTreeRow] {
+        let (roots, children) = projectHierarchy()
+        var rows: [ProjectTreeRow] = []
+        var emitted: Set<Int> = []
+
+        func emit(_ project: VikunjaProject, depth: Int, ancestors: Set<Int>) {
+            if ancestors.contains(project.id) {
+                if !loggedProjectCycle {
+                    // ids only, never titles — DiagnosticLog privacy contract.
+                    DiagnosticLog.warn("project tree: cycle at depth \(depth)")
+                    loggedProjectCycle = true
+                }
+                return
+            }
+            emitted.insert(project.id)
+            let kids = children[project.id] ?? []
+            let isExpanded = expanded.contains(project.id)
+            rows.append(ProjectTreeRow(
+                project: project,
+                depth: depth,
+                hasChildren: !kids.isEmpty,
+                expanded: isExpanded
+            ))
+            guard isExpanded else { return }
+            let deeper = ancestors.union([project.id])
+            for kid in kids {
+                emit(kid, depth: depth + 1, ancestors: deeper)
+            }
+        }
+
+        for root in roots {
+            emit(root, depth: 0, ancestors: [])
+        }
+
+        // A pure cycle (or a self-parent) has no root, so nothing above ever
+        // reached its members. Show them flat rather than let them vanish.
+        for project in visibleProjects where !emitted.contains(project.id) {
+            if !loggedProjectCycle {
+                DiagnosticLog.warn("project tree: unrooted project hoisted to top level")
+                loggedProjectCycle = true
+            }
+            rows.append(ProjectTreeRow(
+                project: project,
+                depth: 0,
+                hasChildren: false,
+                expanded: false
+            ))
+        }
+        return rows
+    }
+
+    /// A project's own undone tasks plus every descendant's — the badge a
+    /// **collapsed** parent shows, so collapsing never makes a count silently
+    /// vanish. Same ancestor-set cycle guard as `projectTree`. `tasks(for:)`
+    /// stays the exact-match "own tasks" query that `ProjectView` uses.
+    func rolledUpTaskCount(for project: VikunjaProject) -> Int {
+        let (_, children) = projectHierarchy()
+        var total = 0
+        var visited: Set<Int> = []
+        func walk(_ project: VikunjaProject) {
+            guard visited.insert(project.id).inserted else { return }
+            total += tasks(for: project).count
+            for kid in children[project.id] ?? [] { walk(kid) }
+        }
+        walk(project)
+        return total
+    }
+
+    /// How many projects sit under `project` in the tree. Vikunja deletes
+    /// sub-projects along with their parent, so the delete-confirmation copy
+    /// uses this to say so. Cycle-guarded like the walks above.
+    func descendantProjectCount(for project: VikunjaProject) -> Int {
+        let (_, children) = projectHierarchy()
+        var count = 0
+        var visited: Set<Int> = []
+        func walk(_ id: Int) {
+            for kid in children[id] ?? [] where visited.insert(kid.id).inserted {
+                count += 1
+                walk(kid.id)
+            }
+        }
+        walk(project.id)
+        return count
     }
 
     // MARK: - Refresh
@@ -370,6 +511,8 @@ final class TaskStore {
         logbookSearchResults = nil
 
         outbox = Outbox(accountId: accountId)
+        projectExpansion = ProjectExpansion(accountId: accountId)
+        loggedProjectCycle = false
         DiagnosticLog.info("outbox replaced")
 
         WidgetCache.clear()

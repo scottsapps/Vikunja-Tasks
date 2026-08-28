@@ -76,10 +76,26 @@ struct VikunjaProject: Codable, Identifiable, Equatable {
     let id: Int
     let title: String
     let hexColor: String?
+    /// Raw `parent_project_id` off the wire. **Optional on purpose**: the
+    /// widget cache and the Watch's config store both decode `[VikunjaProject]`
+    /// from data an older build wrote with no such key, and synthesized
+    /// `Codable` treats an optional as `decodeIfPresent` — a non-optional would
+    /// throw and take the whole cached list down (blank widget, blank Watch).
+    /// Never test this directly; use `parentId`.
+    let parentProjectId: Int?
 
     enum CodingKeys: String, CodingKey {
         case id, title
         case hexColor = "hex_color"
+        case parentProjectId = "parent_project_id"
+    }
+
+    /// Nil for a top-level project. Vikunja's Go server sends `0` (the zero
+    /// value for an omitted int), not `null`, and project ids are always
+    /// positive — so both `nil` and `0` mean "no parent".
+    var parentId: Int? {
+        guard let parentProjectId, parentProjectId > 0 else { return nil }
+        return parentProjectId
     }
 
     static func == (lhs: VikunjaProject, rhs: VikunjaProject) -> Bool {

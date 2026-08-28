@@ -306,17 +306,25 @@ struct AppRoot: View {
                 }
 
                 Section {
-                    ForEach(visibleProjects) { project in
-                        NavigationLink(value: SidebarItem.project(project.id)) {
-                            HStack(spacing: 11) {
-                                Image(systemName: "folder.fill")
-                                    .foregroundStyle(Color(vikunjaHex: project.hexColor) ?? Color.accentColor)
-                                    .imageScale(.large)
-                                    .frame(width: 26)
-                                Text(project.title)
+                    ForEach(store.projectTree(expanded: store.projectExpansion.expanded)) { row in
+                        let project = row.project
+                        // The chevron is a sibling of the NavigationLink, not
+                        // inside its label: a Button nested in a NavigationLink
+                        // never fires on iOS — the whole row navigates instead.
+                        HStack(spacing: 11) {
+                            projectExpandChevron(for: row)
+                            NavigationLink(value: SidebarItem.project(project.id)) {
+                                HStack(spacing: 11) {
+                                    Image(systemName: "folder.fill")
+                                        .foregroundStyle(Color(vikunjaHex: project.hexColor) ?? Color.accentColor)
+                                        .imageScale(.large)
+                                        .frame(width: 26)
+                                    Text(project.title)
+                                }
                             }
                         }
-                        .badge(store.tasks(for: project).count)
+                        .padding(.leading, CGFloat(min(row.depth, 3)) * 16)
+                        .badge(projectBadgeCount(for: row))
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
                                 projectToDelete = project
@@ -403,8 +411,21 @@ struct AppRoot: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("All tasks in this project will be permanently deleted.")
+                deleteProjectMessage(for: projectToDelete)
             }
+        }
+    }
+
+    /// Delete-confirmation body for the iPhone project list. Vikunja deletes a
+    /// project's sub-projects with it, so when there are any the copy names the
+    /// count instead of understating what happens.
+    @ViewBuilder
+    private func deleteProjectMessage(for project: VikunjaProject?) -> some View {
+        let subCount = project.map { store.descendantProjectCount(for: $0) } ?? 0
+        if subCount > 0 {
+            Text("This will also delete ^[\(subCount) sub-project](inflect: true) and all of their tasks. This can't be undone.")
+        } else {
+            Text("All tasks in this project will be permanently deleted.")
         }
     }
 
@@ -493,8 +514,40 @@ struct AppRoot: View {
         return nil
     }
 
-    private var visibleProjects: [VikunjaProject] {
-        store.visibleProjects
+    // MARK: - Nested project rows (iPhone list)
+
+    /// Expand/collapse control for a project row — shown only when the project
+    /// has children; a leaf gets an equally-sized clear spacer so sibling
+    /// folder icons stay aligned. A real `Button` with a rectangular hit area
+    /// (a bare glyph is too small a target), turning rather than popping.
+    @ViewBuilder
+    private func projectExpandChevron(for row: TaskStore.ProjectTreeRow) -> some View {
+        if row.hasChildren {
+            Button {
+                store.projectExpansion.toggle(row.project.id)
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(row.expanded ? 90 : 0))
+                    .animation(.easeInOut(duration: 0.2), value: row.expanded)
+                    .frame(width: 16, height: 16)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(row.expanded ? Text("Collapse \(row.project.title)") : Text("Expand \(row.project.title)"))
+        } else {
+            Color.clear.frame(width: 16, height: 16)
+        }
+    }
+
+    /// Collapsed parent → own + every descendant's task count, so collapsing
+    /// hides no work; expanded → its own count only, children showing theirs.
+    private func projectBadgeCount(for row: TaskStore.ProjectTreeRow) -> Int {
+        if row.hasChildren && !row.expanded {
+            return store.rolledUpTaskCount(for: row.project)
+        }
+        return store.tasks(for: row.project).count
     }
 
     #if os(iOS)

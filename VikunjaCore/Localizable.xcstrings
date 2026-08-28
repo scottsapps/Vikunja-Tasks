@@ -7,9 +7,6 @@
     "\"%@\" was never uploaded to your server, so discarding it deletes it permanently." : {
 
     },
-    "%@ This cannot be undone." : {
-
-    },
     "%lld" : {
 
     },
@@ -142,6 +139,9 @@
     "Collapse" : {
 
     },
+    "Collapse %@" : {
+
+    },
     "Complete Task" : {
 
     },
@@ -230,6 +230,9 @@
 
     },
     "Everything on this device has reached your server." : {
+
+    },
+    "Expand %@" : {
 
     },
     "Expected file format:" : {
@@ -513,6 +516,9 @@
 
     },
     "The task will go back to the version on your server. Your change will be lost." : {
+
+    },
+    "This will also delete ^[%lld sub-project](inflect: true) and all of their tasks. This can't be undone." : {
 
     },
     "This will delete ^[%lld new task](inflect: true) and undo ^[%lld change](inflect: true). This cannot be undone." : {

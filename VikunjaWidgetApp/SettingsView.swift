@@ -179,10 +179,17 @@ struct SettingsView: View {
             .pickerStyle(.menu)
 
             if launchPage == .project {
+                // A flat menu, deliberately — a disclosure chevron is
+                // meaningless in a `.menu` Picker, and every project must stay
+                // selectable (this is how someone picks their opening page).
+                // Nested projects are just indented by leading spaces so the
+                // hierarchy stays legible; the tree is walked fully expanded so
+                // none is hidden.
                 Picker("Project", selection: $launchProjectKey) {
                     Text("Inbox").tag(SidebarItem.inbox.storageKey)
-                    ForEach(store.visibleProjects) { project in
-                        Text(project.title).tag(SidebarItem.project(project.id).storageKey)
+                    ForEach(store.projectTree(expanded: Set(store.visibleProjects.map(\.id)))) { row in
+                        Text(String(repeating: "   ", count: min(row.depth, 3)) + row.project.title)
+                            .tag(SidebarItem.project(row.project.id).storageKey)
                     }
                 }
                 .labelsHidden()

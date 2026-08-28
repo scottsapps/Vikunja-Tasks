@@ -26,16 +26,19 @@ struct Sidebar: View {
             }
 
             Section {
-                ForEach(visibleProjects) { project in
+                ForEach(store.projectTree(expanded: store.projectExpansion.expanded)) { row in
+                    let project = row.project
                     let projectColor = Color(vikunjaHex: project.hexColor) ?? Color.accentColor
                     HStack(spacing: 11) {
+                        expandChevron(for: row)
                         Image(systemName: "folder.fill")
                             .foregroundStyle(projectColor)
                             .imageScale(.large)
                             .frame(width: 26)
                         Text(project.title)
                     }
-                    .badge(projectCount(project))
+                    .padding(.leading, CGFloat(min(row.depth, 3)) * 16)
+                    .badge(badgeCount(for: row))
                     .tag(SidebarItem.project(project.id))
                     .contextMenu {
                         Button(role: .destructive) {
@@ -96,15 +99,62 @@ struct Sidebar: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
+            deleteProjectMessage(for: projectToDelete)
+        }
+    }
+
+    /// The delete-confirmation body. Vikunja deletes a project's sub-projects
+    /// along with it, so when there are any, the copy says so and names the
+    /// count rather than understating what will happen.
+    @ViewBuilder
+    private func deleteProjectMessage(for project: VikunjaProject?) -> some View {
+        let subCount = project.map { store.descendantProjectCount(for: $0) } ?? 0
+        if subCount > 0 {
+            Text("This will also delete ^[\(subCount) sub-project](inflect: true) and all of their tasks. This can't be undone.")
+        } else {
             Text("All tasks in this project will be permanently deleted.")
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - Nested project rows
 
-    private var visibleProjects: [VikunjaProject] {
-        store.visibleProjects
+    /// The expand/collapse control, shown only when the project actually has
+    /// children. A leaf gets an equally-sized clear spacer instead so every
+    /// folder icon in a sibling group stays vertically aligned. The chevron is
+    /// a real `Button` with a rectangular hit area — a bare glyph is far too
+    /// small a target — and it turns rather than pops between states.
+    @ViewBuilder
+    private func expandChevron(for row: TaskStore.ProjectTreeRow) -> some View {
+        if row.hasChildren {
+            Button {
+                store.projectExpansion.toggle(row.project.id)
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(row.expanded ? 90 : 0))
+                    .animation(.easeInOut(duration: 0.2), value: row.expanded)
+                    .frame(width: 16, height: 16)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(row.expanded ? Text("Collapse \(row.project.title)") : Text("Expand \(row.project.title)"))
+        } else {
+            Color.clear.frame(width: 16, height: 16)
+        }
     }
+
+    /// A collapsed parent rolls its descendants' counts up into its badge so
+    /// collapsing never hides work; expanded, it shows only its own, with the
+    /// children showing theirs — nothing on screen double-counts.
+    private func badgeCount(for row: TaskStore.ProjectTreeRow) -> Int {
+        if row.hasChildren && !row.expanded {
+            return store.rolledUpTaskCount(for: row.project)
+        }
+        return store.tasks(for: row.project).count
+    }
+
+    // MARK: - Helpers
 
     private var inboxCount: Int {
         store.inboxTasks().count
@@ -117,9 +167,5 @@ struct Sidebar: View {
             guard let d = $0.effectiveDueDate else { return false }
             return cal.startOfDay(for: d) <= today
         }.count
-    }
-
-    private func projectCount(_ project: VikunjaProject) -> Int {
-        store.tasks(for: project).count
     }
 }

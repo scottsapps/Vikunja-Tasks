@@ -52,6 +52,7 @@
 		2BAE77B73D3D2A74F3C48513 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 3F6A7340BAF2DC559139301F /* Localizable.xcstrings */; };
 		2CEDDAD72EAF984837630F5A /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77E4BA4BD463D4E6942E3495 /* WidgetKit.framework */; };
 		2D49DEE37080B6FC91475652 /* VikunjaAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */; };
+		3031F951576BC594F41BE97D /* ProjectExpansion.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3AE6193BDB4995D3EAC7F21 /* ProjectExpansion.swift */; };
 		3046A6443A54D53A16F47BF4 /* VikunjaWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 30D8862B6CFF3E3E06B26ACA /* VikunjaWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		304CB3A270DB5C3643212C06 /* VikunjaAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5E5B82C58D10EB4E909658 /* VikunjaAPI.swift */; };
 		308235EBA3ADB547172A1689 /* TaskRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C26881923D0CBAD74E43300 /* TaskRow.swift */; };
@@ -98,6 +99,7 @@
 		655A40F08CFE7B13401ABA9E /* TaskListToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7DC827A35B5C2F5E7545A65 /* TaskListToolbar.swift */; };
 		66830DEDFCEE3994EE19D447 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = 492A5C2F14D15C60B3380285 /* TelemetryDeck */; };
 		66A65A39450D46B75FFAFDDD /* VikunjaTimelineProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5AA1613FD9623F81CF2764F /* VikunjaTimelineProvider.swift */; };
+		66E6CDC51398D93843B9FFB2 /* ProjectExpansion.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3AE6193BDB4995D3EAC7F21 /* ProjectExpansion.swift */; };
 		6848CC6B84948D92D155FE3A /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6310D2E398EF259266307AA4 /* Reachability.swift */; };
 		6A469E41B898C387D75EA7F3 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A88F453140ABF753FB449C /* DiagnosticLog.swift */; };
 		6AE4426F1C4EA1A3091BDFCD /* SharedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E38CA1B0723B492B073EAE3 /* SharedState.swift */; };
@@ -396,6 +398,7 @@
 		C1938B254B547B170A850D02 /* WatchWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidget.swift; sourceTree = "<group>"; };
 		C19BA8BB693A0D3B77D8FD25 /* AppRoot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoot.swift; sourceTree = "<group>"; };
 		C250522BE5FFAAABE854298E /* TaskSortOrder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSortOrder.swift; sourceTree = "<group>"; };
+		C3AE6193BDB4995D3EAC7F21 /* ProjectExpansion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectExpansion.swift; sourceTree = "<group>"; };
 		C4E12C5D7A535480216299E3 /* UndoCompleteTaskIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoCompleteTaskIntent.swift; sourceTree = "<group>"; };
 		C5CFE29DC68AF948888033B9 /* VikunjaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VikunjaWidgetBundle.swift; sourceTree = "<group>"; };
 		C9F88B5A5977A4665065232F /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
@@ -528,6 +531,7 @@
 				58D5363164D9E1B03D079B04 /* LogViewerView.swift */,
 				097AE4727EE099A83DE65940 /* NotificationResponseHandler.swift */,
 				B7B3CC2E750C8E81B77E0462 /* PendingChangesSheet.swift */,
+				C3AE6193BDB4995D3EAC7F21 /* ProjectExpansion.swift */,
 				B3BB9C870B4EF39EC432A03D /* ProjectView.swift */,
 				A419351B8B970957D829770C /* QuickAddPanelController.swift */,
 				E801F43454C29A23CC09D2B3 /* QuickAddSheet.swift */,
@@ -933,6 +937,7 @@
 				7C4457BE79D282FB1EB9FB65 /* NotificationResponseHandler.swift in Sources */,
 				ACD4CAD1F490956471E7D203 /* Outbox.swift in Sources */,
 				7502A3A55649A6FE9F97A7B0 /* PendingChangesSheet.swift in Sources */,
+				3031F951576BC594F41BE97D /* ProjectExpansion.swift in Sources */,
 				99639FCF960339B2F9FA2670 /* ProjectView.swift in Sources */,
 				56FE7A9BF4B07565205949DF /* QuickAddPanelController.swift in Sources */,
 				9A4E08C259621460C087C4DF /* QuickAddParser.swift in Sources */,
@@ -1028,6 +1033,7 @@
 				770E0ED2F26991B6FAAF99E5 /* NotificationResponseHandler.swift in Sources */,
 				09B9990AA282D81B80385485 /* Outbox.swift in Sources */,
 				9648FF2721E4A5AD5DDDE0B7 /* PendingChangesSheet.swift in Sources */,
+				66E6CDC51398D93843B9FFB2 /* ProjectExpansion.swift in Sources */,
 				0F2F790894D97DA6E0E52026 /* ProjectView.swift in Sources */,
 				9B4962CBEE8CCFACACDA25FB /* QuickAddPanelController.swift in Sources */,
 				1D2EBBE25833CA492EA4ED14 /* QuickAddParser.swift in Sources */,
@@ -1288,7 +1294,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 85;
+				CURRENT_PROJECT_VERSION = 86;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1519,7 +1525,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 85;
+				CURRENT_PROJECT_VERSION = 86;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;

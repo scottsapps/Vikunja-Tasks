@@ -284,6 +284,65 @@ struct AppRoot: View {
         .environment(store)
     }
 
+    #if os(iOS)
+    /// The offline/pending indicator, as a real view pinned above the bottom
+    /// edge rather than a `ToolbarItem(placement: .status)`.
+    ///
+    /// Two things went wrong with the toolbar version, both confirmed on an
+    /// iPhone 17 Pro simulator (iOS 26) against a token that could read but
+    /// not write:
+    ///
+    /// 1. **The label never rendered.** `.status` lands in the bottom bar on
+    ///    iOS, where the item is collapsed to an icon-only circular button and
+    ///    the "N pending" text is dropped entirely. All the user ever saw was a
+    ///    small orange arrow, alone at the bottom of the screen — reported in
+    ///    the wild as "the tiny pink up-arrow doesn't seem to do anything."
+    /// 2. **A toolbar belongs to one screen.** Attached to `compactLayout`'s
+    ///    root list, it disappeared the moment you pushed into Scheduled, the
+    ///    Inbox or a project — which is where tasks actually get added, so the
+    ///    indicator was absent exactly when it was needed.
+    ///
+    /// As a `safeAreaInset` on the shared container it keeps its text, stays
+    /// put across every push, and reaches **iPad** too — `regularLayout`'s
+    /// toolbar is inside `#if os(macOS)`, so iPad had no indicator at all.
+    /// macOS keeps `.status`, where the capsule renders correctly.
+    ///
+    /// Renders nothing (and so insets nothing) when there's no state to show,
+    /// and stays out of onboarding, where there's no account to be pending on.
+    ///
+    /// **Applied inside the navigation content, at `.top`** — via
+    /// `.pendingStatusBanner()` on the root list and on the pushed
+    /// destination, not once on the outer container. Both outer edges are
+    /// occupied by iOS 26's floating chrome and the pill lands on top of it:
+    /// at `.bottom` it sat over the `.searchable` field (which every pushed
+    /// list has and the root list doesn't, so no fixed offset clears it
+    /// everywhere), and at `.top` on the container it sat over the floating
+    /// navigation bar title. Inset from *within* the navigation content it
+    /// lands in the gap between the nav bar and the list, clear of both.
+    ///
+    /// That means **three** attachment sites — the iPhone root list, the
+    /// iPhone pushed destination, and the iPad detail pane — because a
+    /// `NavigationStack`'s root and its destinations are separate view trees
+    /// with no shared ancestor inside the navigation chrome. Search for
+    /// `pendingStatusBar` and keep them in step: a screen that loses the
+    /// modifier silently loses the indicator, which is the whole bug.
+    @ViewBuilder
+    private var pendingStatusBar: some View {
+        if VikunjaConfig.isConfigured {
+            OfflinePill(
+                isOnline: store.reachability.isOnline,
+                pendingCount: store.outbox.ops.count,
+                isReconnecting: store.transientRefreshFailure,
+                isUpdating: store.isShowingStaleData,
+                onTapPending: { showPendingChanges = true }
+            )
+            .padding(.top, 4)
+            .padding(.bottom, 6)
+        }
+    }
+
+    #endif
+
     // MARK: - iPhone layout (NavigationStack)
 
     private var compactLayout: some View {
@@ -346,6 +405,8 @@ struct AppRoot: View {
             }
             #if os(iOS)
             .listStyle(.insetGrouped)
+            // Site 1 of 3 — see `pendingStatusBar`.
+            .safeAreaInset(edge: .top, spacing: 0) { pendingStatusBar }
             #endif
             .navigationTitle("Veyrn")
             #if os(iOS)
@@ -360,6 +421,11 @@ struct AppRoot: View {
                         destinationView(for: item)
                     }
                 }
+                #if os(iOS)
+                // Site 2 of 3 — the pushed screens, which is where Quick Add
+                // actually lives and where the indicator used to vanish.
+                .safeAreaInset(edge: .top, spacing: 0) { pendingStatusBar }
+                #endif
                 .searchable(text: $searchText, prompt: "Search tasks")
                 .task(id: searchText) {
                     if item == .logbook { store.updateLogbookSearch(searchText) }
@@ -381,9 +447,9 @@ struct AppRoot: View {
                         Image(systemName: "gear")
                     }
                 }
-                ToolbarItem(placement: .status) {
-                    OfflinePill(isOnline: store.reachability.isOnline, pendingCount: store.outbox.ops.count, isReconnecting: store.transientRefreshFailure, isUpdating: store.isShowingStaleData, onTapPending: { showPendingChanges = true })
-                }
+                // No `.status` pill here — it lives in `pendingStatusBar` on
+                // the shared container so it survives a push and keeps its
+                // label. See that property for why.
             }
             .overlay {
                 if store.isLoading && store.undoneTasks.isEmpty {
@@ -443,6 +509,11 @@ struct AppRoot: View {
                     destinationView(for: selection)
                 }
             }
+            #if os(iOS)
+            // Site 3 of 3 — iPad's detail pane. `regularLayout`'s `.toolbar`
+            // below is macOS-only, so before this iPad had no indicator at all.
+            .safeAreaInset(edge: .top, spacing: 0) { pendingStatusBar }
+            #endif
             .searchable(text: $searchText, prompt: "Search tasks")
             // Keyed on selection too (unlike the iPhone destination, which is
             // pushed fresh per item) — the split-view detail is one long-lived

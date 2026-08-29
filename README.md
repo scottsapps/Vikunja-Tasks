@@ -17,15 +17,20 @@ Beta Builds Available on [TestFlight](https://testflight.apple.com/join/q8GhTkFz
 - **Full task management** — create, edit, complete, and reopen tasks
 - **Subtasks** — inline checklist with progress badge, add subtasks directly from the task editor
 - **Inbox, Scheduled, Logbook, and Projects** sidebar, similar to Things 3
+- **Nested projects** — sub-projects render indented under their parent with an expand/collapse chevron, in the sidebar and the iPhone project list; a collapsed parent rolls up its children's task counts. Expansion is remembered per account
 - **Project and label colors** — hex color tinting throughout the UI for projects and label chips
-- **WidgetKit extension** for macOS and iOS showing upcoming tasks grouped by date, including Lock Screen and StandBy widgets (accessory families: rectangular, circular, inline)
+- **Region-aware dates** — every displayed date follows the reader's locale (field order, not just translated month names)
+- **WidgetKit extension** for macOS and iOS showing upcoming tasks grouped by date, with a reminder bell and priority chip on each row and paging through a busy "today"; includes Lock Screen and StandBy widgets (accessory families: rectangular, circular, inline)
 - **Quick Add** with a natural-language parser: `*tag`, `+project`, `!priority`, dates like `tomorrow`, `next monday`, `in 3 days`, and recurrence like `every week` — with a reminder chip to set a reminder right at creation time
-- **API v2 Compatible** — for instances on 2.4.0 or later, uses API v2, with fallback to API v1 
-- **Bulk import** — paste or drag in a plain-text list of tasks (uses API v2 for instances on 2.5.0 or later)
+- **Uses Vikunja's API v2** on instances reporting 2.4.0 or later, with automatic fallback to API v1 (reads only; v1 stays the permanent fallback until Vikunja removes it)
+- **Bulk import** — paste or drag in a plain-text list of tasks (created in one request on instances 2.5.0 or later)
 - **Rich text notes** — Vikunja's HTML task descriptions, with bold/italic/links/bullets
-- **Offline mode** — an outbox queues changes and drains when you're back online
+- **Offline mode** — an outbox queues changes and drains when you're back online; a tappable "pending" pill opens a Pending Changes sheet to see why a change is stuck, retry it, or discard it
+- **Cross-device refresh** — a CloudKit change beacon nudges your other devices to refresh after an edit
 - **Multiple accounts** — up to 5 Vikunja accounts (same server or different ones), switched from Settings
 - **API tokens in the system Keychain**, shared across app, widgets, and Watch
+- **Configurable task order** — sort tasks within a day by name, priority, or project, with undated tasks pinned to the top or bottom (Settings)
+- **iPhone opening page** — open the app on Main, Scheduled, a chosen project, or wherever you last were (Settings)
 - **macOS global hotkey** — system-wide Quick Add panel
 - **iOS Home Screen Quick Actions** — jump straight to New Task or Scheduled
 - **Reminders** — synced to the system notification center
@@ -38,8 +43,8 @@ Beta Builds Available on [TestFlight](https://testflight.apple.com/join/q8GhTkFz
 
 - A running [Vikunja](https://vikunja.io) instance — self-hosted or Vikunja Cloud
 - A Vikunja API token (Settings → API Tokens in your Vikunja web UI)
-- An Apple Developer account (paid, for signing)
-- Xcode 16+
+- An Apple Developer account (paid, for signing), with **CloudKit** and **Push Notifications** enabled on the App ID — the app uses a CloudKit change beacon (see step 3)
+- Xcode 26+ (developed against 26.6)
 - [xcodegen](https://github.com/yonaskolb/XcodeGen): `brew install xcodegen`
 
 ## Getting Started
@@ -66,6 +71,8 @@ CODE_SIGN_STYLE = Automatic
 
 Replace `XXXXXXXXXX` with your 10-character Apple Developer Team ID, found in Xcode → Settings → Accounts → click your team → Team ID column.
 
+The two app targets carry **CloudKit** and **Push Notifications** entitlements (for the cross-device change beacon), plus an iCloud container identifier written by the Makefile. Change that identifier (see the forking table below), then enable both capabilities for your App ID and create the CloudKit container — at [developer.apple.com](https://developer.apple.com/account/resources/identifiers/list), or let Xcode's automatic signing register them on the first signed build. A build with the wrong or unregistered container fails to sign.
+
 The build number lives in `project.yml` (`CURRENT_PROJECT_VERSION`, under `settings.base`), **not** here and not in Xcode's UI — project settings override the xcconfig, and editing it in Xcode only touches the generated `.xcodeproj`, which the next `make gen` overwrites. Bump it there before each TestFlight/App Store upload.
 
 ### 4. Replace the TelemetryDeck identifiers
@@ -86,6 +93,8 @@ make gen
 ```
 
 Always use `make gen` rather than running xcodegen directly — the Makefile regenerates the six entitlements files after each xcodegen run (xcodegen writes them empty). This also means **the entitlements files themselves are generated output: edit the Makefile, never the `.entitlements` files.**
+
+If you change any user-facing text, run `make strings` afterward to sync the string catalog (`VikunjaCore/Localizable.xcstrings`). `xcodebuild` compiles the catalog but never writes new keys back, so a command-line build silently leaves it stale.
 
 ### 6. Open and build
 
@@ -119,13 +128,14 @@ grep -rn "net\.angstreich" --include="*.swift" --include="*.plist" . project.yml
 | **App Group** | `Makefile` (written into all six entitlements files), `VikunjaCore/VikunjaConfig.swift` (`appGroupSuite`), `VikunjaCore/WidgetCache.swift` (`suiteName`) |
 | **Keychain access group** | `Makefile` (all six entitlements) |
 | **Keychain service** | `VikunjaCore/TokenStore.swift` (`service`) |
+| iCloud container id | `Makefile` (`com.apple.developer.icloud-container-identifiers`, written into the two app entitlements) — `iCloud.net.angstreich.VikunjaWidgetApp`; must also exist as a CloudKit container on your account |
 | Background refresh task id | `VikunjaWidgetApp/BackgroundRefresh.swift` (`taskId`) **and** `InfoIOS.plist` (`BGTaskSchedulerPermittedIdentifiers`) — these two must match |
 | iOS Quick Action types | `VikunjaWidgetApp/VikunjaWidgetApp.swift` (two `case` strings) **and** `InfoIOS.plist` (`UIApplicationShortcutItems`) — must match |
 | Watch companion app | `VikunjaWidgetWatch/Info.plist` (`WKCompanionAppBundleIdentifier`) — must be your iOS app's bundle ID |
 | **Bug report email** | `VikunjaWidgetApp/BugReportMail.swift` (`supportAddress`) — otherwise your users' bug reports come to *me* |
 | TelemetryDeck App ID + namespace | `VikunjaWidgetApp/VeyrnTelemetry.swift` |
 
-The three in bold are the ones that fail silently. The App Group and Keychain access group are written by the **Makefile**, not by `project.yml`, so changing the bundle prefix alone leaves them pointing at this project — the app builds, launches, and then can't share credentials or cached tasks with its own widgets.
+The bold rows are the ones that bite silently. The App Group, Keychain access group, and iCloud container id are all written by the **Makefile**, not by `project.yml`, so changing the bundle prefix alone leaves them pointing at this project. Get the App Group or Keychain group wrong and the app builds, launches, and then can't share credentials or cached tasks with its own widgets; get the iCloud container wrong and signing fails at build time.
 
 **Cosmetic**, safe to leave: dispatch queue labels (`DiagnosticLog.swift`, `HangWatchdog.swift`), `Notification.Name` strings (`ShortcutRouter.swift`, `HotkeyRecorderView.swift`), the `Logger` subsystem in `CompleteTaskIntent.swift`, and the `vikunja://` / `veyrn://` URL schemes in the plists (only worth changing if you'd otherwise clash with an installed copy of Veyrn).
 
@@ -160,12 +170,14 @@ The Watch targets compile only a **subset** of `VikunjaCore`, listed explicitly 
 | `VikunjaWidgetApp/AppRoot.swift` | Root view; NavigationSplitView (Mac/iPad) or NavigationStack (iPhone) |
 | `VikunjaWidgetApp/BugReportMail.swift` | Report-a-Bug mail composition (MessageUI on iOS, NSSharingService on macOS) |
 | `VikunjaWidgetApp/HangWatchdog.swift` | Detects an unresponsive main thread; ignores process suspension |
+| `VikunjaWidgetApp/ChangeBeacon.swift` | CloudKit change beacon — nudges the user's other devices to refresh after an edit (app targets only; never in `VikunjaCore/`) |
 
 ## Vikunja API Notes
 
-- **v1 is used for everything except the undone-task fetch.** On servers reporting 2.4.0+, that one call uses v2's paged `GET /tasks`; anything else falls back automatically.
-- **v1 has no working "all tasks" endpoint** (`/tasks/all` is broken), so the fallback fetches per-project and merges. That fan-out is bounded to 4 concurrent requests, with one retry per project.
-- **Send the full task object on every mutation.** Vikunja's Go server treats any omitted field as zero-valued, so a partial body silently wipes unrelated fields — adding a reminder with no `due_date` in the body erases the due date. Clear a due date with the `0001-01-01T00:00:00Z` sentinel rather than by omitting it.
+- **v2 is preferred for everything** on servers reporting 2.4.0+ (detected via the `/info` probe). Reads fall back to v1 per-call if a v2 request fails; mutations route by the version flag with **no** automatic v1 retry — a timed-out v2 write may already have landed server-side, and replaying it on v1 could double-create or double-toggle.
+- **v1 is the permanent fallback** (until Vikunja removes it) and has no working "all tasks" endpoint (`/tasks/all` is broken), so its undone-task fetch runs per-project and merges — bounded to 4 concurrent requests, one retry per project. v2 does the same fetch in one paged request.
+- **On the v1 path, send the full task object on every mutation.** Vikunja's Go server treats any omitted field as zero-valued, so a partial body silently wipes unrelated fields — adding a reminder with no `due_date` in the body erases the due date. Clear a due date with the `0001-01-01T00:00:00Z` sentinel rather than by omitting it. v2 is real merge-patch and doesn't have this problem.
+- **Bulk import** uses v2's atomic bulk-create on servers reporting 2.5.0+, falling back to one request per task otherwise. A token minted on a pre-2.5.0 server can't call the bulk route even after the server is upgraded (Vikunja freezes a token's permissions at creation); Veyrn detects the fallback and shows a one-time note.
 - Due dates are stored as midnight UTC; this is intentional and renders as the previous evening in western timezones.
 - The widgets serve from a local App Group cache when it's under 15 minutes old, and fall back to a stale cache rather than showing nothing.
 
@@ -190,11 +202,14 @@ xcodebuild -project VikunjaWidget.xcodeproj -scheme VikunjaWidgetWatch \
   CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 ```
 
-Note that an unsigned build gets **no entitlements**, so the Keychain and App Group are unavailable — it's a compile check, not a functional one.
+An unsigned build gets **no entitlements**, so it's a compile check only, not a functional one:
+
+- The Keychain and App Group are unavailable.
+- It **crashes on launch** — with no iCloud entitlement, the CloudKit change beacon's registration raises an uncaught exception the instant the app starts. To actually run the app, do a signed build ("Sign to Run Locally" is enough on the Simulator).
 
 ## Gotchas
 
-- The macOS widget disappears when run from Xcode; archive and install into `/Applications` to see it. After installing a new build, a widget can render as ghosted placeholder bars until deleted and re-added — `killall chronod` clears it.
+- The macOS widget disappears when run from Xcode; archive and install into `/Applications` to see it. After installing a new build, the widget can render as ghosted placeholder bars — this is stale LaunchServices registrations (an Xcode build outranking the `/Applications` copy), not a code bug. Run `make fix-widget`; it recovers on its own at the next reload (~2 min). Do **not** `killall chronod` — on restart it re-resolves the same stale bundle and deletes the widget's timeline and placeholder archives, turning a redacted widget into a genuinely blank one.
 - `List` is broken in widget extensions — use `VStack`.
 - Every `SecItem` query must set `kSecUseDataProtectionKeychain`. Without it, macOS writes to the legacy file-based keychain where the access-group entitlement doesn't apply, and the widget silently reads stale data instead of erroring.
 - `Form` on macOS promotes each field's placeholder into a leading label column — use a plain `VStack` for cross-platform field layouts.

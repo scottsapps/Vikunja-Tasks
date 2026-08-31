@@ -83,12 +83,26 @@ struct VikunjaProject: Codable, Identifiable, Equatable {
     /// throw and take the whole cached list down (blank widget, blank Watch).
     /// Never test this directly; use `parentId`.
     let parentProjectId: Int?
+    /// Raw `is_archived` off the wire. **Optional for the same reason as
+    /// `parentProjectId`**: caches written by a build that predates this field
+    /// decode without it, and a non-optional would throw and take the whole
+    /// cached list down. Absent ⇒ not archived, which is the safe default —
+    /// it shows a project rather than hiding one. Never test this directly;
+    /// use `isArchivedProject`.
+    let isArchived: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id, title
         case hexColor = "hex_color"
         case parentProjectId = "parent_project_id"
+        case isArchived = "is_archived"
     }
+
+    /// Vikunja archives a project to mean "done with this, get it out of the
+    /// way": it stays readable but goes read-only. Veyrn has no archive UI, so
+    /// archived projects are filtered out at the API boundary — see
+    /// `VikunjaAPI.fetchAllProjects()`.
+    var isArchivedProject: Bool { isArchived == true }
 
     /// Nil for a top-level project. Vikunja's Go server sends `0` (the zero
     /// value for an omitted int), not `null`, and project ids are always

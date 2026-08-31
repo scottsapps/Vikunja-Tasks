@@ -70,7 +70,7 @@ enum VikunjaAPI {
     static func fetchAllProjects() async throws -> [VikunjaProject] {
         if supportsAPIv2 {
             do {
-                return try await getV2Paged("/projects", perPage: 100)
+                return droppingArchived(try await getV2Paged("/projects", perPage: 100))
             } catch {
                 if v1FallbackIsPointless(error) { throw error }
                 DiagnosticLog.warn("v2 fetchAllProjects failed (\(VeyrnError.logDescription(for: error))) — falling back to v1")
@@ -84,8 +84,58 @@ enum VikunjaAPI {
             if batch.count < 100 { break }
             page += 1
         }
-        return all
+        return droppingArchived(all)
     }
+
+    /// Archived projects — and everything nested under one — never reach the
+    /// rest of the app. Filtering at this boundary rather than in each view is
+    /// what makes all five independent fetch sites (app refresh, background
+    /// refresh, both widget providers, the Watch) agree for free. The task
+    /// fetch inherits it too: `fetchAllUndoneTasks(projects:)` scopes itself to
+    /// the ids it is handed, so an archived project's tasks are never fetched
+    /// on v1 and are filtered out of the global v2 response.
+    ///
+    /// Descendants are walked rather than trusting each project's own flag.
+    /// Vikunja only started cascading the archive flag to sub-projects in
+    /// 2.6.0, so a project archived on an older server still has unflagged
+    /// children — and hiding a parent while keeping its children would strand
+    /// them as fake roots in the sidebar's tree.
+    private static func droppingArchived(_ projects: [VikunjaProject]) -> [VikunjaProject] {
+        let archivedRoots = Set(projects.filter(\.isArchivedProject).map(\.id))
+        guard !archivedRoots.isEmpty else { return projects }
+
+        // `uniquingKeysWith` rather than `uniqueKeysWithValues`: a duplicate id
+        // would trap, and this runs in the widget and Watch processes too.
+        let parents = Dictionary(
+            projects.map { ($0.id, $0.parentId) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        func hasArchivedAncestor(_ id: Int) -> Bool {
+            var cursor: Int? = id
+            // A parent cycle in server data would otherwise spin forever; the
+            // chain can't legitimately be longer than the project count.
+            var hops = 0
+            while let current = cursor, hops <= parents.count {
+                if archivedRoots.contains(current) { return true }
+                cursor = parents[current] ?? nil
+                hops += 1
+            }
+            return false
+        }
+
+        let kept = projects.filter { !hasArchivedAncestor($0.id) }
+        let hidden = projects.count - kept.count
+        // Logged only when the number moves. This runs on every refresh in
+        // five processes; a steady "3 hidden" line each poll would push real
+        // history off the end of the rolling log for no new information.
+        if hidden > 0, hidden != lastLoggedArchivedCount {
+            DiagnosticLog.info("projects: \(hidden) archived hidden, \(kept.count) shown")
+        }
+        lastLoggedArchivedCount = hidden
+        return kept
+    }
+
+    private static var lastLoggedArchivedCount = 0
 
     // MARK: - Tasks (undone)
 

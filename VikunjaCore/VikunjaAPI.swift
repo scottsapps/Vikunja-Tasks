@@ -543,17 +543,121 @@ enum VikunjaAPI {
 
     // MARK: - Date helpers
 
-    /// Snaps a date to 8 PM local time, preserving the calendar day in local time.
+    /// Where a bare due date lands when the user has no server setting. Kept
+    /// as the fallback rather than Vikunja's own (which rounds to the nearest
+    /// upcoming hour) because a deadline that moves depending on when you
+    /// typed it is worse than one that is always the same.
+    static let fallbackDefaultDueTime = (hour: 20, minute: 0)
+
+    /// Snaps a date to the default due time, preserving the calendar day in
+    /// local time. That time is the user's Vikunja **default due time**
+    /// setting when the server is 2.6.0+ and they have set one, and 8 PM local
+    /// otherwise.
+    ///
+    /// Reads the App Group cache rather than the network, so the widgets, the
+    /// Watch and the bulk importer all snap to the same time without a request
+    /// of their own — `refreshDefaultDueTimeIfSupported()` is what fills it.
     static func applyDefaultTime(_ date: Date) -> Date {
         let local = TimeZone.current
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = local
         var comps = cal.dateComponents([.year, .month, .day], from: date)
-        comps.hour = 20
-        comps.minute = 0
+        let time = cachedDefaultDueTime ?? fallbackDefaultDueTime
+        comps.hour = time.hour
+        comps.minute = time.minute
         comps.second = 0
         comps.timeZone = local
         return cal.date(from: comps) ?? date
+    }
+
+    private static var cachedDefaultDueTime: (hour: Int, minute: Int)? {
+        guard let raw = UserDefaults(suiteName: VikunjaConfig.appGroupSuite)?
+            .string(forKey: DiagnosticLog.serverDefaultDueTimeDefaultsKey) else { return nil }
+        return parsedDefaultDueTime(raw)
+    }
+
+    /// Mirrors Vikunja's own `parseUserDefaultTime`: exactly `HH:MM`, 24-hour,
+    /// zero-padded, `00:00`–`23:59`. Anything else counts as unset — the web
+    /// client does the same, so the two agree on which values are junk.
+    static func parsedDefaultDueTime(_ raw: String) -> (hour: Int, minute: Int)? {
+        let parts = raw.split(separator: ":", omittingEmptySubsequences: false)
+        guard parts.count == 2,
+              parts.allSatisfy({ $0.count == 2 && $0.allSatisfy { $0.isASCII && $0.isNumber } }),
+              let hour = Int(parts[0]), let minute = Int(parts[1]),
+              (0...23).contains(hour), (0...59).contains(minute) else { return nil }
+        return (hour, minute)
+    }
+
+    /// `GET /user` → `settings.frontend_settings.defaultDueTime`.
+    ///
+    /// Parsed with `JSONSerialization`, not `Codable`, on purpose:
+    /// `frontend_settings` is documented as "arbitrary settings used only by
+    /// the frontend — any JSON value, stored and returned verbatim". It is a
+    /// free-form blob outside the API contract, so it can legitimately be
+    /// absent, `null`, or some shape a future web release invents. Every step
+    /// is a conditional cast: an unexpected shape yields `nil` (fall back to
+    /// 8 PM), never a thrown decode error that would look like a server fault.
+    static func fetchServerDefaultDueTime() async throws -> String? {
+        let data = try await getV2Raw("/user")
+        let object = try? JSONSerialization.jsonObject(with: data)
+        guard let root = object as? [String: Any],
+              let settings = root["settings"] as? [String: Any],
+              let frontend = settings["frontend_settings"] as? [String: Any],
+              let raw = frontend["defaultDueTime"] as? String,
+              parsedDefaultDueTime(raw) != nil else { return nil }
+        return raw
+    }
+
+    /// Refreshes the cached default due time. Called once per app refresh;
+    /// never from the widget or Watch, which just read what the app cached.
+    ///
+    /// Silent on failure by design. The likeliest failure is an API token
+    /// minted without the user-read right, and **Vikunja answers 401 — not
+    /// 403 — for a missing permission**, the same status a revoked token
+    /// gives. Raising that would turn an optional nicety into the blocking
+    /// "check your token" alert that a failed task write earns. So a failure
+    /// leaves the previous value in force: a flaky network can never silently
+    /// move the time tasks get filed at.
+    static func refreshDefaultDueTimeIfSupported() async {
+        guard supportsUserDefaultDueTime else { return }
+        let defaults = UserDefaults(suiteName: VikunjaConfig.appGroupSuite)
+        let previous = defaults?.string(forKey: DiagnosticLog.serverDefaultDueTimeDefaultsKey)
+
+        let fetched: String?
+        do {
+            fetched = try await fetchServerDefaultDueTime()
+            hasLoggedDefaultDueTimeFailure = false
+        } catch {
+            // Once per run of failures, not once per refresh: an under-scoped
+            // token fails *every* poll, and repeating the same warning every
+            // five minutes would evict the rest of the log.
+            if !hasLoggedDefaultDueTimeFailure {
+                hasLoggedDefaultDueTimeFailure = true
+                DiagnosticLog.warn("default due time unavailable (\(VeyrnError.logDescription(for: error)))"
+                                   + " — keeping \(describeDefaultDueTime(previous))")
+            }
+            return
+        }
+
+        // Logged only on change: this runs on every refresh, and an unchanged
+        // setting is not news.
+        guard fetched != previous else { return }
+        if let fetched {
+            defaults?.set(fetched, forKey: DiagnosticLog.serverDefaultDueTimeDefaultsKey)
+        } else {
+            defaults?.removeObject(forKey: DiagnosticLog.serverDefaultDueTimeDefaultsKey)
+        }
+        DiagnosticLog.info("default due time: \(describeDefaultDueTime(fetched))")
+    }
+
+    private static var hasLoggedDefaultDueTimeFailure = false
+
+    static func describeDefaultDueTime(_ value: String?) -> String {
+        guard let value else {
+            return String(format: "%02d:%02d (Veyrn default)",
+                          fallbackDefaultDueTime.hour, fallbackDefaultDueTime.minute)
+        }
+        return "\(value) (server setting)"
     }
 
     // MARK: - Task update
@@ -766,6 +870,17 @@ enum VikunjaAPI {
             .bool(forKey: DiagnosticLog.serverSupportsBulkCreateDefaultsKey) ?? false
     }
 
+    /// `≥ 2.6.0` — the user-level **default due time** setting. Narrower again
+    /// than `supportsBulkTaskCreate` (`≥ 2.5.0`), cached the same way, cleared
+    /// by the same account switch. Gates only the `GET /user` request: the
+    /// setting lives in the free-form `frontend_settings` blob, which an older
+    /// server would happily return without the key, so this saves a pointless
+    /// round trip rather than guarding correctness.
+    private static var supportsUserDefaultDueTime: Bool {
+        UserDefaults(suiteName: VikunjaConfig.appGroupSuite)?
+            .bool(forKey: DiagnosticLog.serverSupportsDefaultDueTimeDefaultsKey) ?? false
+    }
+
     private struct V2Page<T: Decodable>: Decodable {
         let items: [T]?
         let page: Int?
@@ -789,6 +904,14 @@ enum VikunjaAPI {
         let request = makeRequest(path, base: v2BaseURL)
         let (data, _) = try await send(request)
         return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    /// For responses whose shape isn't a contract — today just `GET /user`,
+    /// whose `frontend_settings` is a free-form blob parsed by hand.
+    private static func getV2Raw(_ path: String) async throws -> Data {
+        let request = makeRequest(path, base: v2BaseURL)
+        let (data, _) = try await send(request)
+        return data
     }
 
     /// Loops `page`/`total_pages` until the server reports no more pages (or

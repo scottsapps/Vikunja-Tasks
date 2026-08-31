@@ -328,6 +328,10 @@ final class TaskStore {
                 let localOnly = labels.filter { !serverIds.contains($0.id) }
                 labels = fetchedLabels + localOnly
             }
+            // Only the app refreshes this; the widgets and the Watch read the
+            // value it caches. Never throws — see the method's own note on why
+            // a missing user-read permission must not raise the auth alert.
+            await VikunjaAPI.refreshDefaultDueTimeIfSupported()
             rebuildMergedTasks()
             saveCache()
             #if os(iOS)

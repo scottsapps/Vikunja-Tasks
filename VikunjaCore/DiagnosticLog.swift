@@ -510,18 +510,26 @@ enum DiagnosticLog {
         let defaults = UserDefaults(suiteName: VikunjaConfig.appGroupSuite)
         guard let version = defaults?.string(forKey: serverVersionDefaultsKey) else {
             return "\(kind) · Vikunja unknown · API v2 available: unknown · bulk create: unknown"
+                + " · default due time: unknown"
         }
         let supportsV2 = defaults?.bool(forKey: serverSupportsV2DefaultsKey) ?? false
         let supportsBulk = defaults?.bool(forKey: serverSupportsBulkCreateDefaultsKey) ?? false
+        let dueTime = defaults?.string(forKey: serverDefaultDueTimeDefaultsKey)
         return "\(kind) · Vikunja \(version) · API v2 available: \(supportsV2 ? "yes" : "no")"
             + " · bulk create: \(supportsBulk ? "yes" : "no")"
+            + " · default due time: \(VikunjaAPI.describeDefaultDueTime(dueTime))"
     }
 
-    /// Shared with `VeyrnTelemetry`, which writes these three keys whenever
+    /// Shared with `VeyrnTelemetry`, which writes the first four keys whenever
     /// `/info` succeeds so the header can read them without a network call.
     static let serverVersionDefaultsKey = "diag.serverVersion"
     static let serverSupportsV2DefaultsKey = "diag.serverSupportsV2"
     static let serverSupportsBulkCreateDefaultsKey = "diag.serverSupportsBulkCreate"
+    static let serverSupportsDefaultDueTimeDefaultsKey = "diag.serverSupportsDefaultDueTime"
+    /// Written by `VikunjaAPI.refreshDefaultDueTimeIfSupported()`, not the
+    /// `/info` probe — it is the setting's *value* (`"HH:MM"`), not a
+    /// capability flag. Absent means "fall back to Veyrn's own 8 PM".
+    static let serverDefaultDueTimeDefaultsKey = "diag.serverDefaultDueTime"
 
     // MARK: - Breadcrumb storage
 

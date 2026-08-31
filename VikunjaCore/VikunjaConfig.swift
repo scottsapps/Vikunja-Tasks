@@ -250,6 +250,12 @@ enum VikunjaConfig {
         defaults?.removeObject(forKey: DiagnosticLog.serverVersionDefaultsKey)
         defaults?.removeObject(forKey: DiagnosticLog.serverSupportsV2DefaultsKey)
         defaults?.removeObject(forKey: DiagnosticLog.serverSupportsBulkCreateDefaultsKey)
+        defaults?.removeObject(forKey: DiagnosticLog.serverSupportsDefaultDueTimeDefaultsKey)
+        // The default due time is a *per-user* setting, so unlike the capability
+        // flags above it would be actively wrong to carry across a switch —
+        // account A's 09:00 must not file account B's tasks. Cleared here means
+        // the fallback 8 PM applies until the new account's first refresh.
+        defaults?.removeObject(forKey: DiagnosticLog.serverDefaultDueTimeDefaultsKey)
     }
 
     // MARK: - Migration (idempotent, safe to run in any process)

@@ -2,7 +2,31 @@ import Foundation
 import Observation
 import WidgetKit
 
+/// **`@MainActor` here is load-bearing, not decoration — don't remove it.**
+///
+/// Every stored property below is either `@Observable` state SwiftUI reads
+/// (which may only be mutated from the main thread) or `outbox`, whose array
+/// two threads must never touch at once. Neither was guaranteed before build
+/// 90, and the reason is subtle: `createTask` is *synchronous* and was
+/// nonisolated, so the `Task { await drainOutbox() }` it fires did **not**
+/// inherit the main-actor context of the SwiftUI code calling it. It landed on
+/// the cooperative pool and could start running immediately — while the caller
+/// was still appending later ops to `outbox.ops` on the main thread.
+///
+/// Build 88's own log caught exactly that: a 3-task import logged
+/// `drain start: 1 ops` because the drain snapshotted the array between two
+/// appends. That was the visible and harmless half of the window. The same
+/// window also let two drains clear `guard !isDraining` together, which sends
+/// one queued create twice — the single failure the whole outbox design exists
+/// to prevent — on top of mutating an `Array` from two threads at once.
+///
+/// Annotating the class serializes all of it on the main actor: the awaits are
+/// network calls, which suspend and free the thread rather than blocking it.
+/// The one real cost is that `saveCache()`'s JSON encoding now runs on the main
+/// thread (single-digit milliseconds at a few hundred tasks, once per refresh).
+/// That was never genuinely optional either — it mutates observed state.
 @Observable
+@MainActor
 final class TaskStore {
 
     // MARK: - Published state

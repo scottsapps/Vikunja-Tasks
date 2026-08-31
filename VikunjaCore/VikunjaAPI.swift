@@ -597,15 +597,34 @@ enum VikunjaAPI {
     /// absent, `null`, or some shape a future web release invents. Every step
     /// is a conditional cast: an unexpected shape yields `nil` (fall back to
     /// 8 PM), never a thrown decode error that would look like a server fault.
+    /// Both spellings of the key, likeliest first.
+    ///
+    /// `frontend_settings` is written by the web client, which runs its entire
+    /// request payload — nested objects included — through `objectToSnakeCase`
+    /// on the way out and `objectToCamelCase` on the way back. So the stored,
+    /// on-the-wire name is **`default_due_time`**, even though Vikunja's own
+    /// `IFrontendSettings` type calls the field `defaultDueTime`: that spelling
+    /// only ever exists in the browser's memory. Build 88 read the TypeScript
+    /// model and assumed it described the stored shape, so it looked for a key
+    /// that is never on the wire, found nothing, and said nothing.
+    ///
+    /// Both are accepted rather than just the correct one: the blob is
+    /// free-form and outside the API contract, so nothing stops a future web
+    /// release — or another client — writing either spelling.
+    private static let defaultDueTimeKeys = ["default_due_time", "defaultDueTime"]
+
     static func fetchServerDefaultDueTime() async throws -> String? {
         let data = try await getV2Raw("/user")
         let object = try? JSONSerialization.jsonObject(with: data)
         guard let root = object as? [String: Any],
               let settings = root["settings"] as? [String: Any],
-              let frontend = settings["frontend_settings"] as? [String: Any],
-              let raw = frontend["defaultDueTime"] as? String,
-              parsedDefaultDueTime(raw) != nil else { return nil }
-        return raw
+              let frontend = settings["frontend_settings"] as? [String: Any] else { return nil }
+        for key in defaultDueTimeKeys {
+            if let raw = frontend[key] as? String, parsedDefaultDueTime(raw) != nil {
+                return raw
+            }
+        }
+        return nil
     }
 
     /// Refreshes the cached default due time. Called once per app refresh;
@@ -639,18 +658,28 @@ enum VikunjaAPI {
             return
         }
 
-        // Logged only on change: this runs on every refresh, and an unchanged
-        // setting is not news.
-        guard fetched != previous else { return }
-        if let fetched {
-            defaults?.set(fetched, forKey: DiagnosticLog.serverDefaultDueTimeDefaultsKey)
-        } else {
-            defaults?.removeObject(forKey: DiagnosticLog.serverDefaultDueTimeDefaultsKey)
+        if fetched != previous {
+            if let fetched {
+                defaults?.set(fetched, forKey: DiagnosticLog.serverDefaultDueTimeDefaultsKey)
+            } else {
+                defaults?.removeObject(forKey: DiagnosticLog.serverDefaultDueTimeDefaultsKey)
+            }
         }
-        DiagnosticLog.info("default due time: \(describeDefaultDueTime(fetched))")
+
+        // On every change, and once per launch besides. Build 88 logged only
+        // on change, which made "the setting is unset" and "the setting hasn't
+        // moved" equally silent — and that is exactly what hid the wrong key:
+        // the request succeeded, matched nothing, and left no trace either
+        // way. One line per launch is worth the volume, because it is the only
+        // thing that says which time is actually in force.
+        if fetched != previous || !hasLoggedDefaultDueTime {
+            hasLoggedDefaultDueTime = true
+            DiagnosticLog.info("default due time: \(describeDefaultDueTime(fetched))")
+        }
     }
 
     private static var hasLoggedDefaultDueTimeFailure = false
+    private static var hasLoggedDefaultDueTime = false
 
     static func describeDefaultDueTime(_ value: String?) -> String {
         guard let value else {

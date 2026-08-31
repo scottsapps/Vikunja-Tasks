@@ -773,19 +773,144 @@ final class TaskStore {
     /// as the Pending Changes sheet's "why it's stuck" header.
     private(set) var lastDrainFailureMessage: String?
 
+    /// Set when `drainOutbox()` is asked to run while a drain is already
+    /// walking the queue, so the request can be honored by another pass rather
+    /// than thrown away. The drain equivalent of `coalescedRefresh`.
+    private var drainRequestedWhileDraining = false
+
+    /// Upper bound on passes per `drainOutbox()` call. Termination doesn't
+    /// rest on it — a pass that achieves nothing and isn't chasing a newly
+    /// queued op already ends the loop — but ops that are *skipped* rather
+    /// than removed (an `.update` whose `.create` hasn't landed yet) make
+    /// "no progress" a reachable steady state, so the cap is what guarantees
+    /// a drain can never spin. Whatever is still queued after four passes
+    /// waits for the next poll, exactly as it did before.
+    private static let maxDrainPasses = 4
+
     func drainOutbox() async {
-        guard !isDraining else { return }
+        guard !isDraining else {
+            // Deferred, not dropped. The in-flight pass snapshotted the queue
+            // before this op existed, so dropping the request left the op
+            // sitting until something else happened to trigger a drain — the
+            // next poll, up to five minutes away. `createTask` fires a drain
+            // per task, so a bulk import hit this on every task after the
+            // first: the opening pass took a one-op snapshot, every later
+            // task was dropped here, and the run of consecutive creates that
+            // bulk create needs could never form. Both symptoms — imports
+            // trickling out one request at a time, and the last task hanging
+            // as "pending" — came from this one dropped call.
+            drainRequestedWhileDraining = true
+            return
+        }
         isDraining = true
         defer { isDraining = false }
-        guard reachability.isOnline, !outbox.ops.isEmpty else { return }
+
+        var totalOk = 0
+        var totalDropped = 0
+        var blockingFailure: Error?
+        var staleTokenSuspected = false
+        var passes = 0
+
+        while true {
+            // Cleared before the pass, so a request arriving *during* it is
+            // what the loop sees afterwards — not one this pass already served.
+            drainRequestedWhileDraining = false
+            guard reachability.isOnline, !outbox.ops.isEmpty else { break }
+            passes += 1
+
+            let pass = await performDrainPass()
+            totalOk += pass.okCount
+            totalDropped += pass.droppedCount
+            staleTokenSuspected = staleTokenSuspected || pass.staleTokenSuspected
+
+            // A blocking failure means every remaining op carries the same bad
+            // credential; another pass would fail identically and alert twice.
+            if let failure = pass.blockingFailure {
+                blockingFailure = failure
+                break
+            }
+
+            // Another pass only if this one either got somewhere or is chasing
+            // ops queued while it ran. Otherwise the next snapshot is the one
+            // just handled, and replaying it changes nothing.
+            let madeProgress = pass.okCount + pass.droppedCount > 0
+            guard madeProgress || drainRequestedWhileDraining else { break }
+            guard passes < Self.maxDrainPasses else {
+                DiagnosticLog.info("drain: \(outbox.ops.count) ops still queued after \(passes) passes — leaving them for the next refresh")
+                break
+            }
+        }
+
+        // Offline, or nothing queued: no pass ran, so there is nothing to
+        // report, nudge, or refresh for — the pre-split early return.
+        guard passes > 0 else { return }
+        // One summary when the loop actually did what it was added for, so a
+        // multi-pass drain reads as one event rather than as several
+        // unexplained start/end pairs.
+        if passes > 1 {
+            DiagnosticLog.info("drain complete: \(totalOk) ok, \(totalDropped) dropped over \(passes) passes")
+        }
+        // Totalled across every pass: one op landing in the second pass still
+        // means the queue moved, so the beacon fires and a stale failure
+        // message clears, exactly as a single-pass drain would have done.
+        let okCount = totalOk
+        // Only when something actually landed server-side: a drain that
+        // dropped 4xx ops or paused on a network error changed nothing and
+        // must not nudge other devices.
+        if okCount > 0 { ChangeBeacon.publish(reason: "outbox") }
+        await refresh(background: true, reason: "outbox")
+
+        // Deliberately after the refresh. `performRefresh` clears `error` on
+        // entry, and for the case this exists to catch — a token that reads
+        // fine and can't write — that refresh *succeeds*, so an alert raised
+        // before it would be wiped by the very next line and the user would
+        // once again be told nothing.
+        //
+        // The message guard is what keeps this to one alert: the op stays
+        // queued now, so every later drain retries it and fails again, and
+        // without the guard a permanently-under-scoped token would alert on
+        // every 60s poll.
+        if let blockingFailure {
+            let message = VeyrnError.message(for: blockingFailure)
+            if message != lastDrainFailureMessage {
+                lastDrainFailureMessage = message
+                report(blockingFailure)
+            }
+        } else if okCount > 0 {
+            lastDrainFailureMessage = nil
+        }
+
+        // The bulk endpoint refused this token but the per-task fallback got
+        // every task through — an old token missing the 2.5.0 bulk-create
+        // permission. Nothing is broken, so this is a one-time heads-up, not
+        // an error, and only when the fallback actually succeeded.
+        if staleTokenSuspected, okCount > 0, blockingFailure == nil {
+            adviseStaleTokenOnce()
+        }
+    }
+
+    private struct DrainPass {
+        var okCount = 0
+        var droppedCount = 0
+        var blockingFailure: Error?
+        var staleTokenSuspected = false
+    }
+
+    /// One walk of the queue as it stands right now, split out of
+    /// `drainOutbox()` so that call can run more than one. Both reasons are
+    /// about the snapshot: an op queued while a walk is running can only be
+    /// seen by taking a fresh one, and a run of consecutive creates only
+    /// coalesces into a single bulk request when the ops share a snapshot.
+    private func performDrainPass() async -> DrainPass {
         let snapshot = outbox.ops
         DiagnosticLog.info("drain start: \(snapshot.count) ops [\(opCounts(snapshot))]")
         let drainClock = DiagnosticLog.Stopwatch()
         var okCount = 0
         var droppedCount = 0
         // Set when a write fails for a reason the *user* has to clear — an
-        // under-scoped or revoked token. Reported after the trailing refresh,
-        // not here; see below.
+        // under-scoped or revoked token. Returned rather than reported here:
+        // `drainOutbox` raises it after its trailing refresh, and stops
+        // passing once it is set.
         var blockingFailure: Error?
         // Index walk rather than `for op in snapshot`: on a 2.5.0+ server a run
         // of consecutive same-project creates (a bulk import, or a batch added
@@ -931,39 +1056,12 @@ final class TaskStore {
         }
         let elapsed = DiagnosticLog.elapsed(drainClock)
         DiagnosticLog.info("drain end: \(okCount) ok, \(droppedCount) dropped, \(elapsed) — queue depth \(outbox.ops.count)")
-        // Only when something actually landed server-side: a drain that
-        // dropped 4xx ops or paused on a network error changed nothing and
-        // must not nudge other devices.
-        if okCount > 0 { ChangeBeacon.publish(reason: "outbox") }
-        await refresh(background: true, reason: "outbox")
-
-        // Deliberately after the refresh. `performRefresh` clears `error` on
-        // entry, and for the case this exists to catch — a token that reads
-        // fine and can't write — that refresh *succeeds*, so an alert raised
-        // before it would be wiped by the very next line and the user would
-        // once again be told nothing.
-        //
-        // The message guard is what keeps this to one alert: the op stays
-        // queued now, so every later drain retries it and fails again, and
-        // without the guard a permanently-under-scoped token would alert on
-        // every 60s poll.
-        if let blockingFailure {
-            let message = VeyrnError.message(for: blockingFailure)
-            if message != lastDrainFailureMessage {
-                lastDrainFailureMessage = message
-                report(blockingFailure)
-            }
-        } else if okCount > 0 {
-            lastDrainFailureMessage = nil
-        }
-
-        // The bulk endpoint refused this token but the per-task fallback got
-        // every task through — an old token missing the 2.5.0 bulk-create
-        // permission. Nothing is broken, so this is a one-time heads-up, not
-        // an error, and only when the fallback actually succeeded.
-        if staleTokenSuspected, okCount > 0, blockingFailure == nil {
-            adviseStaleTokenOnce()
-        }
+        return DrainPass(
+            okCount: okCount,
+            droppedCount: droppedCount,
+            blockingFailure: blockingFailure,
+            staleTokenSuspected: staleTokenSuspected
+        )
     }
 
     /// One-time, reassuring note shown after a bulk import went through on the

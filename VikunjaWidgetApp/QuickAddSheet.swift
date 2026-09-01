@@ -294,10 +294,9 @@ struct QuickAddSheet: View {
             }
 
             if showExpandedReminderPicker {
-                DatePicker("", selection: $expandedReminderDate,
+                DatePicker("Remind me at", selection: $expandedReminderDate,
                            displayedComponents: [.date, .hourAndMinute])
-                    .datePickerStyle(.graphical)
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, 4).padding(.vertical, 4)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }

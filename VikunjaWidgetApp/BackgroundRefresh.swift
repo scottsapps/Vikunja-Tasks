@@ -55,12 +55,15 @@ enum BackgroundRefresh {
     /// a BGTask or push wake launches the whole app, and the foreground
     /// `refreshIfStale` catches the store up later. Returns the task count.
     @discardableResult
-    static func performSync(reason: String) async throws -> Int {
+    static func performSync(reason: String, verifyReminders: Bool = false) async throws -> Int {
         DiagnosticLog.info("sync start (reason: \(reason))")
         let projects = try await VikunjaAPI.fetchAllProjects()
         let tasks = try await VikunjaAPI.fetchAllUndoneTasks(projects: projects)
         WidgetCache.save(tasks: tasks, projects: projects)
         await ReminderScheduler.sync(tasks: tasks)
+        // A nudge means another device changed something; the list we just
+        // fetched may not show it yet, so confirm each armed reminder directly.
+        if verifyReminders { await ReminderScheduler.verifyPending(reason: reason) }
         WatchSessionProvider.shared.pushSnapshot(tasks: tasks, projects: projects)
         WidgetCenter.shared.reloadAllTimelines()
         return tasks.count

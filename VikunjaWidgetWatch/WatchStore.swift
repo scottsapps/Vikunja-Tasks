@@ -84,6 +84,7 @@ final class WatchStore {
         tasks.removeAll { $0.id == task.id }
         do {
             try await VikunjaAPI.completeTask(id: task.id)
+            WatchConfigStore.shared.reportCompletion(taskId: task.id)
             WidgetCache.save(tasks: tasks, projects: projects)
             WidgetCenter.shared.reloadAllTimelines()
         } catch {

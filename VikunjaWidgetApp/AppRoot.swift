@@ -198,7 +198,12 @@ struct AppRoot: View {
         .onReceive(NotificationCenter.default.publisher(for: .veyrnNudgeReceived)) { _ in
             // Nobody asked for this refresh, so nothing about it should ever
             // raise a dialog — 502/503/504 route into the pill instead.
-            Task { await store.refresh(background: true, reason: "nudge") }
+            Task {
+                await store.refresh(background: true, reason: "nudge")
+                // The list from that refresh may still be behind the change the
+                // nudge signalled; confirm each armed reminder task-by-task.
+                await ReminderScheduler.verifyPending(reason: "nudge")
+            }
         }
         #endif
         .task {

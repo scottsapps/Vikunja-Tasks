@@ -65,6 +65,9 @@ enum ReminderScheduler {
         // Build the set of (id → reminder ISO) that the server wants
         var desired: [String: (taskId: Int, title: String, date: Date)] = [:]
         for task in tasks {
+            // A task we just completed/deleted can still come back in a stale
+            // `filter=done=false` list; don't re-arm the reminder we cancelled.
+            if ReminderStore.isTombstoned(taskId: task.id, serverUpdated: task.updatedDate) { continue }
             for reminder in task.reminders ?? [] {
                 guard let date = reminder.date, date > Date() else { continue }
                 let id = ReminderStore.identifier(taskId: task.id, reminderISO: reminder.reminder)
@@ -110,6 +113,52 @@ enum ReminderScheduler {
         await ReminderStore.cancel(taskId: taskId, reason: reason)
     }
 
+    /// Cross-check every still-pending reminder against the server, one task at
+    /// a time. The `filter=done=false` list has been seen to keep returning a
+    /// completed task for many minutes after the write landed — long enough for
+    /// its reminder to fire — while a single-task `GET /tasks/{id}` stayed
+    /// correct throughout. Run only on the nudge path: "something changed on
+    /// another device" is exactly when the list may be behind. Capped so a user
+    /// with many reminders can't turn one push into a long request fan-out; a
+    /// per-task hiccup leaves that reminder armed rather than risk dropping a
+    /// real one.
+    static func verifyPending(reason: String) async {
+        let center = UNUserNotificationCenter.current()
+        guard await center.notificationSettings().authorizationStatus == .authorized else { return }
+
+        // `contains`, not `hasPrefix`: a snoozed copy's id is
+        // `vikunja.snooze.<original>.<epoch>` and still needs verifying.
+        let pending = await center.pendingNotificationRequests()
+            .filter { $0.identifier.contains("vikunja.reminder.") }
+        var seen = Set<Int>()
+        let taskIds = pending
+            .sorted {
+                let a = ($0.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate() ?? .distantFuture
+                let b = ($1.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate() ?? .distantFuture
+                return a < b
+            }
+            .compactMap { $0.content.userInfo["taskId"] as? Int }
+            .filter { seen.insert($0).inserted }
+            .prefix(25)
+        guard !taskIds.isEmpty else { return }
+
+        var cancelled = 0
+        for id in taskIds {
+            do {
+                if try await VikunjaAPI.fetchTask(id: id).done {
+                    await ReminderStore.cancel(taskId: id, reason: "verified done (\(reason))")
+                    cancelled += 1
+                }
+            } catch let apiError as VikunjaAPI.APIError where apiError.isGone {
+                await ReminderStore.cancel(taskId: id, reason: "verified gone (\(reason))")
+                cancelled += 1
+            } catch {
+                // Leave this one armed — a network blip must not swallow a reminder.
+            }
+        }
+        DiagnosticLog.info("reminders verified: \(taskIds.count) checked, \(cancelled) cancelled")
+    }
+
     private static func authDescription(_ status: UNAuthorizationStatus) -> String {
         switch status {
         case .authorized: return "authorized"
@@ -121,8 +170,9 @@ enum ReminderScheduler {
         }
     }
 
-    /// Cancel all vikunja reminders (e.g. on sign-out).
+    /// Cancel all vikunja reminders (e.g. on sign-out or account switch).
     static func cancelAll() async {
+        ReminderStore.clearAllTombstones()
         let center = UNUserNotificationCenter.current()
         let pending = await center.pendingNotificationRequests()
         let ids = pending

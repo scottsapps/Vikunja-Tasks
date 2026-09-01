@@ -38,7 +38,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                 // process launched into the background where `TaskStore` state isn't
                 // meaningful. The foreground store catches up via the existing
                 // `scenePhase → active` → `refreshIfStale(60)`.
-                let count = try await BackgroundRefresh.performSync(reason: "nudge")
+                let count = try await BackgroundRefresh.performSync(reason: "nudge", verifyReminders: true)
                 DiagnosticLog.info("nudge sync done: \(count) tasks")
                 completionHandler(.newData)
             } catch {

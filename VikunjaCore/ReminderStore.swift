@@ -29,9 +29,79 @@ enum ReminderStore {
         identifier.contains("vikunja.reminder.\(taskId).")
     }
 
+    // MARK: - Completion tombstones
+    //
+    // `cancel(taskId:)` pulls a finished task's pending notification, but the
+    // very next network refresh hands `ReminderScheduler.sync` a task list that
+    // — against a lagging server — can still show that task as *not done*, and
+    // `sync` then re-arms the reminder it just cancelled. On the Mac a completed
+    // task was seen re-armed 2 s after commit this way; a device that only hears
+    // about the completion through the `filter=done=false` list stays exposed
+    // for as long as that list is stale (40 min in one incident). A tombstone
+    // records "we cancelled this on purpose" so `sync` leaves it alone until the
+    // server catches up or the window lapses.
+
+    private static let tombstoneKey = "veyrn.reminder.tombstones"   // [String(taskId): completedAt epoch]
+    private static let tombstoneTTL: TimeInterval = 20 * 60
+    /// The server's `updated` on our own completion PATCH lands at ~completedAt;
+    /// only a value clearly past that means the task was changed *again*
+    /// elsewhere (a reopen), which retires the tombstone.
+    private static let tombstoneUpdatedSlack: TimeInterval = 120
+
+    private static var tombstoneStore: UserDefaults? {
+        UserDefaults(suiteName: "group.net.angstreich.VikunjaWidgetApp")
+    }
+
+    /// Current tombstones with expired entries dropped.
+    private static func liveTombstones() -> [String: Double] {
+        let cutoff = Date().timeIntervalSince1970 - tombstoneTTL
+        let raw = tombstoneStore?.dictionary(forKey: tombstoneKey) as? [String: Double] ?? [:]
+        return raw.filter { $0.value >= cutoff }
+    }
+
+    /// Mark a task as deliberately finished. Pruning old entries happens here,
+    /// on the write path.
+    static func tombstone(taskId: Int) {
+        var map = liveTombstones()
+        map[String(taskId)] = Date().timeIntervalSince1970
+        tombstoneStore?.set(map, forKey: tombstoneKey)
+    }
+
+    /// Drop a task's tombstone — for an explicit re-arm (undo, reopen, or
+    /// discarding a queued completion).
+    static func clearTombstone(taskId: Int) {
+        var map = liveTombstones()
+        guard map.removeValue(forKey: String(taskId)) != nil else { return }
+        tombstoneStore?.set(map, forKey: tombstoneKey)
+    }
+
+    /// Wipe every tombstone — task ids collide across servers, so an account
+    /// switch must not carry one account's "done" over onto another's task.
+    static func clearAllTombstones() {
+        tombstoneStore?.removeObject(forKey: tombstoneKey)
+    }
+
+    /// Whether `sync` should skip re-arming this task's reminder. `serverUpdated`
+    /// is the task's `updated` from the list response: once it is clearly newer
+    /// than our completion the task changed again elsewhere, so the tombstone is
+    /// retired and the reminder allowed back.
+    static func isTombstoned(taskId: Int, serverUpdated: Date?) -> Bool {
+        guard let at = liveTombstones()[String(taskId)] else { return false }
+        if let updated = serverUpdated,
+           updated.timeIntervalSince1970 > at + tombstoneUpdatedSlack {
+            clearTombstone(taskId: taskId)
+            return false
+        }
+        return true
+    }
+
     /// Cancel every pending *and* already-delivered reminder for one task.
     @discardableResult
     static func cancel(taskId: Int, reason: String) async -> Int {
+        // Record the intent first: even when nothing is pending right now, the
+        // next stale-list refresh must not re-arm this reminder.
+        tombstone(taskId: taskId)
+
         let center = UNUserNotificationCenter.current()
 
         let pendingIds = await center.pendingNotificationRequests()
@@ -64,6 +134,9 @@ enum ReminderStore {
     /// been rewritten without it) simply doesn't call this, leaving the app's
     /// next `ReminderScheduler.sync` to put the reminder back.
     static func schedule(task: VikunjaTask, reason: String) async {
+        // An explicit re-arm overrides any prior completion tombstone.
+        clearTombstone(taskId: task.id)
+
         let center = UNUserNotificationCenter.current()
         guard await center.notificationSettings().authorizationStatus == .authorized else { return }
         let pending = Set(await center.pendingNotificationRequests().map(\.identifier))

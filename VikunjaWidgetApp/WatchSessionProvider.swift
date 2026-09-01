@@ -56,6 +56,20 @@ final class WatchSessionProvider: NSObject, WCSessionDelegate {
         lastPushedTodayCount = todayCount
     }
 
+    /// The Watch reports a task it completed (see `WatchConfigStore.reportCompletion`).
+    /// Handle it like any cross-device completion: drop this task's local
+    /// reminder now (which also tombstones it against a still-stale list),
+    /// nudge the Mac, and catch the widget/Watch caches up.
+    func session(_ s: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        guard let taskId = userInfo["completed_task_id"] as? Int else { return }
+        DiagnosticLog.info("watch reported completion: task \(taskId)")
+        Task {
+            await ReminderStore.cancel(taskId: taskId, reason: "completed on watch")
+            ChangeBeacon.publish(reason: "watch completion")
+            try? await BackgroundRefresh.performSync(reason: "watch")
+        }
+    }
+
     func session(_ s: WCSession, activationDidCompleteWith _: WCSessionActivationState, error _: Error?) {
         syncConfig()
     }

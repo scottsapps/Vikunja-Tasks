@@ -731,6 +731,7 @@ final class TaskStore {
     func undoComplete(taskId: Int) {
         guard let task = pendingUndo[taskId] else { return }
         DiagnosticLog.info("undo complete task \(taskId)")
+        ReminderStore.clearTombstone(taskId: taskId)
         undoTimers[taskId]?.cancel()
         undoTimers.removeValue(forKey: taskId)
         pendingUndo.removeValue(forKey: taskId)
@@ -769,6 +770,7 @@ final class TaskStore {
     }
 
     func reopen(task: VikunjaTask) async {
+        ReminderStore.clearTombstone(taskId: task.id)
         doneTasks.removeAll { $0.id == task.id }
         saveDoneCache()
         let taskRef = ref(for: task.id)
@@ -1282,9 +1284,11 @@ final class TaskStore {
                 // `commitCompletion` moved the task into `doneTasks` and
                 // cancelled its reminders. Take it back out here;
                 // `rebuildMergedTasks()` re-derives it into `undoneTasks` from
-                // the untouched server list, and the reminder is re-armed below.
+                // the untouched server list, and the reminder is re-armed below —
+                // so lift the completion tombstone or `sync` would skip it.
                 if let id = localId(for: op.ref) {
                     doneTasks.removeAll { $0.id == id }
+                    ReminderStore.clearTombstone(taskId: id)
                 }
             case .reopen:
                 // `reopen` removed the task from `doneTasks` and kept no local

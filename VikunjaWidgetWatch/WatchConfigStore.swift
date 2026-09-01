@@ -13,6 +13,18 @@ final class WatchConfigStore: NSObject, ObservableObject, WCSessionDelegate {
         WCSession.default.activate()
     }
 
+    /// Tell the phone a task was completed here. The Watch schedules no
+    /// notifications of its own, but the phone's local reminder — mirrored to
+    /// this Watch whenever the phone is locked — would otherwise fire for a
+    /// task finished on the wrist, and the phone only learns of it through the
+    /// `filter=done=false` list, which has been seen to lag by many minutes.
+    /// `transferUserInfo` is queued, background-delivered, and survives the
+    /// phone being unreachable right now.
+    func reportCompletion(taskId: Int) {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
+        WCSession.default.transferUserInfo(["completed_task_id": taskId])
+    }
+
     private func store(_ ctx: [String: Any]) {
         let defaults = UserDefaults(suiteName: VikunjaConfig.appGroupSuite)
         if let host = ctx["vikunja_host"] as? String { defaults?.set(host, forKey: "vikunja_host") }

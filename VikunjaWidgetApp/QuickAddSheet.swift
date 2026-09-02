@@ -568,7 +568,7 @@ struct QuickAddSheet: View {
                     previewChip(icon: "calendar", text: dueText)
                 }
                 if let priority = parsed.priority {
-                    previewChip(icon: "flag.fill", text: "Priority \(priority)")
+                    previewChip(icon: "flag.fill", text: priorityLabel(priority))
                 }
                 ForEach(parsed.labelTitles, id: \.self) { tag in
                     previewChip(icon: "tag.fill", text: tag)

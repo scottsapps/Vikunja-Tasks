@@ -19,9 +19,16 @@ struct QuickAddResult {
 ///   *tag          → label
 ///   +project      → project (prefix-matched)
 ///   !1 – !5       → priority
-///   today / tomorrow / tom / weekday name / "apr 30" / "in N days|weeks|months" / "next week"
-///   every day|week|month|year / every N days / every monday / every weekday
+///   Dates: today / tonight / tomorrow / tom / weekday name / "next <weekday>" /
+///          "apr 30" / "2026-09-15" / "9/15" (locale-ordered) /
+///          "in N days|weeks|months" / next week / next month / end of month
+///   Recurrence: every day|week|month|year / daily|weekly|monthly|yearly /
+///               "every N days" / "every two weeks" / every monday / every weekday
 enum QuickAddParser {
+
+    /// Digits or a spelled-out count, one–twelve ("every two weeks").
+    private static let numberToken =
+        #"(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)"#
 
     static func parse(_ input: String, knownProjects: [VikunjaProject] = [], knownLabels: [VikunjaLabel] = []) -> QuickAddResult {
         var text = input
@@ -48,7 +55,7 @@ enum QuickAddParser {
             return 7 * 24 * 3600   // approximation; server handles weekday scheduling
         }
 
-        // "every N days/weeks/months/years"
+        // "every N days/weeks/months/years" — N as digits or a word ("every two weeks")
         let unitMap: [(String, Int)] = [
             ("years?", 365 * 24 * 3600),
             ("months?", 30 * 24 * 3600),
@@ -56,9 +63,23 @@ enum QuickAddParser {
             ("days?", 24 * 3600),
         ]
         for (unit, seconds) in unitMap {
-            if let match = remove(pattern: #"\bevery\s+(\d+)\s+"# + unit + #"\b"#, from: &text),
-               let n = Int(match) {
-                return n * seconds
+            if let match = remove(pattern: #"\bevery\s+"# + numberToken + #"\s+"# + unit + #"\b"#, from: &text) {
+                let n = intFromNumberToken(match)
+                if n > 0 { return n * seconds }
+            }
+        }
+
+        // "daily" / "weekly" / "monthly" / "yearly". Guarded so a *weekly label
+        // or a +monthly project name is left untouched.
+        let namedIntervals: [(String, Int)] = [
+            ("daily", 24 * 3600),
+            ("weekly", 7 * 24 * 3600),
+            ("monthly", 30 * 24 * 3600),
+            ("yearly", 365 * 24 * 3600),
+        ]
+        for (word, seconds) in namedIntervals {
+            if remove(pattern: #"(?<![\w*+])"# + word + #"(?![\w-])"#, from: &text) != nil {
+                return seconds
             }
         }
 
@@ -93,20 +114,36 @@ enum QuickAddParser {
         let now = Date()
         let todayStart = cal.startOfDay(for: now)
 
-        // "in N days/weeks/months"
+        // "in N days/weeks/months" — N as digits or a word ("in two weeks")
         let relativeUnits: [(String, Calendar.Component)] = [
             ("months?", .month), ("weeks?", .weekOfYear), ("days?", .day)
         ]
         for (unit, component) in relativeUnits {
-            if let match = remove(pattern: #"\bin\s+(\d+)\s+"# + unit + #"\b"#, from: &text),
-               let n = Int(match) {
-                return cal.date(byAdding: component, value: n, to: todayStart)
+            if let match = remove(pattern: #"\bin\s+"# + numberToken + #"\s+"# + unit + #"\b"#, from: &text) {
+                let n = intFromNumberToken(match)
+                if n > 0 { return cal.date(byAdding: component, value: n, to: todayStart) }
             }
         }
 
-        // "next week"
+        // "next week" / "next month"
         if remove(pattern: #"\bnext\s+week\b"#, from: &text) != nil {
             return cal.date(byAdding: .weekOfYear, value: 1, to: todayStart)
+        }
+        if remove(pattern: #"\bnext\s+month\b"#, from: &text) != nil {
+            return cal.date(byAdding: .month, value: 1, to: todayStart)
+        }
+
+        // "end of month" / "end of the month" → last day of the current month
+        if remove(pattern: #"\bend\s+of\s+(?:the\s+)?month\b"#, from: &text) != nil {
+            let monthStart = cal.date(from: cal.dateComponents([.year, .month], from: todayStart)) ?? todayStart
+            let nextMonthStart = cal.date(byAdding: .month, value: 1, to: monthStart) ?? monthStart
+            return cal.date(byAdding: .day, value: -1, to: nextMonthStart)
+        }
+
+        // "tonight" → today. Veyrn applies the user's default due time on create,
+        // so the evening intent collapses to that time anyway.
+        if remove(pattern: #"(?<![\w*+])tonight(?![\w-])"#, from: &text) != nil {
+            return todayStart
         }
 
         // "tomorrow" / "tom"
@@ -119,12 +156,17 @@ enum QuickAddParser {
             return todayStart
         }
 
-        // Weekday names: "monday", "mon", etc. → next occurrence
+        // Weekday names: "monday", "mon", etc. → next occurrence.
+        // "next monday" forces the occurrence in the *following* week.
         let weekdayMap: [(String, Int)] = [
             ("monday|mon", 2), ("tuesday|tue", 3), ("wednesday|wed", 4),
             ("thursday|thu", 5), ("friday|fri", 6), ("saturday|sat", 7), ("sunday|sun", 1)
         ]
         for (pattern, weekday) in weekdayMap {
+            if remove(pattern: #"\bnext\s+("# + pattern + #")\b"#, from: &text) != nil {
+                let thisWeek = nextWeekday(weekday, after: todayStart, cal: cal)
+                return cal.date(byAdding: .day, value: 7, to: thisWeek)
+            }
             if remove(pattern: #"\b("# + pattern + #")\b"#, from: &text) != nil {
                 return nextWeekday(weekday, after: todayStart, cal: cal)
             }
@@ -132,6 +174,11 @@ enum QuickAddParser {
 
         // "Apr 30", "April 30", "30 apr" etc.
         if let date = extractMonthDay(&text, cal: cal, todayStart: todayStart) {
+            return date
+        }
+
+        // "2026-09-15", "9/15", "15/9/2026", "15.9.26"
+        if let date = extractNumericDate(&text, cal: cal, todayStart: todayStart) {
             return date
         }
 
@@ -191,6 +238,84 @@ enum QuickAddParser {
             return cal.date(from: comps)
         }
         return nil
+    }
+
+    // MARK: - Numeric dates
+
+    /// ISO dates (`2026-09-15`) and separator dates (`9/15`, `15/9/2026`,
+    /// `15.9.26`). A separator date with no year is only accepted when one
+    /// component is > 12, so the field order is unambiguous — a bare `3/4` is
+    /// left in the title rather than guessed. When a year is present and both
+    /// components are ≤ 12, the order follows the reader's locale.
+    private static func extractNumericDate(_ text: inout String, cal: Calendar, todayStart: Date) -> Date? {
+        let currentYear = cal.component(.year, from: todayStart)
+
+        // ISO 8601 calendar date — always unambiguous.
+        if let (range, groups) = firstRegexMatch(#"(?<![\w*+/.\-])(\d{4})-(\d{1,2})-(\d{1,2})\b"#, in: text),
+           let year = Int(groups[1]), let month = Int(groups[2]), let day = Int(groups[3]),
+           let date = calendarDate(year: year, month: month, day: day, cal: cal) {
+            text.removeSubrange(range)
+            text = collapseSpaces(text)
+            return date
+        }
+
+        // "9/15", "15/9/2026", "15.9.26", "9.15.2026"
+        guard let (range, groups) = firstRegexMatch(
+                #"(?<![\w*+/.\-])(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?\b"#, in: text),
+              let a = Int(groups[1]), let b = Int(groups[2]) else { return nil }
+
+        let yearString = groups.count > 3 ? groups[3] : ""
+        let hasYear = !yearString.isEmpty
+
+        let month: Int
+        let day: Int
+        if a > 12, b <= 12 {              // 15/9  → day / month
+            day = a; month = b
+        } else if b > 12, a <= 12 {       // 9/15  → month / day
+            month = a; day = b
+        } else if hasYear {              // 3/4/2026 → locale order decides
+            if localeDayBeforeMonth { day = a; month = b } else { month = a; day = b }
+        } else {
+            return nil                    // bare "3/4" — too ambiguous to guess
+        }
+
+        let year = hasYear ? normalizedYear(yearString) : currentYear
+        guard var date = calendarDate(year: year, month: month, day: day, cal: cal) else { return nil }
+        if !hasYear, date < todayStart {
+            date = cal.date(byAdding: .year, value: 1, to: date) ?? date
+        }
+        text.removeSubrange(range)
+        text = collapseSpaces(text)
+        return date
+    }
+
+    /// A real calendar date, or nil when the components don't exist (e.g. Feb 30).
+    private static func calendarDate(year: Int, month: Int, day: Int, cal: Calendar) -> Date? {
+        guard (1...12).contains(month), (1...31).contains(day) else { return nil }
+        var comps = DateComponents()
+        comps.year = year; comps.month = month; comps.day = day
+        guard let date = cal.date(from: comps) else { return nil }
+        let roundTrip = cal.dateComponents([.month, .day], from: date)
+        return (roundTrip.month == month && roundTrip.day == day) ? date : nil
+    }
+
+    /// Two-digit years map into the 2000s; anything else is taken as written.
+    private static func normalizedYear(_ raw: String) -> Int {
+        let n = Int(raw) ?? 0
+        return raw.count == 2 ? 2000 + n : n
+    }
+
+    /// Whether the reader's locale writes the day before the month in an
+    /// all-digits date (true across most of the world, false for `M/d/y`
+    /// locales like en-US).
+    private static var localeDayBeforeMonth: Bool {
+        let fmt = DateFormatter()
+        fmt.locale = .current
+        fmt.setLocalizedDateFormatFromTemplate("yMd")
+        let pattern = fmt.dateFormat ?? "M/d/y"
+        guard let dayIndex = pattern.firstIndex(of: "d"),
+              let monthIndex = pattern.firstIndex(of: "M") else { return true }
+        return dayIndex < monthIndex
     }
 
     // MARK: - Priority
@@ -264,7 +389,39 @@ enum QuickAddParser {
         }
 
         text.removeSubrange(fullRange)
-        text = text.replacingOccurrences(of: "  ", with: " ").trimmingCharacters(in: .whitespaces)
+        text = collapseSpaces(text)
         return captureStr
+    }
+
+    /// First case-insensitive match of `pattern`, as (full range, group strings).
+    /// `groups[0]` is the whole match; groups that did not participate come back
+    /// as "".
+    private static func firstRegexMatch(_ pattern: String, in text: String) -> (Range<String.Index>, [String])? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let fullRange = Range(match.range, in: text) else { return nil }
+
+        var groups: [String] = []
+        for index in 0..<match.numberOfRanges {
+            if let groupRange = Range(match.range(at: index), in: text) {
+                groups.append(String(text[groupRange]))
+            } else {
+                groups.append("")
+            }
+        }
+        return (fullRange, groups)
+    }
+
+    /// Digit string or spelled-out one–twelve → Int (0 when unrecognized).
+    private static func intFromNumberToken(_ token: String) -> Int {
+        if let n = Int(token) { return n }
+        let words = ["one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+                     "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12]
+        return words[token.lowercased()] ?? 0
+    }
+
+    /// Squeezes the double space a mid-string token removal leaves behind, then trims.
+    private static func collapseSpaces(_ text: String) -> String {
+        text.replacingOccurrences(of: "  ", with: " ").trimmingCharacters(in: .whitespaces)
     }
 }

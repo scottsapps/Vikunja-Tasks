@@ -1,0 +1,5 @@
+{
+  "fill" : { "solid" : "extended-srgb:0.204,0.302,0.855,1.000" },
+  "groups" : [ { "layers" : [ { "image-name" : "art.png", "name" : "Veyrn" } ] } ],
+  "supported-platforms" : { "circles" : [ "watchOS" ], "squares" : [ "iOS", "macOS" ] }
+}

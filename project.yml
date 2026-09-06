@@ -23,7 +23,7 @@ settings:
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     SWIFT_EMIT_LOC_STRINGS: YES
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
-    CURRENT_PROJECT_VERSION: 94
+    CURRENT_PROJECT_VERSION: 96
 
 configFiles:
   Debug: Signing.xcconfig
@@ -93,7 +93,11 @@ targets:
       INFOPLIST_FILE: VikunjaWidgetApp/Info.plist
       MACOSX_DEPLOYMENT_TARGET: "14.0"
       ENABLE_HARDENED_RUNTIME: YES
-      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      # macOS-only Icon Composer icon (VikunjaWidgetApp/AppIconMac.icon). Full-bleed
+      # square art; macOS 26 renders it glass/masked, macOS 15 gets actool's
+      # rounded-rect legacy rasterisation. A plain .appiconset can't do both —
+      # see references/app.md.
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIconMac
     dependencies:
       - target: VikunjaWidgetExtension
         embed: true
@@ -138,6 +142,7 @@ targets:
       - path: VikunjaWidgetApp
         excludes:
           - Info.plist
+          - AppIconMac.icon      # macOS-only icon; iOS keeps AppIcon.appiconset
       - path: VikunjaCore
     entitlements:
       path: VikunjaWidgetApp/VikunjaWidgetAppIOS.entitlements

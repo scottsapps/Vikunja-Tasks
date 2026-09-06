@@ -66,7 +66,7 @@ final class WatchSessionProvider: NSObject, WCSessionDelegate {
         Task {
             await ReminderStore.cancel(taskId: taskId, reason: "completed on watch")
             ChangeBeacon.publish(reason: "watch completion")
-            try? await BackgroundRefresh.performSync(reason: "watch")
+            _ = try? await BackgroundRefresh.performSync(reason: "watch")
         }
     }
 

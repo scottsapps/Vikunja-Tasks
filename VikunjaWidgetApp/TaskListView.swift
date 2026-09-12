@@ -19,6 +19,12 @@ struct TaskListView: View {
     var activeTagFilter: Set<String> = []
     var suppressUpcomingDueDate: Bool = false
 
+    /// Calendar events keyed by start-of-day, shown above that day's tasks in
+    /// `.byDate` mode only (3.5). **The empty default is load-bearing**: it is what
+    /// keeps `InboxView`, `ProjectView` and `LogbookView` untouched by this feature
+    /// without any of them knowing it exists.
+    var events: [Date: [DayItem]] = [:]
+
     // Ordering preference — @AppStorage rather than a plain read so the list
     // redraws the moment it changes in Settings.
     @AppStorage(TaskSortPreferences.fieldKey) private var sortField: TaskSortField = .alphabetical
@@ -35,7 +41,7 @@ struct TaskListView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            if filteredTasks.isEmpty {
+            if filteredTasks.isEmpty && events.isEmpty {
                 emptyState
             } else {
                 switch mode {
@@ -135,6 +141,11 @@ struct TaskListView: View {
         return List {
             ForEach(groups, id: \.label) { group in
                 Section {
+                    ForEach(group.events) { item in
+                        EventRow(item: item)
+                            .listRowInsets(EdgeInsets(top: 1, leading: 8, bottom: 1, trailing: 8))
+                            .listRowSeparator(.hidden)
+                    }
                     ForEach(group.tasks, id: \.id) { task in
                         taskRowOrEditor(task)
                             .listRowInsets(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
@@ -146,6 +157,13 @@ struct TaskListView: View {
             }
         }
         .listStyle(.plain)
+        // `List` pads every row out to a minimum height (44pt on iOS) for touch
+        // targets. A task row is two lines and clears it comfortably; a one-line
+        // `EventRow` does not, so a day of meetings renders as a ladder of
+        // widely-spaced rows. Lowering the floor lets the event rows hug their
+        // content — task rows are unaffected because they were never the ones
+        // being padded.
+        .environment(\.defaultMinListRowHeight, 8)
     }
 
     // MARK: - Flat content (Inbox)
@@ -211,6 +229,7 @@ struct TaskListView: View {
         let label: String
         let sortKey: Date
         let tasks: [VikunjaTask]
+        var events: [DayItem] = []
     }
 
     private func dateGroups(_ tasks: [VikunjaTask]) -> [DateGroup] {
@@ -235,10 +254,18 @@ struct TaskListView: View {
             }
         }
 
-        return buckets.keys.sorted().compactMap { day -> DateGroup? in
-            let sorted = sortOrder.sorted(buckets[day]!, projectNames: store.projectMap)
+        // Days that have events but no tasks still need a bucket. Events are always
+        // dated, so they can never reach the undated sentinel keys and the
+        // top/bottom placement of "No Date" is unaffected.
+        var days = Set(buckets.keys)
+        days.formUnion(events.keys)
+
+        return days.sorted().compactMap { day -> DateGroup? in
+            let dayTasks = sortOrder.sorted(buckets[day] ?? [], projectNames: store.projectMap)
+            let dayEvents = events[day] ?? []
+            guard !dayTasks.isEmpty || !dayEvents.isEmpty else { return nil }
             let label = day == noDateKey ? DayLabel.noDate : DayLabel.groupHeader(day)
-            return DateGroup(label: label, sortKey: day, tasks: sorted)
+            return DateGroup(label: label, sortKey: day, tasks: dayTasks, events: dayEvents)
         }
     }
 

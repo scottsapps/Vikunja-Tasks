@@ -38,12 +38,29 @@ struct EventRow: View {
     private var isDeclined: Bool { item.event.isDeclined }
     private var isTentative: Bool { item.event.isTentative && !isDeclined }
 
+    /// Already over. **Shown, greyed — not dropped.** The widget filters finished
+    /// events out of its timeline because it has a handful of rows to spend; a list
+    /// has room, and a day you are halfway through reads better with the morning still
+    /// in it. Things 3 does the same.
+    ///
+    /// All-day rows never count as past: they are the whole day, so "over" is not a
+    /// thing they are until the day itself rolls over.
+    private var isPast: Bool {
+        guard !item.isAllDay, !item.spansWholeDay else { return false }
+        return item.displayEnd <= now
+    }
+
+    /// Re-evaluated whenever the row is rebuilt — which the Scheduled view does on
+    /// appear, on scene-active and on `.EKEventStoreChanged`. Good enough for a list
+    /// you return to; nothing here needs to tick second by second.
+    private var now: Date { Date() }
+
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             leading
             Text(item.event.title.isEmpty ? "(no title)" : item.event.title)
                 .font(.system(size: eventTextSize))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(isPast ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.secondary))
                 .lineLimit(2)
             Spacer(minLength: 0)
         }
@@ -74,7 +91,7 @@ struct EventRow: View {
         } else {
             Text(timeText)
                 .font(.system(size: eventTextSize, weight: .regular))
-                .foregroundStyle(color)
+                .foregroundStyle(isPast ? AnyShapeStyle(.tertiary) : AnyShapeStyle(color))
                 .monospacedDigit()
                 .lineLimit(1)
                 .frame(width: timeColumnWidth, alignment: .leading)
@@ -102,6 +119,7 @@ struct EventRow: View {
         let when = (item.isAllDay || item.spansWholeDay) ? "All day" : timeText
         if isDeclined { return "\(when), \(title), declined" }
         if isTentative { return "\(when), \(title), maybe" }
+        if isPast { return "\(when), \(title), ended" }
         return "\(when), \(title)"
     }
 }

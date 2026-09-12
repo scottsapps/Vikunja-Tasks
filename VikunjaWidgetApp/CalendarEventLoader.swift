@@ -20,6 +20,7 @@
 import SwiftUI
 import Observation
 import EventKit
+import WidgetKit
 
 @MainActor
 @Observable
@@ -54,7 +55,18 @@ final class CalendarEventLoader {
             queue: .main
         ) { [weak self] _ in
             guard let self else { return }
-            Task { @MainActor in await self.load() }
+            Task { @MainActor in
+                await self.load()
+                // This is the job Calvane's login item existed to do. Veyrn is an app
+                // you leave open (global-hotkey Quick Add), so an in-app observer covers
+                // it without adding a background launch item — which Veyrn could not do
+                // invisibly anyway, lacking `LSUIElement`.
+                //
+                // The residual gap, deliberately accepted: quit Veyrn on the Mac and the
+                // widget falls back to its own 30-minute timeline floor until you reopen
+                // it. Documented in `skill/references/calendar.md`.
+                WidgetCenter.shared.reloadTimelines(ofKind: VeyrnCalendarWidgetKind)
+            }
         }
     }
 

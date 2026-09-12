@@ -54,6 +54,15 @@ gen:
 # not, so a CLI-only session leaves the table stale. Builds all three schemes
 # first because the catalog is shared by every target — syncing from one
 # platform's .stringsdata alone would mark the other platforms' strings stale.
+# NOTE: these builds pass CODE_SIGNING_ALLOWED=NO, which produces an
+# entitlement-stripped Veyrn.app. They therefore build into their OWN DerivedData
+# (STRINGS_DD), never the one Xcode uses. Sharing it means Xcode finds that build
+# "up to date" and launches it unsigned, whereupon ChangeBeacon's
+# CKContainer.default() kills the app with "containerIdentifier can not be nil" and
+# macOS starts asking to "access data from other apps". Cost an hour once; don't
+# remove the -derivedDataPath.
+STRINGS_DD := /tmp/veyrn-strings-dd
+
 strings:
 	@set -e; \
 	for s in VikunjaWidgetApp:platform=macOS \
@@ -63,12 +72,10 @@ strings:
 		echo "Building $$scheme…"; \
 		xcodebuild -project VikunjaWidget.xcodeproj -scheme "$$scheme" \
 			-configuration Debug -destination "$$dest" build \
+			-derivedDataPath $(STRINGS_DD) \
 			CODE_SIGNING_ALLOWED=NO >/dev/null; \
 	done; \
-	intermediates=$$(xcodebuild -project VikunjaWidget.xcodeproj \
-		-scheme VikunjaWidgetApp -showBuildSettings 2>/dev/null \
-		| awk -F' = ' '/ BUILD_DIR =/{print $$2; exit}' \
-		| sed 's|/Build/Products|/Build/Intermediates.noindex|'); \
+	intermediates=$(STRINGS_DD)/Build/Intermediates.noindex; \
 	args=$$(find "$$intermediates" -name '*.stringsdata' \
 		-not -path '*/TelemetryDeck.build/*' \
 		-exec printf -- '--stringsdata %s ' {} +); \

@@ -30,6 +30,12 @@ public struct AgendaSnapshot: Sendable, Equatable {
     /// left column.
     public var referenceDay: Date
 
+    /// Whether Veyrn's calendar feature is switched on at all. Distinct from
+    /// `hasAccess`: the switch being off is not a permission problem and must not be
+    /// reported as one, or the widget tells people to grant access they have already
+    /// granted. Defaulted so sample data and tests don't have to care.
+    public var featureEnabled: Bool = true
+
     public init(
         authorization: CalendarAuthorization,
         sections: [DaySection],
@@ -37,8 +43,10 @@ public struct AgendaSnapshot: Sendable, Equatable {
         isContinuation: Bool,
         canPageBack: Bool,
         canPageForward: Bool,
-        referenceDay: Date
+        referenceDay: Date,
+        featureEnabled: Bool = true
     ) {
+        self.featureEnabled = featureEnabled
         self.authorization = authorization
         self.sections = sections
         self.page = page
@@ -88,8 +96,10 @@ public struct AgendaContentView: View {
     public var body: some View {
         let metrics = Metrics.forFamily(family)
         Group {
-            if !snapshot.hasAccess {
-                NoAccessView(metrics: metrics)
+            if !snapshot.featureEnabled {
+                NoAccessView(metrics: metrics, reason: .switchedOff)
+            } else if !snapshot.hasAccess {
+                NoAccessView(metrics: metrics, reason: .noPermission)
             } else {
                 switch family {
                 case .large:
@@ -103,7 +113,7 @@ public struct AgendaContentView: View {
         .overlay(alignment: .topTrailing) {
             // Chevrons show whenever access is granted — disabled, never hidden (§7);
             // in the no-events state both are disabled but still present.
-            if showsStaticChevrons && snapshot.hasAccess {
+            if showsStaticChevrons && snapshot.hasAccess && snapshot.featureEnabled {
                 ChevronPair(canPageBack: snapshot.canPageBack,
                             canPageForward: snapshot.canPageForward,
                             metrics: metrics)
@@ -116,15 +126,32 @@ public struct AgendaContentView: View {
 
 /// §10 — brief message plus a tap target that opens the app. No chevrons in this state.
 public struct NoAccessView: View {
+    /// Why there is nothing to draw. Keeping these apart matters: telling someone to
+    /// grant access they already granted — because they simply never switched the
+    /// feature on — is the more confusing of the two failures.
+    public enum Reason { case switchedOff, noPermission }
+
     let metrics: Metrics
+    var reason: Reason = .noPermission
+
     public var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Calendar access needed")
-                .font(metrics.titleFont)
-                .foregroundStyle(.primary)
-            Text("Tap to open Calvane Widget and grant access.")
-                .font(metrics.locationFont)
-                .foregroundStyle(.secondary)
+            switch reason {
+            case .switchedOff:
+                Text("Calendar is off")
+                    .font(metrics.titleFont)
+                    .foregroundStyle(.primary)
+                Text("Turn on Show Calendar Events in Veyrn's settings.")
+                    .font(metrics.locationFont)
+                    .foregroundStyle(.secondary)
+            case .noPermission:
+                Text("Calendar access needed")
+                    .font(metrics.titleFont)
+                    .foregroundStyle(.primary)
+                Text("Tap to open Veyrn and grant access.")
+                    .font(metrics.locationFont)
+                    .foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(metrics.contentPadding)

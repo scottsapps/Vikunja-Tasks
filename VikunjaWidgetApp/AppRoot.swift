@@ -691,8 +691,32 @@ struct AppRoot: View {
     #endif
 
     private func handleDeepLink(_ url: URL) {
-        guard url.scheme == "vikunja",
-              url.host == "task",
+        guard url.scheme == "vikunja" else { return }
+
+        // Calendar widget taps. iOS reaches Calendar.app directly via
+        // `OpenCalendarIntent` and never gets here; macOS has no `calshow:` handler, so
+        // the hop through the app is unavoidable there. Calvane could make that hop
+        // invisible because it set `LSUIElement`; Veyrn is a normal windowed app, so its
+        // window comes forward on the way. See `VeyrnCalendar/UI/DeepLink.swift`.
+        if url.host == "calendar",
+           let stamp = url.pathComponents.dropFirst().first.flatMap(Int.init),
+           let calshow = URL(string: "calshow:\(stamp)") {
+            #if os(macOS)
+            NSWorkspace.shared.open(calshow)
+            #else
+            // Only reached on iOS 17, where the widget has no `OpenURLIntent` to open
+            // Calendar itself. On 18+ the tap never comes through the app at all.
+            UIApplication.shared.open(calshow)
+            #endif
+            return
+        }
+
+        if url.host == "calendar-settings" {
+            showSettings = true
+            return
+        }
+
+        guard url.host == "task",
               let idStr = url.pathComponents.dropFirst().first,
               let taskId = Int(idStr),
               let task = store.undoneTasks.first(where: { $0.id == taskId })

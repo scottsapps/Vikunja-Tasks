@@ -38,5 +38,10 @@ struct VikunjaWidget: Widget {
 struct VikunjaWidgetBundle: WidgetBundle {
     var body: some Widget {
         VikunjaWidget()
+        // Always offered in the gallery, even with the calendar feature switched off —
+        // a widget that appears only once a hidden setting is flipped is the kind of
+        // thing guideline 2.3.1 is about. With the switch off it renders a "turn this
+        // on in Veyrn" state instead of events, and asks for no permission.
+        VeyrnCalendarWidget()
     }
 }

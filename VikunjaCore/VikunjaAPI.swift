@@ -25,6 +25,22 @@ enum VikunjaAPI {
         return URLSession(configuration: config)
     }()
 
+    /// Companion to `session`, used for exactly one situation: a GET whose
+    /// metrics show `hadNoConnectionAttempt()` — `session`'s own
+    /// connectivity wait is stuck, awake, and (confirmed 2026-09-11) that
+    /// can survive even a fresh `URLSession` across a full app relaunch, so
+    /// retrying on `session` again just requeues into the same stuck wait.
+    /// `waitsForConnectivity = false` forces an immediate attempt instead of
+    /// asking the (stuck) path evaluator first — the same difference that
+    /// lets `curl`/Safari reach the same host while `session` sits waiting.
+    private static let directSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.waitsForConnectivity = false
+        config.timeoutIntervalForRequest = 20
+        config.timeoutIntervalForResource = 25
+        return URLSession(configuration: config)
+    }()
+
     /// Whether a failed v2 request should be re-thrown instead of retried on
     /// v1. The fallback exists for servers that don't speak v2 — it can't help
     /// with failures that aren't about the API version, and the second request
@@ -1056,8 +1072,10 @@ enum VikunjaAPI {
         let method = request.httpMethod ?? "GET"
         let path = request.url?.path ?? "?"
 
-        // Two failures here are not really failures, and both are repaired by
-        // simply asking again:
+        // Three failures here are not really failures, and all three are
+        // repaired by simply asking again — the first two on `session`
+        // again, the third on `directSession` since `session` itself is
+        // what's stuck:
         //
         // 1. **We were frozen for it.** `timeoutIntervalForResource` is a
         //    wall-clock deadline and it counts time the machine spent asleep,
@@ -1071,41 +1089,57 @@ enum VikunjaAPI {
         //    iOS log shows one on a reused HTTP/3 connection, failing at 8.8 s
         //    with the response never completing, immediately after which an
         //    organic refresh succeeded in ~1 s.
+        // 3. **`session`'s own connectivity wait is stuck** — awake the whole
+        //    time, and `MetricsCollector.hadNoConnectionAttempt()` is true:
+        //    the request never left `waitsForConnectivity`'s internal queue
+        //    to even try. Confirmed at both severities: a rare, self-healing
+        //    one-off (2026-08-11), and a self-hosted user whose account
+        //    failed 100% of attempts for ~50 min across several full app
+        //    relaunches — a fresh `URLSession` alone doesn't clear it, so the
+        //    retry uses `directSession` to skip the wait instead.
         //
-        // Deliberately **not** retried: a timeout that ran while awake. That
-        // one already spent the entire resource budget establishing that the
-        // network isn't answering, and a second pass just makes the user wait
-        // 50 s for the same answer instead of 25.
+        // Deliberately **not** retried: any other awake timeout, where the
+        // network genuinely was tried and didn't answer. That one already
+        // spent the entire resource budget establishing that the network
+        // isn't answering, and a second pass just makes the user wait 50 s
+        // for the same answer instead of 25.
         //
         // **GETs only.** A mutation that failed may perfectly well have landed
         // on the server; replaying it could double-create or double-toggle.
         // Same reasoning that keeps v2 mutations from falling back to v1 — a
-        // transport failure says nothing about whether the write applied. One
-        // extra pass, too: failing the retry the same way is a real failure
-        // for the caller to handle.
+        // transport failure says nothing about whether the write applied. Each
+        // case retries at most once: failing the retry the same way is a real
+        // failure for the caller to handle.
         let retryAllowed = (method == "GET")
         var retried = false
+        var useDirectSession = false
 
         while true {
             let stopwatch = DiagnosticLog.Stopwatch()
             // Per-request delegate purely to collect metrics; see `phaseSummary`.
             let metrics = MetricsCollector()
+            let activeSession = useDirectSession ? directSession : session
 
             let data: Data
             let response: URLResponse
             do {
-                (data, response) = try await session.data(for: request, delegate: metrics)
+                (data, response) = try await activeSession.data(for: request, delegate: metrics)
             } catch {
                 let elapsed = DiagnosticLog.elapsed(stopwatch)
                 // The freeze check is what narrows case 1 from "any
                 // connectivity blip" to "we were frozen for it": both hold.
                 let frozenThroughIt = VeyrnError.isConnectivityOnly(error)
                     && DiagnosticLog.wasFrozen(during: stopwatch)
-                let willRetry = (frozenThroughIt || VeyrnError.isConnectionLost(error))
+                // Case 3: awake (not case 1) and the metrics confirm the
+                // request never even attempted a connection.
+                let stuckWaitingForConnectivity = VeyrnError.isConnectivityOnly(error)
+                    && !frozenThroughIt
+                    && metrics.hadNoConnectionAttempt()
+                let willRetry = (frozenThroughIt || VeyrnError.isConnectionLost(error) || stuckWaitingForConnectivity)
                     && retryAllowed && !retried
 
                 let line = "✗ \(VeyrnError.logDescription(for: error)) \(method) \(path) (\(elapsed)) \(metrics.phaseSummary())"
-                    + (willRetry ? " — retrying" : "")
+                    + (willRetry ? (stuckWaitingForConnectivity ? " — retrying direct" : " — retrying") : "")
                 // A cancelled request is expected — we quit, switched accounts,
                 // or a task group tore down its siblings. Logging it at ERROR
                 // made routine teardown read as failure. A request we're about
@@ -1119,6 +1153,7 @@ enum VikunjaAPI {
 
                 if willRetry {
                     retried = true
+                    useDirectSession = stuckWaitingForConnectivity
                     continue
                 }
                 throw error
@@ -1231,6 +1266,23 @@ final class MetricsCollector: NSObject, URLSessionTaskDelegate, @unchecked Senda
         lock.unlock()
     }
 
+    /// True when the last transaction recorded zero lifecycle timestamps —
+    /// DNS, connect, and request all nil — meaning the task never left
+    /// `URLSession`'s internal queue to attempt a connection at all.
+    ///
+    /// Racy by a hair, same as `phaseSummary()`: `didFinishCollecting` isn't
+    /// guaranteed to land before `data(for:)` throws, so this can read
+    /// `false` on a request that *was* stuck, simply because metrics hadn't
+    /// arrived yet. That's the safe direction to be wrong in — a caller
+    /// gating a retry on this under-fires rather than misfires.
+    func hadNoConnectionAttempt() -> Bool {
+        lock.lock()
+        let m = last
+        lock.unlock()
+        guard let m else { return false }
+        return m.domainLookupStartDate == nil && m.connectStartDate == nil && m.requestStartDate == nil
+    }
+
     func phaseSummary() -> String {
         lock.lock()
         let m = last
@@ -1268,7 +1320,7 @@ final class MetricsCollector: NSObject, URLSessionTaskDelegate, @unchecked Senda
             }
         }
         if !stalled {
-            if m.domainLookupStartDate == nil, m.connectStartDate == nil, m.requestStartDate == nil {
+            if hadNoConnectionAttempt() {
                 // Never even attempted a connection — the request sat waiting
                 // for one. This is the shape a stale/exhausted connection pool
                 // would take.

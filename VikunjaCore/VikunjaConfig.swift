@@ -185,6 +185,9 @@ enum VikunjaConfig {
         TokenStore.deleteToken(for: id)
         UserDefaults.standard.removeObject(forKey: "vikunja.outbox.v1.\(id.uuidString)")
         UserDefaults.standard.removeObject(forKey: "vikunja.outbox.placeholderCounter.v1.\(id.uuidString)")
+        // Per-account project-list expansion state (ProjectExpansion, build 85). Added
+        // after this cleanup was written, so it was orphaned on every account deletion.
+        UserDefaults.standard.removeObject(forKey: "veyrn.projectExpansion.\(id.uuidString)")
         DiagnosticLog.info("account deleted (now \(accts.count))")
 
         guard wasActive else { return }

@@ -71,7 +71,9 @@ final class CalendarEventLoader {
     }
 
     func load() async {
-        guard CalendarPreferences.isEnabled else {
+        // Both switches: the feature on, *and* the user wanting events in this list.
+        // The widget only needs the first.
+        guard CalendarPreferences.isEnabled, CalendarPreferences.showsInScheduled else {
             eventsByDay = [:]
             return
         }

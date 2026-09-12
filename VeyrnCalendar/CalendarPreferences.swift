@@ -26,6 +26,25 @@ enum CalendarPreferences {
 
     /// Off by default. See rule 1 above.
     static var isEnabled: Bool { store?.bool(forKey: enabledKey) ?? false }
+
+    /// Whether events also appear alongside tasks in the Scheduled list.
+    ///
+    /// Deliberately **separate from `isEnabled`**: wanting the calendar widget is not
+    /// the same as wanting events interleaved into your task list, and someone who
+    /// turns the feature on for the widget should not have their Scheduled view
+    /// rearranged as a side effect. Only meaningful while `isEnabled` is true.
+    static let showInScheduledKey = "veyrn.calendar.showInScheduled"
+
+    /// Defaults to **true** so the switch behaves the way it did when there was only
+    /// one of them — turning the calendar on shows events in both places, and this is
+    /// the opt-*out*.
+    static var showsInScheduled: Bool {
+        guard let store else { return true }
+        // `bool(forKey:)` cannot distinguish "false" from "never set", and the default
+        // here is true, so check for the key's presence first.
+        guard store.object(forKey: showInScheduledKey) != nil else { return true }
+        return store.bool(forKey: showInScheduledKey)
+    }
 }
 
 /// The widget's kind string. Lives here rather than in the extension because both

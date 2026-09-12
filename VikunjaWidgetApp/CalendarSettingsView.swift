@@ -2,30 +2,36 @@
 //  CalendarSettingsView.swift
 //  VikunjaWidgetApp
 //
-//  The calendar section of Settings. Ported from Calvane's `WidgetSettingsView`, but
-//  **not** a straight lift: Calvane's was a standalone `List` with `Section`s, and
-//  Veyrn's Settings is a `ScrollView` of headline-plus-controls blocks. The compact
-//  calendar chooser (colour dot · title · source · check) is the part that carried
-//  over as-is.
+//  The Calendar pane of Settings. Ported from Calvane's `WidgetSettingsView` — the
+//  compact calendar chooser (colour dot · title · source · check) carried over intact;
+//  the rest was re-laid-out for Veyrn.
 //
-//  Shape of the section, and why:
+//  Two switches, deliberately separate:
 //
-//      Show Calendar Events        ← always visible, default off
-//      └─ everything else          ← only once access is granted
+//      Enable Calendar        ← master. Grants access; powers the widget.
+//      └─ Show in Scheduled   ← only the task list. Opt-out, default on.
 //
-//  The sub-controls stay hidden until there's access so the section is never a wall
-//  of dead switches, and so the only thing a user sees before opting in is the one
-//  switch that explains what opting in does.
+//  Wanting the calendar widget is not the same as wanting events interleaved into
+//  your task list, and turning the feature on for the widget should not silently
+//  rearrange the Scheduled view. The widget reads only the master switch.
+//
+//  Everything below the master switch stays hidden until access is granted, so the
+//  pane is never a wall of dead controls, and the only thing visible before opting in
+//  is the one switch that explains what opting in does.
 //
 
 import SwiftUI
 import WidgetKit
 
 struct CalendarSettingsView: View {
-    // Bound to the App Group store, not `UserDefaults.standard` — see
+    // Both bound to the App Group store, not `UserDefaults.standard` — see
     // `CalendarPreferences.store` for why there is deliberately only one copy.
     @AppStorage(CalendarPreferences.enabledKey, store: CalendarPreferences.store)
     private var calendarEnabled: Bool = false
+
+    @AppStorage(CalendarPreferences.showInScheduledKey, store: CalendarPreferences.store)
+    private var showInScheduled: Bool = true
+
     @State private var model = CalendarAccessModel()
 
     private var selectedCount: Int {
@@ -34,10 +40,7 @@ struct CalendarSettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Calendar")
-                .font(.headline)
-
-            Toggle("Show Calendar Events", isOn: $calendarEnabled)
+            Toggle("Enable Calendar", isOn: $calendarEnabled)
                 .onChange(of: calendarEnabled) { _, on in
                     // The binding has already written to the App Group, which is what
                     // the widget reads — so this only has to nudge it and reload.
@@ -47,7 +50,7 @@ struct CalendarSettingsView: View {
                     }
                 }
 
-            Text("Shows your calendar events alongside tasks in Scheduled, and adds a calendar widget. Events are read-only and never leave your device.")
+            Text("Lets Veyrn read the calendars on this device, for the Veyrn Calendar widget. Events are read-only and never leave your device.")
                 .font(.caption).foregroundStyle(.secondary)
 
             if calendarEnabled {
@@ -59,6 +62,7 @@ struct CalendarSettingsView: View {
                         Task { await model.requestAccessAndLoad() }
                     }
                     .buttonStyle(.bordered)
+                    .padding(.top, 4)
                 case .denied, .restricted, .writeOnly:
                     deniedNotice
                 }
@@ -89,12 +93,25 @@ struct CalendarSettingsView: View {
             .buttonStyle(.bordered)
             #endif
         }
+        .padding(.top, 4)
     }
 
     // MARK: - Granted
 
     @ViewBuilder
     private var grantedControls: some View {
+        Divider().padding(.vertical, 6)
+
+        Toggle("Show in Scheduled", isOn: $showInScheduled)
+            .onChange(of: showInScheduled) { _, _ in
+                // Only the in-app list cares; the widget is unaffected either way.
+                // `TodayView` reloads on scene-active, which covers dismissing Settings.
+            }
+        Text("Also show events alongside tasks in the Scheduled list. Turn this off to keep the calendar for the widget only.")
+            .font(.caption).foregroundStyle(.secondary)
+
+        Divider().padding(.vertical, 6)
+
         Stepper(
             "Days ahead: \(model.options.daysAhead)",
             value: Binding(
@@ -128,7 +145,7 @@ struct CalendarSettingsView: View {
             }
             .font(.caption)
         }
-        .padding(.top, 4)
+        .padding(.top, 10)
 
         ForEach(model.calendars) { cal in
             let on = model.selection.includes(cal)
@@ -160,5 +177,14 @@ struct CalendarSettingsView: View {
              ? "Showing all calendars. New calendars appear automatically."
              : "Showing \(selectedCount) of \(model.calendars.count) calendars.")
             .font(.caption).foregroundStyle(.secondary)
+    }
+}
+
+/// Whether the calendar feature is on, for the Settings root row's trailing label.
+enum CalendarSettingsSummary {
+    static var current: LocalizedStringKey {
+        guard CalendarPreferences.isEnabled else { return "Off" }
+        guard EventKitSource.authorization.canRead else { return "Needs access" }
+        return CalendarPreferences.showsInScheduled ? "On" : "Widget only"
     }
 }

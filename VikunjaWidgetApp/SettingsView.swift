@@ -43,120 +43,150 @@ struct SettingsView: View {
     private var isOnboarding: Bool { accounts.isEmpty }
 
     var body: some View {
+        // Two genuinely different screens. Onboarding stays a single inline form —
+        // there is no account yet, so a list of categories would be a menu of things
+        // you cannot do, and the pre-multi-account flow deliberately never made you
+        // navigate two levels deep just to type a token. Everything after that is
+        // organised into panes, because the flat scroll had grown past what fits on a
+        // phone and the calendar chooser alone can run to a dozen rows.
+        if isOnboarding {
+            onboardingBody
+        } else {
+            configuredBody
+        }
+    }
+
+    // MARK: - Onboarding (no accounts yet)
+
+    private var onboardingBody: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // The Help section pushed this screen past what fits on a small
-            // iPhone in a large Dynamic Type setting — the body is scrollable
-            // now, with the footer button kept outside so Done/Get Started
-            // stays pinned regardless of content height.
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(isOnboarding ? "Welcome to Veyrn" : "Settings")
+                        Text("Welcome to Veyrn")
                             .font(.title2)
                             .fontWeight(.semibold)
                         Text("Connect to your Vikunja instance.")
                             .foregroundStyle(.secondary)
                     }
 
-                    if isOnboarding {
-                        onboardingForm
-                    } else {
-                        accountsSection
-                    }
+                    onboardingForm
 
-                    #if os(iOS)
-                    // Nothing to open to before there's an account, and the
-                    // project list is empty at that point anyway.
-                    if !isOnboarding && LaunchPreferences.isSupported {
-                        openingPageSection
-                    }
-                    #endif
-
-                    // Nothing to order until there's an account to order.
-                    if !isOnboarding {
-                        taskOrderSection
-                    }
-
-                    // Calendar — the EventKit prompt only ever fires from here,
-                    // after the user flips the switch. Nothing to show before
-                    // there's an account to show events beside.
-                    if !isOnboarding {
-                        CalendarSettingsView()
-                    }
-
-                    // Font size
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Task Font Size")
-                            .font(.headline)
-                        Picker("Font Size", selection: $fontSizeOffset) {
-                            Text("Small").tag(-1)
-                            Text("Medium").tag(0)
-                            Text("Large").tag(2)
-                            Text("Extra Large").tag(4)
-                        }
-                        .pickerStyle(.segmented)
-                    }
-
-                    // Analytics opt-in
-                    Toggle("Share anonymous usage analytics", isOn: $telemetryOptIn)
-                        .onChange(of: telemetryOptIn) { _, v in
-                            UserDefaults.standard.set(v, forKey: "vikunja_telemetry_opt_in")
-                        }
-
-                    #if os(macOS)
-                    // Quick Add Shortcut
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Quick Add Shortcut")
-                            .font(.headline)
-                        HotkeyRecorderView(keyCode: $hotkeyKeyCode, modifiers: $hotkeyModifiers)
-                            .onChange(of: hotkeyKeyCode) { _, _ in saveHotkey() }
-                            .onChange(of: hotkeyModifiers) { _, _ in saveHotkey() }
-                        Text("Click to record a new global shortcut (default: ⌃Space)")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    #endif
-
-                    // Help — shown in both onboarding and configured layouts,
-                    // so a user who can't sign in still has a way to report it.
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Help")
-                            .font(.headline)
-                        Button {
-                            showBugReport = true
-                        } label: {
-                            Label("Report a Bug", systemImage: "ladybug")
-                        }
-                        .buttonStyle(.bordered)
-                        // Interpolated, not written out: a fork that changes
-                        // `BugReportMail.supportAddress` would otherwise still
-                        // show this project's address to its own users.
-                        Text("Sends a report to \(BugReportMail.supportAddress). You choose whether to attach the diagnostic log, and you can read it first.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
+                    // Kept in both layouts, so someone who cannot sign in still has a
+                    // way to report why.
+                    helpSection
                 }
             }
 
             HStack {
                 Spacer()
-                if isOnboarding {
-                    Button("Get Started") { getStarted() }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(!canSaveOnboarding)
-                } else {
-                    // "Done", not "Cancel": every setting on this screen
-                    // applies immediately (font size and analytics are
-                    // @AppStorage, the hotkey saves on change, accounts save
-                    // in their own editor), so there is nothing to cancel.
-                    // On macOS this is also the only way out — there's no
-                    // swipe-to-dismiss.
-                    Button("Done") { dismiss() }
-                        .buttonStyle(.borderedProminent)
-                        .keyboardShortcut(.defaultAction)
-                }
+                Button("Get Started") { getStarted() }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!canSaveOnboarding)
             }
             .padding(.top, 16)
         }
         .padding(32)
+        .onAppear { reload() }
+        .sheet(isPresented: $showBugReport) { BugReportSheet() }
+    }
+
+    // MARK: - Configured settings (organised into panes)
+
+    private var configuredBody: some View {
+        NavigationStack {
+            List {
+                Section("Account") {
+                    NavigationLink {
+                        pane("Accounts") { accountsSection }
+                    } label: {
+                        settingsRow("Accounts", systemImage: "person.crop.circle",
+                                    detail: VikunjaConfig.activeAccount.map { Text(verbatim: $0.name) })
+                    }
+                }
+
+                Section("Tasks") {
+                    #if os(iOS)
+                    if LaunchPreferences.isSupported {
+                        NavigationLink {
+                            pane("Opening Page") { openingPageSection }
+                        } label: {
+                            settingsRow("Opening Page", systemImage: "arrow.forward.square",
+                                        detail: Text(launchPage.title))
+                        }
+                    }
+                    #endif
+
+                    NavigationLink {
+                        pane("Task Order") { taskOrderSection }
+                    } label: {
+                        settingsRow("Task Order", systemImage: "arrow.up.arrow.down",
+                                    detail: Text(sortField.title))
+                    }
+
+                    NavigationLink {
+                        pane("Calendar") { CalendarSettingsView() }
+                    } label: {
+                        settingsRow("Calendar", systemImage: "calendar",
+                                    detail: Text(CalendarSettingsSummary.current))
+                    }
+                }
+
+                Section("Appearance") {
+                    NavigationLink {
+                        pane("Task Font Size") { fontSizeSection }
+                    } label: {
+                        settingsRow("Task Font Size", systemImage: "textformat.size",
+                                    detail: Text(fontSizeLabel))
+                    }
+
+                    #if os(macOS)
+                    NavigationLink {
+                        pane("Quick Add Shortcut") { quickAddSection }
+                    } label: {
+                        settingsRow("Quick Add Shortcut", systemImage: "keyboard")
+                    }
+                    #endif
+                }
+
+                Section("Privacy") {
+                    // One switch. A pane of its own would be more taps for less.
+                    Toggle(isOn: $telemetryOptIn) {
+                        Label("Share anonymous usage analytics", systemImage: "chart.bar")
+                    }
+                    .onChange(of: telemetryOptIn) { _, v in
+                        UserDefaults.standard.set(v, forKey: "vikunja_telemetry_opt_in")
+                    }
+                }
+
+                Section("Help") {
+                    NavigationLink {
+                        pane("Help") { helpSection }
+                    } label: {
+                        settingsRow("Report a Bug", systemImage: "ladybug")
+                    }
+                }
+            }
+            .navigationTitle("Settings")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    // "Done", not "Cancel": every setting here applies immediately
+                    // (@AppStorage, the hotkey saves on change, accounts save in their
+                    // own editor), so there is nothing to cancel. On macOS it is also
+                    // the only way out — there is no swipe-to-dismiss.
+                    Button("Done") { dismiss() }
+                        .keyboardShortcut(.defaultAction)
+                }
+            }
+        }
+        #if os(macOS)
+        // A sheet with a NavigationStack has no intrinsic size to speak of; without
+        // this it opens too small to show a pane's contents.
+        .frame(minWidth: 520, idealWidth: 560, minHeight: 560, idealHeight: 640)
+        #endif
         .onAppear { reload() }
         .sheet(isPresented: $showAccountList, onDismiss: reload) {
             AccountListView(store: store)
@@ -169,14 +199,119 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Pane scaffolding
+
+    /// Every detail pane is the same shape: an existing section's content, scrollable,
+    /// padded and titled. Reusing the section bodies unchanged is what keeps this
+    /// reorganisation from also being a rewrite of every control in it.
+    private func pane<Content: View>(
+        _ title: LocalizedStringKey,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                content()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(24)
+        }
+        .navigationTitle(title)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+    }
+
+    /// A root row: icon, name, and the current value on the trailing edge so the list
+    /// answers "what is this set to?" without opening anything.
+    ///
+    /// `detail` is a `Text` rather than a `String` so each caller decides whether its
+    /// value is translatable (`Text("Small")`) or user data that must not be
+    /// (`Text(verbatim: accountName)`).
+    private func settingsRow(
+        _ title: LocalizedStringKey,
+        systemImage: String,
+        detail: Text? = nil
+    ) -> some View {
+        HStack {
+            Label(title, systemImage: systemImage)
+            Spacer(minLength: 8)
+            detail?
+                .foregroundStyle(.secondary)
+            #if os(macOS)
+            // iOS draws a disclosure chevron for a `NavigationLink` in a `List`;
+            // macOS draws nothing, so without this the rows read as static text and
+            // there is no hint they open anything. Matches System Settings.
+            Image(systemName: "chevron.forward")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.tertiary)
+            #endif
+        }
+        // The whole row is the target, not just the words in it.
+        .contentShape(Rectangle())
+    }
+
+    // MARK: - Appearance
+
+    private var fontSizeSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Picker("Font Size", selection: $fontSizeOffset) {
+                Text("Small").tag(-1)
+                Text("Medium").tag(0)
+                Text("Large").tag(2)
+                Text("Extra Large").tag(4)
+            }
+            .pickerStyle(.segmented)
+
+            Text("Applies to task titles in every list.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private var fontSizeLabel: LocalizedStringKey {
+        switch fontSizeOffset {
+        case ..<0:  return "Small"
+        case 0:     return "Medium"
+        case 1...2: return "Large"
+        default:    return "Extra Large"
+        }
+    }
+
+    #if os(macOS)
+    private var quickAddSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HotkeyRecorderView(keyCode: $hotkeyKeyCode, modifiers: $hotkeyModifiers)
+                .onChange(of: hotkeyKeyCode) { _, _ in saveHotkey() }
+                .onChange(of: hotkeyModifiers) { _, _ in saveHotkey() }
+            Text("Click to record a new global shortcut (default: ⌃Space)")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+    #endif
+
+    // MARK: - Help
+
+    private var helpSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                showBugReport = true
+            } label: {
+                Label("Report a Bug", systemImage: "ladybug")
+            }
+            .buttonStyle(.bordered)
+
+            // Interpolated, not written out: a fork that changes
+            // `BugReportMail.supportAddress` would otherwise still show this
+            // project's address to its own users.
+            Text("Sends a report to \(BugReportMail.supportAddress). You choose whether to attach the diagnostic log, and you can read it first.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
     // MARK: - Opening page (iOS)
 
     #if os(iOS)
     private var openingPageSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Opening Page")
-                .font(.headline)
-
             Picker("Opening Page", selection: $launchPage) {
                 ForEach(LaunchPage.allCases) { page in
                     Text(page.title).tag(page)
@@ -213,9 +348,6 @@ struct SettingsView: View {
 
     private var taskOrderSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Task Order")
-                .font(.headline)
-
             Picker("Sort tasks by", selection: $sortField) {
                 ForEach(TaskSortField.allCases) { field in
                     Text(field.title).tag(field)
@@ -268,9 +400,6 @@ struct SettingsView: View {
 
     private var accountsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Accounts")
-                .font(.headline)
-
             Button {
                 showAccountList = true
             } label: {

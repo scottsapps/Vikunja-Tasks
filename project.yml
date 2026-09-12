@@ -35,10 +35,13 @@ schemes:
       targets:
         VikunjaWidgetApp: all
         VikunjaWidgetExtension: all
+        VeyrnCalendarTests: [test]
     run:
       config: Debug
     test:
       config: Debug
+      targets:
+        - VeyrnCalendarTests
     profile:
       config: Release
     analyze:
@@ -83,6 +86,7 @@ targets:
         excludes:
           - InfoIOS.plist
       - path: VikunjaCore
+      - path: VeyrnCalendar
     entitlements:
       path: VikunjaWidgetApp/VikunjaWidgetApp.entitlements
     settings:
@@ -103,6 +107,7 @@ targets:
         embed: true
       - package: TelemetryDeck
       - sdk: CloudKit.framework
+      - sdk: EventKit.framework
 
   VikunjaWidgetExtension:
     type: app-extension
@@ -110,6 +115,7 @@ targets:
     sources:
       - path: VikunjaWidgetExtension
       - path: VikunjaCore
+      - path: VeyrnCalendar
     entitlements:
       path: VikunjaWidgetExtension/VikunjaWidgetExtension.entitlements
     info:
@@ -132,6 +138,7 @@ targets:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
       - sdk: AppIntents.framework
+      - sdk: EventKit.framework
 
   # ── iOS ──────────────────────────────────────────────────────────────────
 
@@ -144,6 +151,7 @@ targets:
           - Info.plist
           - AppIconMac.icon      # macOS-only icon; iOS keeps AppIcon.appiconset
       - path: VikunjaCore
+      - path: VeyrnCalendar
     entitlements:
       path: VikunjaWidgetApp/VikunjaWidgetAppIOS.entitlements
     settings:
@@ -161,6 +169,7 @@ targets:
         embed: true
       - package: TelemetryDeck
       - sdk: CloudKit.framework
+      - sdk: EventKit.framework
 
   VikunjaWidgetExtensionIOS:
     type: app-extension
@@ -168,6 +177,7 @@ targets:
     sources:
       - path: VikunjaWidgetExtension
       - path: VikunjaCore
+      - path: VeyrnCalendar
     entitlements:
       path: VikunjaWidgetExtension/VikunjaWidgetExtensionIOS.entitlements
     settings:
@@ -181,6 +191,7 @@ targets:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
       - sdk: AppIntents.framework
+      - sdk: EventKit.framework
 
   # ── watchOS ──────────────────────────────────────────────────────────────
   VikunjaWidgetWatch:
@@ -245,3 +256,24 @@ targets:
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
+
+  # ── Tests ────────────────────────────────────────────────────────────────
+  # Veyrn's first test target. It exists for the calendar code moved over from
+  # Calvane, which arrived with real coverage — `fill` in particular is the
+  # highest-risk function in the port. Hosted in the macOS app because that is
+  # the target the sources compile into; `@testable import Veyrn` reaches them.
+  VeyrnCalendarTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: VeyrnCalendarTests
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: net.angstreich.VeyrnCalendarTests
+      GENERATE_INFOPLIST_FILE: YES
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
+      # The host target is VikunjaWidgetApp but its product is Veyrn.app —
+      # xcodegen derives TEST_HOST from the target name, which doesn't exist.
+      TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Veyrn.app/Contents/MacOS/Veyrn"
+      BUNDLE_LOADER: "$(TEST_HOST)"
+    dependencies:
+      - target: VikunjaWidgetApp

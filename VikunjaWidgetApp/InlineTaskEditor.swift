@@ -611,6 +611,13 @@ struct InlineTaskEditor: View {
                 }
             }
         }
+        #if os(macOS)
+        // A `NavigationStack { List }` in a macOS sheet has no intrinsic height to
+        // speak of: the sheet collapses to its chrome, so neither the labels nor the
+        // "No labels yet" line is visible and the picker looks broken rather than
+        // empty. iOS sizes sheets itself, which is why only the Mac showed it.
+        .frame(minWidth: 320, idealWidth: 360, minHeight: 380, idealHeight: 440)
+        #endif
     }
 
     // MARK: - Chip label helpers

@@ -20,6 +20,8 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Veyrn shows your calendar events alongside your scheduled tasks. Events are read-only and never leave your device.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

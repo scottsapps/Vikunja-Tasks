@@ -77,6 +77,13 @@ struct SettingsView: View {
                         taskOrderSection
                     }
 
+                    // Calendar — the EventKit prompt only ever fires from here,
+                    // after the user flips the switch. Nothing to show before
+                    // there's an account to show events beside.
+                    if !isOnboarding {
+                        CalendarSettingsView()
+                    }
+
                     // Font size
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Task Font Size")

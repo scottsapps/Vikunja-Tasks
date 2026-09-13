@@ -30,12 +30,15 @@ struct Sidebar: View {
                     let project = row.project
                     let projectColor = Color(vikunjaHex: project.hexColor) ?? Color.accentColor
                     HStack(spacing: 11) {
-                        expandChevron(for: row)
                         Image(systemName: "folder.fill")
                             .foregroundStyle(projectColor)
                             .imageScale(.large)
                             .frame(width: 26)
                         Text(project.title)
+                        if row.hasChildren {
+                            Spacer()
+                            expandChevron(for: row)
+                        }
                     }
                     .padding(.leading, CGFloat(min(row.depth, 3)) * 16)
                     .badge(badgeCount(for: row))
@@ -118,30 +121,27 @@ struct Sidebar: View {
 
     // MARK: - Nested project rows
 
-    /// The expand/collapse control, shown only when the project actually has
-    /// children. A leaf gets an equally-sized clear spacer instead so every
-    /// folder icon in a sibling group stays vertically aligned. The chevron is
-    /// a real `Button` with a rectangular hit area — a bare glyph is far too
-    /// small a target — and it turns rather than pops between states.
-    @ViewBuilder
+    /// The expand/collapse control for a project with children, called only
+    /// when `row.hasChildren`. Sits at the row's trailing edge rather than
+    /// leading — a leading chevron reserved space in front of every parent's
+    /// own folder icon, making it look indented relative to sibling leaf
+    /// projects at the same depth. Real `Button` with a rectangular hit area
+    /// — a bare glyph is far too small a target — and it turns rather than
+    /// pops between states.
     private func expandChevron(for row: TaskStore.ProjectTreeRow) -> some View {
-        if row.hasChildren {
-            Button {
-                store.projectExpansion.toggle(row.project.id)
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .rotationEffect(.degrees(row.expanded ? 90 : 0))
-                    .animation(.easeInOut(duration: 0.2), value: row.expanded)
-                    .frame(width: 16, height: 16)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(row.expanded ? Text("Collapse \(row.project.title)") : Text("Expand \(row.project.title)"))
-        } else {
-            Color.clear.frame(width: 16, height: 16)
+        Button {
+            store.projectExpansion.toggle(row.project.id)
+        } label: {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .rotationEffect(.degrees(row.expanded ? 90 : 0))
+                .animation(.easeInOut(duration: 0.2), value: row.expanded)
+                .frame(width: 16, height: 16)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(row.expanded ? Text("Collapse \(row.project.title)") : Text("Expand \(row.project.title)"))
     }
 
     /// A collapsed parent rolls its descendants' counts up into its badge so

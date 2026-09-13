@@ -381,7 +381,6 @@ struct AppRoot: View {
                         // inside its label: a Button nested in a NavigationLink
                         // never fires on iOS — the whole row navigates instead.
                         HStack(spacing: 11) {
-                            projectExpandChevron(for: row)
                             NavigationLink(value: SidebarItem.project(project.id)) {
                                 HStack(spacing: 11) {
                                     Image(systemName: "folder.fill")
@@ -390,6 +389,10 @@ struct AppRoot: View {
                                         .frame(width: 26)
                                     Text(project.title)
                                 }
+                            }
+                            if row.hasChildren {
+                                Spacer()
+                                projectExpandChevron(for: row)
                             }
                         }
                         .padding(.leading, CGFloat(min(row.depth, 3)) * 16)
@@ -597,29 +600,29 @@ struct AppRoot: View {
 
     // MARK: - Nested project rows (iPhone list)
 
-    /// Expand/collapse control for a project row — shown only when the project
-    /// has children; a leaf gets an equally-sized clear spacer so sibling
-    /// folder icons stay aligned. A real `Button` with a rectangular hit area
-    /// (a bare glyph is too small a target), turning rather than popping.
-    @ViewBuilder
+    /// Expand/collapse control for a project row, called only when
+    /// `row.hasChildren`. Sits at the row's trailing edge, as a sibling of
+    /// the `NavigationLink` rather than inside its label — a `Button` nested
+    /// in a `NavigationLink`'s label never fires on iOS, the whole row
+    /// navigates instead. A leading chevron would also have reserved space
+    /// in front of every parent's own folder icon, making it look indented
+    /// relative to sibling leaf projects at the same depth. Real `Button`
+    /// with a rectangular hit area (a bare glyph is too small a target),
+    /// turning rather than popping.
     private func projectExpandChevron(for row: TaskStore.ProjectTreeRow) -> some View {
-        if row.hasChildren {
-            Button {
-                store.projectExpansion.toggle(row.project.id)
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .rotationEffect(.degrees(row.expanded ? 90 : 0))
-                    .animation(.easeInOut(duration: 0.2), value: row.expanded)
-                    .frame(width: 16, height: 16)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(row.expanded ? Text("Collapse \(row.project.title)") : Text("Expand \(row.project.title)"))
-        } else {
-            Color.clear.frame(width: 16, height: 16)
+        Button {
+            store.projectExpansion.toggle(row.project.id)
+        } label: {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .rotationEffect(.degrees(row.expanded ? 90 : 0))
+                .animation(.easeInOut(duration: 0.2), value: row.expanded)
+                .frame(width: 16, height: 16)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(row.expanded ? Text("Collapse \(row.project.title)") : Text("Expand \(row.project.title)"))
     }
 
     /// Collapsed parent → own + every descendant's task count, so collapsing

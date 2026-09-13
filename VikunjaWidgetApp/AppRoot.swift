@@ -134,7 +134,12 @@ enum SidebarItem: Hashable {
 struct AppRoot: View {
     var store: TaskStore
     @State private var selection: SidebarItem? = .today
+    // iOS/iPadOS only: macOS opens the real `Settings` scene instead (see
+    // `openSettings` below).
     @State private var showSettings = false
+    #if os(macOS)
+    @Environment(\.openSettings) private var openSettings
+    #endif
     @State private var showQuickAdd = false
     @State private var showBulkImport = false
     @State private var showPendingChanges = false
@@ -531,7 +536,7 @@ struct AppRoot: View {
         #if os(macOS)
         .toolbar {
             ToolbarItem(placement: .navigation) {
-                Button { showSettings = true } label: {
+                Button { openSettings() } label: {
                     Label("Settings", systemImage: "gear")
                 }
                 .help("Settings")
@@ -712,7 +717,11 @@ struct AppRoot: View {
         }
 
         if url.host == "calendar-settings" {
+            #if os(macOS)
+            openSettings()
+            #else
             showSettings = true
+            #endif
             return
         }
 

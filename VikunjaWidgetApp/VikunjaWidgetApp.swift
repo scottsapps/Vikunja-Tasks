@@ -200,5 +200,15 @@ struct VikunjaWidgetAppEntry: App {
             }
             #endif
         }
+        #if os(macOS)
+        // A real Settings scene, not a sheet: Cmd-, and a proper window with
+        // the tabbed layout every native Mac app's Settings uses (see
+        // `SettingsView.macBody`) — the toolbar gear button and the
+        // `calendar-settings` deep link both open this via `openSettings()`
+        // rather than the `showSettings` sheet flag iOS/iPadOS still use.
+        Settings {
+            SettingsView(store: store, onSave: { Task { await store.refresh(reason: "settings") } })
+        }
+        #endif
     }
 }

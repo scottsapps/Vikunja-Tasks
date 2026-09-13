@@ -8,8 +8,6 @@ struct SettingsView: View {
     private enum ServerKind { case cloud, custom }
 
     @State private var accounts: [VeyrnAccount] = []
-    @State private var showAccountList = false
-    @State private var showAddAccount = false
     @State private var showBugReport = false
 
     // Onboarding-only state — shown inline when there are no accounts yet,
@@ -21,7 +19,11 @@ struct SettingsView: View {
     @State private var token = ""
     @State private var errorMessage: String?
 
+    #if os(iOS)
+    // macOS's configured settings is a real `Settings` scene, not a sheet —
+    // there's no "Done" button to dismiss (see `macBody`).
     @Environment(\.dismiss) private var dismiss
+    #endif
     @AppStorage("vikunja_font_size_offset") private var fontSizeOffset: Int = 0
     @AppStorage(TaskSortPreferences.fieldKey) private var sortField: TaskSortField = .alphabetical
     @AppStorage(TaskSortPreferences.projectTieBreakKey) private var projectTieBreak: ProjectTieBreak = .alphabetical
@@ -47,8 +49,10 @@ struct SettingsView: View {
         // there is no account yet, so a list of categories would be a menu of things
         // you cannot do, and the pre-multi-account flow deliberately never made you
         // navigate two levels deep just to type a token. Everything after that is
-        // organised into panes, because the flat scroll had grown past what fits on a
-        // phone and the calendar chooser alone can run to a dozen rows.
+        // organised by platform: iOS/iPadOS keeps a grouped list (still a sheet,
+        // still a "Done" button — that's how Settings looks there), while macOS uses
+        // its own window with the tabbed layout every native Mac app's Settings uses
+        // (see `macBody`).
         if isOnboarding {
             onboardingBody
         } else {
@@ -91,14 +95,25 @@ struct SettingsView: View {
         .sheet(isPresented: $showBugReport) { BugReportSheet() }
     }
 
-    // MARK: - Configured settings (organised into panes)
+    // MARK: - Configured settings
 
     private var configuredBody: some View {
+        #if os(macOS)
+        macBody
+        #else
+        iosBody
+        #endif
+    }
+
+    #if os(iOS)
+    // MARK: iOS/iPadOS: grouped list, organised into panes
+
+    private var iosBody: some View {
         NavigationStack {
             List {
                 Section("Account") {
                     NavigationLink {
-                        pane("Accounts") { accountsSection }
+                        AccountsPane(store: store, onChange: onSave)
                     } label: {
                         settingsRow("Accounts", systemImage: "person.crop.circle",
                                     detail: VikunjaConfig.activeAccount.map { Text(verbatim: $0.name) })
@@ -106,7 +121,6 @@ struct SettingsView: View {
                 }
 
                 Section("Tasks") {
-                    #if os(iOS)
                     if LaunchPreferences.isSupported {
                         NavigationLink {
                             pane("Opening Page") { openingPageSection }
@@ -115,7 +129,6 @@ struct SettingsView: View {
                                         detail: Text(launchPage.title))
                         }
                     }
-                    #endif
 
                     NavigationLink {
                         pane("Task Order") { taskOrderSection }
@@ -139,14 +152,6 @@ struct SettingsView: View {
                         settingsRow("Task Font Size", systemImage: "textformat.size",
                                     detail: Text(fontSizeLabel))
                     }
-
-                    #if os(macOS)
-                    NavigationLink {
-                        pane("Quick Add Shortcut") { quickAddSection }
-                    } label: {
-                        settingsRow("Quick Add Shortcut", systemImage: "keyboard")
-                    }
-                    #endif
                 }
 
                 Section("Privacy") {
@@ -159,47 +164,36 @@ struct SettingsView: View {
                     }
                 }
 
-                Section("Help") {
-                    NavigationLink {
-                        pane("Help") { helpSection }
+                // A plain row, not a pane: this already is the report-a-bug
+                // screen's one meaningful action, so tapping it goes straight
+                // to the sheet instead of a "Help" landing page in between.
+                Section {
+                    Button {
+                        showBugReport = true
                     } label: {
-                        settingsRow("Report a Bug", systemImage: "ladybug")
+                        Label("Report a Bug", systemImage: "ladybug")
                     }
+                } footer: {
+                    Text("Sends a report to \(BugReportMail.supportAddress). You choose whether to attach the diagnostic log, and you can read it first.")
                 }
             }
             .navigationTitle("Settings")
-            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     // "Done", not "Cancel": every setting here applies immediately
-                    // (@AppStorage, the hotkey saves on change, accounts save in their
-                    // own editor), so there is nothing to cancel. On macOS it is also
-                    // the only way out — there is no swipe-to-dismiss.
+                    // (@AppStorage, accounts save in their own editor), so there is
+                    // nothing to cancel.
                     Button("Done") { dismiss() }
                         .keyboardShortcut(.defaultAction)
                 }
             }
         }
-        #if os(macOS)
-        // A sheet with a NavigationStack has no intrinsic size to speak of; without
-        // this it opens too small to show a pane's contents.
-        .frame(minWidth: 520, idealWidth: 560, minHeight: 560, idealHeight: 640)
-        #endif
         .onAppear { reload() }
-        .sheet(isPresented: $showAccountList, onDismiss: reload) {
-            AccountListView(store: store)
-        }
-        .sheet(isPresented: $showAddAccount, onDismiss: { reload(); onSave?() }) {
-            AccountEditorView(mode: .create, store: store, onComplete: { reload(); onSave?() })
-        }
         .sheet(isPresented: $showBugReport) {
             BugReportSheet()
         }
     }
-
-    // MARK: - Pane scaffolding
 
     /// Every detail pane is the same shape: an existing section's content, scrollable,
     /// padded and titled. Reusing the section bodies unchanged is what keeps this
@@ -216,9 +210,7 @@ struct SettingsView: View {
             .padding(24)
         }
         .navigationTitle(title)
-        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
-        #endif
     }
 
     /// A root row: icon, name, and the current value on the trailing edge so the list
@@ -237,18 +229,118 @@ struct SettingsView: View {
             Spacer(minLength: 8)
             detail?
                 .foregroundStyle(.secondary)
-            #if os(macOS)
-            // iOS draws a disclosure chevron for a `NavigationLink` in a `List`;
-            // macOS draws nothing, so without this the rows read as static text and
-            // there is no hint they open anything. Matches System Settings.
-            Image(systemName: "chevron.forward")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.tertiary)
-            #endif
         }
         // The whole row is the target, not just the words in it.
         .contentShape(Rectangle())
     }
+
+    // MARK: - Opening page (iOS)
+
+    private var openingPageSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            // All four choices visible and tappable at once — a `.menu` picker
+            // hid them behind a second tap, which was the whole complaint.
+            VStack(spacing: 0) {
+                ForEach(LaunchPage.allCases) { page in
+                    Button {
+                        launchPage = page
+                    } label: {
+                        HStack {
+                            Text(page.title)
+                            Spacer()
+                            if launchPage == page {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.tint)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                        .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.plain)
+
+                    if page != LaunchPage.allCases.last {
+                        Divider()
+                    }
+                }
+            }
+
+            if launchPage == .project {
+                // A flat menu, deliberately — a disclosure chevron is
+                // meaningless in a `.menu` Picker, and every project must stay
+                // selectable (this is how someone picks their opening page).
+                // Nested projects are just indented by leading spaces so the
+                // hierarchy stays legible; the tree is walked fully expanded so
+                // none is hidden. Unlike the four fixed pages above, a project
+                // list can run long, so it keeps the menu style.
+                Picker("Project", selection: $launchProjectKey) {
+                    Text("Inbox").tag(SidebarItem.inbox.storageKey)
+                    ForEach(store.projectTree(expanded: Set(store.visibleProjects.map(\.id)))) { row in
+                        Text(String(repeating: "   ", count: min(row.depth, 3)) + row.project.title)
+                            .tag(SidebarItem.project(row.project.id).storageKey)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+            }
+
+            Text("Where Veyrn goes when you open it, every time. Main is the list of Inbox, Scheduled, Logbook and your projects; Last Used leaves you where you were.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+    #endif
+
+    #if os(macOS)
+    // MARK: macOS: a tabbed window, like every other Mac app's Settings
+
+    private var macBody: some View {
+        TabView {
+            // Analytics lives here too (3.5) — macOS has no separate Privacy
+            // tab, one switch doesn't earn a whole one, and Accounts is the
+            // closest thing this window has to a "General" tab.
+            AccountsPane(store: store, onChange: onSave)
+                .tabItem { Label("Accounts", systemImage: "person.crop.circle") }
+
+            // Task Order + Appearance share a tab; Calendar does not (3.5) —
+            // its calendar chooser can run to a dozen rows once access is
+            // granted, and that used to visually push Task Order out of the
+            // same tab. `.formStyle(.grouped)` is what actually gives this
+            // the boxed-section look every native Mac Settings window has —
+            // a bare `Form` renders almost flush with the window edge.
+            Form {
+                Section("Task Order") {
+                    taskOrderSection
+                }
+                Section("Task Font Size") {
+                    fontSizeSection
+                }
+                Section("Quick Add Shortcut") {
+                    quickAddSection
+                }
+            }
+            .formStyle(.grouped)
+            .tabItem { Label("Tasks", systemImage: "checklist") }
+
+            Form {
+                CalendarSettingsView()
+            }
+            .formStyle(.grouped)
+            .tabItem { Label("Calendar", systemImage: "calendar") }
+
+            // The tab *is* the report-a-bug screen — no launcher button in
+            // between, since clicking the tab is already the one step.
+            BugReportBody()
+                .padding(24)
+                .tabItem { Label("Help", systemImage: "ladybug") }
+        }
+        // No padding on the `TabView` itself — that would also pad the tab
+        // bar inward, away from the window edge, which no native Mac
+        // Settings window does. `.formStyle(.grouped)` gives the Form tabs
+        // their own inset; the Help tab gets an explicit one instead, since
+        // `BugReportBody` is a plain `VStack`, not a `Form`.
+        .frame(width: 520, height: 480)
+        .onAppear { reload() }
+    }
+    #endif
 
     // MARK: - Appearance
 
@@ -307,43 +399,6 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Opening page (iOS)
-
-    #if os(iOS)
-    private var openingPageSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Picker("Opening Page", selection: $launchPage) {
-                ForEach(LaunchPage.allCases) { page in
-                    Text(page.title).tag(page)
-                }
-            }
-            .labelsHidden()
-            .pickerStyle(.menu)
-
-            if launchPage == .project {
-                // A flat menu, deliberately — a disclosure chevron is
-                // meaningless in a `.menu` Picker, and every project must stay
-                // selectable (this is how someone picks their opening page).
-                // Nested projects are just indented by leading spaces so the
-                // hierarchy stays legible; the tree is walked fully expanded so
-                // none is hidden.
-                Picker("Project", selection: $launchProjectKey) {
-                    Text("Inbox").tag(SidebarItem.inbox.storageKey)
-                    ForEach(store.projectTree(expanded: Set(store.visibleProjects.map(\.id)))) { row in
-                        Text(String(repeating: "   ", count: min(row.depth, 3)) + row.project.title)
-                            .tag(SidebarItem.project(row.project.id).storageKey)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-            }
-
-            Text("Where Veyrn goes when you open it, every time. Main is the list of Inbox, Scheduled, Logbook and your projects; Last Used leaves you where you were.")
-                .font(.caption).foregroundStyle(.secondary)
-        }
-    }
-    #endif
-
     // MARK: - Task order
 
     private var taskOrderSection: some View {
@@ -394,41 +449,6 @@ struct SettingsView: View {
         let undated = undatedPlacement == .top ? "above" : "below"
         return "Scheduled and project lists stay grouped by day, with each day ordered \(within). "
             + "Tasks with no due date sit \(undated) the dated ones. The Inbox uses the same order without the day grouping."
-    }
-
-    // MARK: - Accounts section (already configured)
-
-    private var accountsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button {
-                showAccountList = true
-            } label: {
-                HStack {
-                    Text("Active Account")
-                    Spacer()
-                    Text(VikunjaConfig.activeAccount?.name ?? "")
-                        .foregroundStyle(.secondary)
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                showAddAccount = true
-            } label: {
-                Label("Add Account", systemImage: "plus")
-            }
-            .disabled(accounts.count >= VikunjaConfig.maxAccounts)
-
-            if accounts.count >= VikunjaConfig.maxAccounts {
-                Text("Maximum of 5 accounts.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
     }
 
     // MARK: - Onboarding form (no accounts yet)

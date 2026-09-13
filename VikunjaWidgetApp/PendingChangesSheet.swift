@@ -139,7 +139,7 @@ struct PendingChangesSheet: View {
             }
             Spacer(minLength: 8)
             // No swipeActions — macOS has none, and a context menu alone is
-            // undiscoverable (AccountListView precedent). Visible button on both.
+            // undiscoverable (AccountsPane precedent). Visible button on both.
             Button("Discard") { changeToDiscard = change }
                 .buttonStyle(.borderless)
                 .disabled(store.isDraining)

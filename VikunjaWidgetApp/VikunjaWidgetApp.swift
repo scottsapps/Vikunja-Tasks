@@ -178,10 +178,18 @@ struct VikunjaWidgetAppEntry: App {
                 .onAppear {
                     panelController.setup(store: store)
                 }
+                // Without this, every `vikunja://` URL that arrives while Veyrn is
+                // already running opens *another* window: macOS treats a URL as an
+                // external event, and a `WindowGroup` whose windows claim no events
+                // answers by making a new one (four calendar-widget taps, four
+                // windows — build 105). `allowing: ["*"]` lets the window already on
+                // screen claim the event instead, so the deep link lands there.
+                .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
                 #endif
         }
         #if os(macOS)
         .defaultSize(width: 900, height: 600)
+        .handlesExternalEvents(matching: ["*"])
         #endif
         .onChange(of: scenePhase) { _, newPhase in
             DiagnosticLog.info("scenePhase → \(newPhase)")

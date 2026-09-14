@@ -22,6 +22,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Veyrn shows your calendar events alongside your scheduled tasks. Events are read-only and never leave your device.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Veyrn asks Apple Calendar to show the day you tapped in the calendar widget.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

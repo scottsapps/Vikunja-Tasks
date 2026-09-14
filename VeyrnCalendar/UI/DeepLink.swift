@@ -18,7 +18,9 @@
 //  subscriptions — so there is nothing for `OpenURLIntent` to open and the hop through
 //  the app is unavoidable. Calvane could make that hop invisible because it was an
 //  `LSUIElement` background app; Veyrn is a normal windowed app, so its window comes
-//  forward on the way. See the macOS tap options in the 3.5 plan.
+//  forward on the way. The app then scripts Calendar to the day rather than opening a
+//  URL — `calshow:` is unclaimed there, and handing it to LaunchServices raises a "no
+//  application set to open the URL" panel. See `VikunjaWidgetApp/CalendarLauncher.swift`.
 //
 //  Both URLs reuse the `vikunja://` scheme Veyrn already registers (Info.plist,
 //  `CFBundleURLSchemes`) and are routed in `AppRoot.handleDeepLink`.

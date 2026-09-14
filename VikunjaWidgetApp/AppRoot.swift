@@ -707,14 +707,16 @@ struct AppRoot: View {
         // invisible because it set `LSUIElement`; Veyrn is a normal windowed app, so its
         // window comes forward on the way. See `VeyrnCalendar/UI/DeepLink.swift`.
         if url.host == "calendar",
-           let stamp = url.pathComponents.dropFirst().first.flatMap(Int.init),
-           let calshow = URL(string: "calshow:\(stamp)") {
+           let stamp = url.pathComponents.dropFirst().first.flatMap(Int.init) {
             #if os(macOS)
-            NSWorkspace.shared.open(calshow)
+            // `calshow:` is unclaimed on macOS — opening it raises LaunchServices'
+            // "no application set to open the URL" panel, which is what a widget tap
+            // did through build 104. `CalendarLauncher` scripts Calendar instead.
+            CalendarLauncher.open(day: Date(timeIntervalSinceReferenceDate: TimeInterval(stamp)))
             #else
             // Only reached on iOS 17, where the widget has no `OpenURLIntent` to open
             // Calendar itself. On 18+ the tap never comes through the app at all.
-            UIApplication.shared.open(calshow)
+            UIApplication.shared.open(calendarLaunchURL(stamp: stamp))
             #endif
             return
         }

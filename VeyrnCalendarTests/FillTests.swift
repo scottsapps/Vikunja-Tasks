@@ -18,11 +18,12 @@ private func at(_ c: Calendar, _ y: Int, _ mo: Int, _ d: Int, _ h: Int = 0, _ mi
 }
 
 /// Clean round numbers so the budget arithmetic in each test is obvious.
-/// titleCharsPerLine is huge, so a normal title is always one line (eventRow); the
-/// two-line case is exercised explicitly with a long title.
+/// titleMeasureWidth is huge, so a normal short title always measures as one line
+/// (eventRow); the two-line case is exercised explicitly with a long title and a narrow
+/// width below.
 private let rc = RowCost(
     dayHeader: 20, allDayChip: 20, eventRow: 40, eventRow3: 60, divider: 10,
-    titleCharsPerLine: 1000
+    titleFontPointSize: 13, titleMeasureWidth: 1000
 )
 
 /// N one-line timed events on the same day, 1 hour each starting on the hour.
@@ -139,7 +140,13 @@ struct FillTests {
     @Test("two-line title costs eventRow3")
     func twoLineTitle() {
         let c = cal()
-        let narrow = RowCost(dayHeader: 20, allDayChip: 20, eventRow: 40, eventRow3: 60, divider: 10, titleCharsPerLine: 10)
+        // 100pt is comfortably wider than "Lunch" and comfortably narrower than the long
+        // title at any reasonable bold system font — no need to tune this against a real
+        // widget width, only to separate a clearly-short title from a clearly-long one.
+        let narrow = RowCost(
+            dayHeader: 20, allDayChip: 20, eventRow: 40, eventRow3: 60, divider: 10,
+            titleFontPointSize: 13, titleMeasureWidth: 100
+        )
         let short = AgendaEvent.fixture(id: "s", title: "Lunch", start: at(c, 2026, 9, 5, 12), end: at(c, 2026, 9, 5, 13))
         let long = AgendaEvent.fixture(id: "l", title: "Atlanta Braves at Philadelphia Phillies", start: at(c, 2026, 9, 5, 18), end: at(c, 2026, 9, 5, 20))
 
@@ -149,6 +156,23 @@ struct FillTests {
         #expect(page.nextCursor == nil)
 
         #expect(fill(from: nil, budget: 119, events: [short, long], calendar: c, cost: narrow).sections[0].items.count == 1)
+    }
+
+    @Test("a capital/punctuation-heavy title measures wide even though it's short (regression, §6.3)")
+    func capitalHeavyTitleMeasuresWide() {
+        // Real bug, 2026-09: this 42-character title wrapped to 2 lines on a real macOS
+        // widget, but a naive character-count guess (the old titleCharsPerLine: 47 for
+        // macOS large) judged anything under 47 characters as 1 line — caps, digits, and
+        // punctuation run wider per character than average prose. Real measurement should
+        // catch what character-counting missed.
+        let title = "CRB Phono 5 Standing Call (CO/DSP Counsel)"
+        #expect(title.count < 47)
+        let lines = measuredTitleLines(
+            title,
+            pointSize: RowCost.macOSLarge.titleFontPointSize,
+            width: RowCost.macOSLarge.titleMeasureWidth
+        )
+        #expect(lines == 2)
     }
 
     @Test("DST transition day pages without surprises")

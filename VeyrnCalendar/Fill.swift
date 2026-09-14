@@ -3,6 +3,11 @@
 
 import Foundation
 import CoreGraphics
+#if canImport(UIKit)
+import UIKit
+#else
+import AppKit
+#endif
 
 /// Where a page stopped: the day and the index into that day's ordered items (§6.3).
 /// Persisted across processes (the paging intent writes it in one process, the provider
@@ -21,8 +26,10 @@ public struct Cursor: Codable, Hashable, Sendable {
 
 /// Per-row height estimates, in points, used by `fill` to decide what fits (§6.3). Starting
 /// values are the plan's; the real numbers get tuned against the reference screenshots and
-/// live in the widget's `Metrics` (§5.7). `fill` never measures real text — it approximates
-/// title wrapping from `titleCharsPerLine`.
+/// live in the widget's `Metrics` (§5.7). Title wrapping is measured for real
+/// (`measuredTitleLines`), not guessed by character count — a character-count guess
+/// systematically under-counted capital/punctuation-heavy titles (real bug, 2026-09: a
+/// 42-character title under the old 47-char threshold still wrapped to 2 lines and clipped).
 public struct RowCost: Hashable, Sendable {
     public var dayHeader: CGFloat
     public var allDayChip: CGFloat
@@ -31,8 +38,15 @@ public struct RowCost: Hashable, Sendable {
     /// A row whose title wraps to two lines (the max, §5.1).
     public var eventRow3: CGFloat
     public var divider: CGFloat
-    /// Approximate characters that fit on one title line at the target column width.
-    public var titleCharsPerLine: Int
+    /// Title font point size, for measuring real wrap. Must match the corresponding
+    /// `Metrics.titleFont`'s size — the title is always bold (§5.1).
+    public var titleFontPointSize: CGFloat
+    /// Available width for the title line, in points. Deliberately conservative (narrower
+    /// than the real column) so a borderline title is more likely measured as 2 lines than
+    /// 1 — wasting a little vertical budget on a title that would actually have fit is
+    /// safe; undercounting it and clipping is not (§6.3). Tune against real screenshots
+    /// like the other constants here, not by exact widget-frame math.
+    public var titleMeasureWidth: CGFloat
 
     public init(
         dayHeader: CGFloat = 20,
@@ -40,14 +54,16 @@ public struct RowCost: Hashable, Sendable {
         eventRow: CGFloat = 38,
         eventRow3: CGFloat = 56,
         divider: CGFloat = 13,
-        titleCharsPerLine: Int = 34
+        titleFontPointSize: CGFloat = 13,
+        titleMeasureWidth: CGFloat = 280
     ) {
         self.dayHeader = dayHeader
         self.allDayChip = allDayChip
         self.eventRow = eventRow
         self.eventRow3 = eventRow3
         self.divider = divider
-        self.titleCharsPerLine = titleCharsPerLine
+        self.titleFontPointSize = titleFontPointSize
+        self.titleMeasureWidth = titleMeasureWidth
     }
 
     /// macOS large / iOS large: single wide column (§5.6). Tighter than the defaults to
@@ -56,12 +72,12 @@ public struct RowCost: Hashable, Sendable {
     // close to the widget's real usable height (widget height − top/bottom contentPadding).
     public static let macOSLarge = RowCost(
         dayHeader: 21, allDayChip: 22, eventRow: 34, eventRow3: 49, divider: 12,
-        titleCharsPerLine: 47
+        titleFontPointSize: 13, titleMeasureWidth: 320
     )
     /// iOS medium: the ~65%-width right column (§5.5).
     public static let iOSMedium = RowCost(
         dayHeader: 19, allDayChip: 23, eventRow: 37, eventRow3: 56, divider: 12,
-        titleCharsPerLine: 25
+        titleFontPointSize: 15, titleMeasureWidth: 170
     )
 }
 
@@ -190,16 +206,33 @@ public func fill(
 /// Predicted height of one item.
 func itemCost(_ item: DayItem, cost: RowCost) -> CGFloat {
     if item.isAllDay { return cost.allDayChip }
-    return predictedTitleLines(item.event.title, charsPerLine: cost.titleCharsPerLine) >= 2
-        ? cost.eventRow3
-        : cost.eventRow
+    return measuredTitleLines(
+        item.event.title, pointSize: cost.titleFontPointSize, width: cost.titleMeasureWidth
+    ) >= 2 ? cost.eventRow3 : cost.eventRow
 }
 
-/// Chars-per-line approximation of title wrapping, capped at 2 lines (§5.1). Upgrade to
-/// `NSAttributedString.boundingRect` only if rows visibly clip (§6.3).
-func predictedTitleLines(_ title: String, charsPerLine: Int) -> Int {
-    guard charsPerLine > 0 else { return 1 }
-    let count = title.trimmingCharacters(in: .whitespacesAndNewlines).count
-    guard count > 0 else { return 1 }
-    return max(1, min(2, Int((Double(count) / Double(charsPerLine)).rounded(.up))))
+/// Real line count for `title` at `pointSize`, wrapped to `width` — measures actual text
+/// instead of guessing by character count, capped at 2 lines to match `titleLineLimit`
+/// (§5.1, §6.3). The title is always bold (`EventRowView`), so this always measures the
+/// bold system font regardless of caller.
+func measuredTitleLines(_ title: String, pointSize: CGFloat, width: CGFloat) -> Int {
+    guard width > 0, pointSize > 0 else { return 1 }
+    let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return 1 }
+
+    #if canImport(UIKit)
+    let font = UIFont.boldSystemFont(ofSize: pointSize)
+    #else
+    let font = NSFont.boldSystemFont(ofSize: pointSize)
+    #endif
+
+    let bounds = (trimmed as NSString).boundingRect(
+        with: CGSize(width: width, height: .greatestFiniteMagnitude),
+        options: [.usesLineFragmentOrigin, .usesFontLeading],
+        attributes: [.font: font],
+        context: nil
+    )
+    let lineHeight = font.ascender - font.descender + font.leading
+    guard lineHeight > 0 else { return 1 }
+    return max(1, min(2, Int((bounds.height / lineHeight).rounded(.up))))
 }

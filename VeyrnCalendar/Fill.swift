@@ -10,15 +10,7 @@ import CoreGraphics
 public struct Cursor: Codable, Hashable, Sendable {
     /// Start of day, in the grouping calendar.
     public let day: Date
-    /// Index into `DaySection.items` to resume at.
-    ///
-    /// Normally the first item **not** shown on the previous page. The one exception: a
-    /// page that stopped mid-day (its last section hit the budget wall rather than
-    /// running out of items) instead points at the **last item shown**, repeating it on
-    /// the next page — a hedge against `RowCost` being an estimate, in case that specific
-    /// row rendered a hair taller than predicted and clipped (§6.3). A page that stopped
-    /// because the *next whole day* didn't fit has no such risk — its last section ran out
-    /// of items on its own, a clean fit — so it resumes normally at the dropped day.
+    /// Index into `DaySection.items` — the first item **not** shown on the previous page.
     public let itemIndex: Int
 
     public init(day: Date, itemIndex: Int) {
@@ -170,11 +162,6 @@ public func fill(
                     nextCursor = Cursor(day: allSections[s + 1].day, itemIndex: 0)
                 }
             } else {
-                // The previous section finished normally (it ran out of its own items,
-                // rather than being stopped by the budget), so its last row was a clean
-                // fit, not a near miss — nothing there needs repeating. Resume at this
-                // section's own start; it was never drawn at all, so there's nothing of
-                // it to have clipped.
                 nextCursor = Cursor(day: section.day, itemIndex: fromIndex)
             }
             break sections
@@ -186,9 +173,7 @@ public func fill(
         while idx < section.items.count {
             let c = itemCost(section.items[idx], cost: cost)
             if used + c > budget {
-                // Same reasoning: back up to the last item that fit (always `idx - 1`
-                // here — the pre-check above guarantees `fromIndex` itself fit).
-                nextCursor = Cursor(day: section.day, itemIndex: idx - 1)
+                nextCursor = Cursor(day: section.day, itemIndex: idx)
                 break
             }
             used += c

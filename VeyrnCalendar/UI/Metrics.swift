@@ -68,6 +68,13 @@ public struct Metrics: Sendable {
     /// Height the provider holds back from the budget when today is empty and an extra
     /// "TODAY / No Events" block is prepended (it isn't part of `fill`'s cost model).
     public var emptyTodayReserve: CGFloat
+    /// Cushion subtracted from `fillBudget` before handing it to `fill`. `rowCost` is an
+    /// estimate (character-count title-wrap guess, not measured text), so small per-row
+    /// errors can add up across a page; this keeps `fill` from cutting it that close, so
+    /// the real render lands inside the widget's true height instead of clipping the last
+    /// row. Deliberately generic rather than tuned per reference screenshot — it exists to
+    /// absorb the *error*, not to hit a pixel target.
+    public var fillSafetyMargin: CGFloat
     public var rowCost: RowCost
 }
 
@@ -110,6 +117,7 @@ public extension Metrics {
         chevronHitInset: 8,
         fillBudget: 314,
         emptyTodayReserve: 44,
+        fillSafetyMargin: 12,
         rowCost: .macOSLarge
     )
 
@@ -151,6 +159,7 @@ public extension Metrics {
         chevronHitInset: 8,
         fillBudget: 146,
         emptyTodayReserve: 42,
+        fillSafetyMargin: 12,
         rowCost: .iOSMedium
     )
 

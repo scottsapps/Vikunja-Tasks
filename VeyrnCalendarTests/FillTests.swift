@@ -66,31 +66,38 @@ struct FillTests {
         #expect(exact.sections.map { $0.items.count } == [3])
         #expect(exact.nextCursor == nil)
 
+        // The cursor backs up to the last item that fit (index 1), not the one that
+        // didn't (index 2) — that item is repeated on the next page in case the
+        // estimate that decided it fit ran short of its real rendered height (§6.3).
         let under = fill(from: nil, budget: 139, events: events, calendar: c, cost: rc)
         #expect(under.sections.map { $0.items.count } == [2])
-        #expect(under.nextCursor == Cursor(day: at(c, 2026, 9, 5), itemIndex: 2))
+        #expect(under.nextCursor == Cursor(day: at(c, 2026, 9, 5), itemIndex: 1))
         #expect(!under.isContinuation)
     }
 
-    @Test("day split mid-section repeats the header on page 1")
+    @Test("day split mid-section repeats the header, and the boundary item, on page 1")
     func daySplitRepeatsHeader() {
         let c = cal()
         let events = timedDay(c, 2026, 9, 5, count: 5)
         let day = at(c, 2026, 9, 5)
 
-        // budget = 20 + 2*40 = 100 -> 2 items on page 0
+        // budget = 20 + 2*40 = 100 -> items 0 and 1 fit. The cursor backs up to item 1
+        // (the last one that fit) rather than item 2 (the first one that didn't) — the
+        // estimate that decided item 1 fit may have run short of its real rendered
+        // height, so it's repeated on page 1 rather than risk losing it (§6.3).
         let page0 = fill(from: nil, budget: 100, events: events, calendar: c, cost: rc)
         #expect(page0.sections.map { $0.items.count } == [2])
         #expect(page0.isContinuation == false)
         let cursor = try! #require(page0.nextCursor)
-        #expect(cursor == Cursor(day: day, itemIndex: 2))
+        #expect(cursor == Cursor(day: day, itemIndex: 1))
 
+        // Page 1 resumes at item 1, so it repeats page 0's last row before continuing.
         let page1 = fill(from: cursor, budget: 100, events: events, calendar: c, cost: rc)
         #expect(page1.isContinuation)                       // header repeated
         #expect(page1.sections.count == 1)
         #expect(page1.sections[0].day == day)
-        #expect(page1.sections[0].items.map(\.event.id) == ["2026-9-5-2", "2026-9-5-3"])
-        #expect(page1.nextCursor == Cursor(day: day, itemIndex: 4))
+        #expect(page1.sections[0].items.map(\.event.id) == ["2026-9-5-1", "2026-9-5-2"])
+        #expect(page1.nextCursor == Cursor(day: day, itemIndex: 2))
     }
 
     @Test("a section whose header fits but whose first row does not is dropped whole")
@@ -98,10 +105,12 @@ struct FillTests {
         let c = cal()
         // Day A: 2 events (fills most of the budget). Day B: 1 event.
         let events = timedDay(c, 2026, 9, 5, count: 2) + timedDay(c, 2026, 9, 6, count: 1)
-        // budget = 20 + 2*40 = 100 exactly consumes day A. Day B needs 10+20+40 more.
+        // budget = 20 + 2*40 = 100 exactly consumes day A. Day B needs 10+20+40 more, so
+        // it's dropped whole — but the cursor backs up to day A's last item instead of
+        // pointing at day B's unstarted first row (§6.3).
         let page = fill(from: nil, budget: 105, events: events, calendar: c, cost: rc)
         #expect(page.sections.map(\.day) == [at(c, 2026, 9, 5)])   // day B not started
-        #expect(page.nextCursor == Cursor(day: at(c, 2026, 9, 6), itemIndex: 0))
+        #expect(page.nextCursor == Cursor(day: at(c, 2026, 9, 5), itemIndex: 1))
     }
 
     @Test("all-day-only day")
@@ -114,9 +123,11 @@ struct FillTests {
         // total = 20 + 2*20 = 60
         #expect(fill(from: nil, budget: 60, events: events, calendar: c, cost: rc).sections[0].items.count == 2)
 
+        // Backs up to item 0 (the one that fit) rather than pointing at item 1 (the
+        // one that didn't) (§6.3).
         let tight = fill(from: nil, budget: 40, events: events, calendar: c, cost: rc)
         #expect(tight.sections[0].items.count == 1)
-        #expect(tight.nextCursor == Cursor(day: at(c, 2026, 9, 5), itemIndex: 1))
+        #expect(tight.nextCursor == Cursor(day: at(c, 2026, 9, 5), itemIndex: 0))
     }
 
     @Test("multi-day event spanning three days is counted once per day")
@@ -130,10 +141,11 @@ struct FillTests {
         #expect(full.sections.allSatisfy { $0.items.count == 1 })
         #expect(full.nextCursor == nil)
 
-        // 139 drops the third day's header-only section.
+        // 139 drops the third day's header-only section; the cursor backs up to day
+        // 6's item instead of pointing at day 7's unstarted one (§6.3).
         let clipped = fill(from: nil, budget: 139, events: [trip], calendar: c, cost: rc)
         #expect(clipped.sections.map(\.day) == [at(c, 2026, 9, 5), at(c, 2026, 9, 6)])
-        #expect(clipped.nextCursor == Cursor(day: at(c, 2026, 9, 7), itemIndex: 0))
+        #expect(clipped.nextCursor == Cursor(day: at(c, 2026, 9, 6), itemIndex: 0))
     }
 
     @Test("two-line title costs eventRow3")

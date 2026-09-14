@@ -135,14 +135,15 @@ struct AgendaProvider: TimelineProvider {
         // doesn't cost — hold that height back so the last row still fits. A continuation
         // page has no such block, so it gets the full budget.
         let todayEmpty = visible.first.map { !calendar.isDate($0.day, inSameDayAs: referenceDay) } ?? true
-        let page0Budget = metrics.fillBudget - (todayEmpty ? metrics.emptyTodayReserve : 0)
+        let safeBudget = metrics.fillBudget - metrics.fillSafetyMargin
+        let page0Budget = safeBudget - (todayEmpty ? metrics.emptyTodayReserve : 0)
 
         let page0 = fill(from: nil, budget: page0Budget, sections: visible, cost: metrics.rowCost)
         let requestedPage = PageState.currentPage(for: widgetKey(family), now: date, calendar: calendar)
 
         let snapshot: AgendaSnapshot
         if requestedPage == 1, let cursor = page0.nextCursor {
-            let page1 = fill(from: cursor, budget: metrics.fillBudget, sections: visible, cost: metrics.rowCost)
+            let page1 = fill(from: cursor, budget: safeBudget, sections: visible, cost: metrics.rowCost)
             snapshot = AgendaSnapshot(
                 authorization: authorization, sections: page1.sections, page: 1,
                 isContinuation: page1.isContinuation, canPageBack: true, canPageForward: false,

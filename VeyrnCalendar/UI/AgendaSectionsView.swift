@@ -70,7 +70,13 @@ struct AgendaSectionsView: View {
                     .padding(.top, metrics.emptyDayTopGap)
             } else {
                 VStack(alignment: .leading, spacing: metrics.interItemSpacing) {
-                    ForEach(section.items) { item in
+                    // Positional identity, not `item.id`: a boundary item can appear on
+                    // both pages (§6.3), and matching it by its stable event id lets
+                    // WidgetKit treat the two as "the same view" across the reload,
+                    // animating a slide from its old page-0 position to its new page-1
+                    // one. Position is unique within a single static render and carries
+                    // no such cross-page identity.
+                    ForEach(Array(section.items.enumerated()), id: \.offset) { _, item in
                         if item.isAllDay {
                             AllDayChipView(item: item, metrics: metrics)
                         } else {

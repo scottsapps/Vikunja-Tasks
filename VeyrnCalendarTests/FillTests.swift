@@ -106,11 +106,12 @@ struct FillTests {
         // Day A: 2 events (fills most of the budget). Day B: 1 event.
         let events = timedDay(c, 2026, 9, 5, count: 2) + timedDay(c, 2026, 9, 6, count: 1)
         // budget = 20 + 2*40 = 100 exactly consumes day A. Day B needs 10+20+40 more, so
-        // it's dropped whole — but the cursor backs up to day A's last item instead of
-        // pointing at day B's unstarted first row (§6.3).
+        // it's dropped whole. Day A ran out of its own items (a clean fit, not a near
+        // miss), so the cursor resumes normally at day B rather than repeating anything
+        // from day A (§6.3).
         let page = fill(from: nil, budget: 105, events: events, calendar: c, cost: rc)
         #expect(page.sections.map(\.day) == [at(c, 2026, 9, 5)])   // day B not started
-        #expect(page.nextCursor == Cursor(day: at(c, 2026, 9, 5), itemIndex: 1))
+        #expect(page.nextCursor == Cursor(day: at(c, 2026, 9, 6), itemIndex: 0))
     }
 
     @Test("all-day-only day")
@@ -141,11 +142,11 @@ struct FillTests {
         #expect(full.sections.allSatisfy { $0.items.count == 1 })
         #expect(full.nextCursor == nil)
 
-        // 139 drops the third day's header-only section; the cursor backs up to day
-        // 6's item instead of pointing at day 7's unstarted one (§6.3).
+        // 139 drops the third day's header-only section. Day 6 ran out of its own items
+        // (a clean fit), so the cursor resumes normally at day 7 (§6.3).
         let clipped = fill(from: nil, budget: 139, events: [trip], calendar: c, cost: rc)
         #expect(clipped.sections.map(\.day) == [at(c, 2026, 9, 5), at(c, 2026, 9, 6)])
-        #expect(clipped.nextCursor == Cursor(day: at(c, 2026, 9, 6), itemIndex: 0))
+        #expect(clipped.nextCursor == Cursor(day: at(c, 2026, 9, 7), itemIndex: 0))
     }
 
     @Test("two-line title costs eventRow3")

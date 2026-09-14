@@ -10,10 +10,15 @@ import CoreGraphics
 public struct Cursor: Codable, Hashable, Sendable {
     /// Start of day, in the grouping calendar.
     public let day: Date
-    /// Index into `DaySection.items` to resume at. This is the **last item shown** on the
-    /// previous page, not the first unseen one — repeating it on the next page is a
-    /// deliberate hedge against `RowCost` being an estimate: if that row rendered a hair
-    /// taller than predicted and clipped, it's guaranteed to reappear in full (§6.3).
+    /// Index into `DaySection.items` to resume at.
+    ///
+    /// Normally the first item **not** shown on the previous page. The one exception: a
+    /// page that stopped mid-day (its last section hit the budget wall rather than
+    /// running out of items) instead points at the **last item shown**, repeating it on
+    /// the next page — a hedge against `RowCost` being an estimate, in case that specific
+    /// row rendered a hair taller than predicted and clipped (§6.3). A page that stopped
+    /// because the *next whole day* didn't fit has no such risk — its last section ran out
+    /// of items on its own, a clean fit — so it resumes normally at the dropped day.
     public let itemIndex: Int
 
     public init(day: Date, itemIndex: Int) {
@@ -165,12 +170,12 @@ public func fill(
                     nextCursor = Cursor(day: allSections[s + 1].day, itemIndex: 0)
                 }
             } else {
-                // Re-show the last item that *did* fit rather than resuming at this
-                // dropped section: `cost` is an estimate, so the row that estimate
-                // decided fit may have rendered a hair taller than predicted and clipped
-                // at the real widget edge. Repeating it guarantees it's never lost, even
-                // when it wasn't actually clipped (§6.3).
-                nextCursor = lastShown(in: out)
+                // The previous section finished normally (it ran out of its own items,
+                // rather than being stopped by the budget), so its last row was a clean
+                // fit, not a near miss — nothing there needs repeating. Resume at this
+                // section's own start; it was never drawn at all, so there's nothing of
+                // it to have clipped.
+                nextCursor = Cursor(day: section.day, itemIndex: fromIndex)
             }
             break sections
         }
@@ -195,14 +200,6 @@ public func fill(
     }
 
     return Page(sections: out, nextCursor: nextCursor, isContinuation: isContinuation)
-}
-
-/// A cursor pointing back at the last item actually placed in `out` — used to repeat a
-/// page's final row on the next page (§6.3). `out` only ever holds non-empty sections
-/// (a forced section always keeps its one item), so `out.last` always has an item.
-private func lastShown(in out: [DaySection]) -> Cursor? {
-    guard let last = out.last, let lastItemIndex = last.items.indices.last else { return nil }
-    return Cursor(day: last.day, itemIndex: lastItemIndex)
 }
 
 /// Predicted height of one item.

@@ -22,6 +22,14 @@ struct AgendaWidgetView: View {
         (widgetFamily == .systemLarge || widgetFamily == .systemExtraLarge) ? .large : .medium
     }
 
+    private var cornerHitInset: CGFloat {
+        #if os(macOS)
+        Metrics.forFamily(family).chevronHitInset
+        #else
+        0
+        #endif
+    }
+
     var body: some View {
         let metrics = Metrics.forFamily(family)
         let snapshot = entry.snapshot
@@ -43,8 +51,16 @@ struct AgendaWidgetView: View {
                         widgetKey: VeyrnCalendarWidgetKind + ".\(widgetFamily)",
                         metrics: metrics
                     )
-                    .padding(.top, metrics.contentPadding.top - 6)
-                    .padding(.trailing, metrics.contentPadding.trailing - 6)
+                    // macOS desktop/Notification Center widgets reserve their extreme
+                    // corner for the system's own hover chrome (Edit Widget affordance);
+                    // a tap target flush against that corner can be swallowed before it
+                    // ever reaches our Button. `contentMarginsDisabled()` (Widget.swift)
+                    // opts out of the system's default margin that would normally hold
+                    // content clear of it, so pull the forward chevron in by
+                    // `chevronHitInset` on macOS only — iOS has no such corner chrome and
+                    // stays pixel-identical.
+                    .padding(.top, metrics.contentPadding.top - 6 + cornerHitInset)
+                    .padding(.trailing, metrics.contentPadding.trailing - 6 + cornerHitInset)
                 }
             }
             .widgetURL(snapshot.hasAccess ? dayDeepLink(snapshot.referenceDay) : calendarSettingsDeepLink)

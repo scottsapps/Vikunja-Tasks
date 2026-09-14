@@ -21,6 +21,7 @@ Beta Builds Available on [TestFlight](https://testflight.apple.com/join/q8GhTkFz
 - **Project and label colors** — hex color tinting throughout the UI for projects and label chips
 - **Region-aware dates** — every displayed date follows the reader's locale (field order, not just translated month names)
 - **WidgetKit extension** for macOS and iOS showing upcoming tasks grouped by date, with a reminder bell and priority chip on each row and paging through a busy "today"; includes Lock Screen and StandBy widgets (accessory families: rectangular, circular, inline)
+- **Calendar widget** (macOS + iOS, not Watch) — a separate WidgetKit widget showing your device's calendar events grouped by day, paging through a busy day the same way the task widget does; requests Calendar access and lets you choose which calendars to show (Settings)
 - **Quick Add** with a natural-language parser: `*tag`, `+project`, `!priority`, dates like `tomorrow`, `next monday`, `in 3 days`, and recurrence like `every week` — with a reminder chip to set a reminder right at creation time
 - **Uses Vikunja's API v2** on instances reporting 2.4.0 or later, with automatic fallback to API v1 (reads only; v1 stays the permanent fallback until Vikunja removes it)
 - **Bulk import** — paste or drag in a plain-text list of tasks (created in one request on instances 2.5.0 or later)
@@ -145,6 +146,8 @@ The bold rows are the ones that bite silently. The App Group, Keychain access gr
 VikunjaCore/                 Shared code — models, API client, config, parser, offline outbox, logging
 VikunjaWidgetApp/            App target sources (macOS + iOS, platform-conditional)
 VikunjaWidgetExtension/      Widget extension sources (shared by macOS and iOS widget targets)
+VeyrnCalendar/               Shared calendar code — EventKit source, day grouping/pagination, widget layout views (macOS + iOS only; never Watch)
+VeyrnCalendarTests/          Unit tests for VeyrnCalendar (pagination, day grouping, calendar selection, models)
 VikunjaWidgetWatch/          Apple Watch app (standalone; online-only)
 VikunjaWidgetWatchExtension/ Watch widget extension (Smart Stack + face complications)
 project.yml                  XcodeGen project definition
@@ -171,6 +174,8 @@ The Watch targets compile only a **subset** of `VikunjaCore`, listed explicitly 
 | `VikunjaWidgetApp/BugReportMail.swift` | Report-a-Bug mail composition (MessageUI on iOS, NSSharingService on macOS) |
 | `VikunjaWidgetApp/HangWatchdog.swift` | Detects an unresponsive main thread; ignores process suspension |
 | `VikunjaWidgetApp/ChangeBeacon.swift` | CloudKit change beacon — nudges the user's other devices to refresh after an edit (app targets only; never in `VikunjaCore/`) |
+| `VeyrnCalendar/Fill.swift` | Pagination — slices grouped calendar days to fit the widget's vertical budget, and decides what carries to the next page |
+| `VikunjaWidgetExtension/Calendar/AgendaProvider.swift` | Calendar widget's `TimelineProvider` — fetches events via EventKit, groups by day, and builds each page |
 
 ## Vikunja API Notes
 
@@ -206,6 +211,16 @@ An unsigned build gets **no entitlements**, so it's a compile check only, not a 
 
 - The Keychain and App Group are unavailable.
 - It **crashes on launch** — with no iCloud entitlement, the CloudKit change beacon's registration raises an uncaught exception the instant the app starts. To actually run the app, do a signed build ("Sign to Run Locally" is enough on the Simulator).
+
+## Running Tests
+
+`VeyrnCalendarTests` (macOS) is the repo's only test target — unit tests for the calendar widget's pagination, day grouping, calendar selection, and models:
+
+```bash
+xcodebuild test -project VikunjaWidget.xcodeproj -scheme VikunjaWidgetApp \
+  -destination 'platform=macOS' \
+  CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+```
 
 ## Gotchas
 

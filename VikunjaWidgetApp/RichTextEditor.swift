@@ -35,6 +35,9 @@ struct RichTextEditor: NSViewRepresentable {
         textView.autoresizingMask = .width
         textView.textContainer?.widthTracksTextView = true
         textView.isAutomaticLinkDetectionEnabled = true
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
         textView.delegate = context.coordinator
         context.coordinator.textView = textView
 
@@ -54,16 +57,14 @@ struct RichTextEditor: NSViewRepresentable {
         guard !context.coordinator.isEditing,
               let textView = scrollView.documentView as? NSTextView,
               !textView.attributedString().isEqual(to: attributedText) else { return }
-        context.coordinator.withProgrammaticUpdate {
+        let coordinator = context.coordinator
+        coordinator.withProgrammaticUpdate {
             textView.textStorage?.setAttributedString(attributedText)
             // Re-apply after every attributedText update so dark mode stays correct.
             textView.textColor = .labelColor
-            if textView.isAutomaticLinkDetectionEnabled {
-                // Linkifies bare URLs — and reports itself as a text edit, which is
-                // why it has to run inside the programmatic bracket.
-                textView.checkTextInDocument(nil)
-            }
         }
+        guard textView.isAutomaticLinkDetectionEnabled else { return }
+        coordinator.detectLinks(in: textView)
     }
 
     final class Coordinator: NSObject, NSTextViewDelegate {
@@ -76,6 +77,38 @@ struct RichTextEditor: NSViewRepresentable {
 
         init(binding: Binding<NSAttributedString>) {
             self.binding = binding
+        }
+
+        /// NSTextView.checkTextInDocument(_:) does this same detection but blocks the
+        /// calling thread on a lower-QoS system service — a priority inversion when
+        /// called from the (often user-interactive) main thread, flagged by Xcode 27's
+        /// Thread Performance Checker. Running NSDataDetector ourselves off-thread and
+        /// only touching the text view to apply the result avoids the blocking wait.
+        private static let linkDetector = try? NSDataDetector(
+            types: NSTextCheckingResult.CheckingType.link.rawValue)
+
+        func detectLinks(in textView: NSTextView) {
+            guard let detector = Self.linkDetector else { return }
+            let string = textView.string
+            guard !string.isEmpty else { return }
+            let fullRange = NSRange(location: 0, length: (string as NSString).length)
+            DispatchQueue.global(qos: .utility).async { [weak self, weak textView] in
+                let matches = detector.matches(in: string, options: [], range: fullRange)
+                DispatchQueue.main.async {
+                    guard let self, let textView, textView.window != nil,
+                          !self.isEditing, textView.string == string,
+                          let storage = textView.textStorage else { return }
+                    self.withProgrammaticUpdate {
+                        storage.beginEditing()
+                        storage.removeAttribute(.link, range: NSRange(location: 0, length: storage.length))
+                        for match in matches {
+                            guard let url = match.url else { continue }
+                            storage.addAttribute(.link, value: url, range: match.range)
+                        }
+                        storage.endEditing()
+                    }
+                }
+            }
         }
 
         /// Set while we push a value into the text view ourselves, so the edits that

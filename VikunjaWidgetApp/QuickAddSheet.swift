@@ -7,6 +7,16 @@ struct QuickAddSheet: View {
     /// An explicit `*project` in the text still wins.
     var defaultProjectId: Int? = nil
     var onExpandToggle: ((Bool) -> Void)? = nil
+    /// Closes the hosting window when set — the hotkey-triggered panel isn't a
+    /// SwiftUI presentation, so `\.dismiss` has no presentation context to act on.
+    var onDismiss: (() -> Void)? = nil
+    /// True only for the macOS global-hotkey floating panel. It's borderless (no
+    /// title bar), and SwiftUI content covers the whole window, so AppKit never
+    /// sees exposed "background" for `isMovableByWindowBackground` to drag by —
+    /// this opts the header/footer spacers into `FloatingPanelDragModifier`
+    /// instead. The in-app "+" and ⌘N sheets are real, already-movable window
+    /// sheets, so this stays false there.
+    var isFloatingPanel: Bool = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var cs
 
@@ -67,9 +77,14 @@ struct QuickAddSheet: View {
     private var insetBg: Color { cs == .dark ? Color(red: 42/255, green: 42/255, blue: 45/255) : Color(red: 245/255, green: 245/255, blue: 247/255) }
     private var primaryText: Color { cs == .dark ? Color(red: 242/255, green: 242/255, blue: 247/255) : Color(red: 28/255, green: 28/255, blue: 30/255) }
     private var mutedText: Color { cs == .dark ? Color(red: 134/255, green: 134/255, blue: 140/255) : Color(red: 138/255, green: 138/255, blue: 142/255) }
-    private var hairline: Color { cs == .dark ? Color.white.opacity(0.10) : Color(red: 60/255, green: 60/255, blue: 67/255).opacity(0.10) }
     private var circleStroke: Color { cs == .dark ? Color(red: 85/255, green: 85/255, blue: 92/255) : Color(red: 202/255, green: 202/255, blue: 208/255) }
     private var accentBlue: Color { cs == .dark ? Color(red: 10/255, green: 132/255, blue: 255/255) : Color(red: 0, green: 122/255, blue: 255/255) }
+    private var chevBg: Color { cs == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.05) }
+    private var fieldBg: Color { cs == .dark ? Color.white.opacity(0.07) : Color.white.opacity(0.92) }
+    private var fieldBorder: Color { cs == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.12) }
+    private var footerBandBg: Color { cs == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.035) }
+    private var cancelBg: Color { cs == .dark ? Color.white.opacity(0.09) : Color.black.opacity(0.065) }
+    private var cancelText: Color { cs == .dark ? Color(red: 229/255, green: 229/255, blue: 234/255) : Color(red: 58/255, green: 58/255, blue: 60/255) }
 
     // Chip palette
     private var dueBg: Color    { cs == .dark ? Color(red: 10/255,  green: 132/255, blue: 255/255).opacity(0.18) : Color(red: 231/255, green: 240/255, blue: 255/255) }
@@ -88,18 +103,31 @@ struct QuickAddSheet: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                // Heading row
+                // Heading row — also the panel's drag handle when it has no title bar. Both
+                // the title and the spacer get a tall hit band (not just their own text
+                // height) so there's a generous strip to grab, not a sliver.
                 HStack {
                     Text("New Task")
                         .font(.title3)
                         .fontWeight(.semibold)
+                        .frame(minHeight: 32)
+                        #if os(macOS)
+                        .modifier(FloatingPanelDragModifier(isEnabled: isFloatingPanel))
+                        #endif
                     Spacer()
+                        .frame(minHeight: 32)
+                        #if os(macOS)
+                        .modifier(FloatingPanelDragModifier(isEnabled: isFloatingPanel))
+                        #endif
                     Button {
                         toggleExpand()
                     } label: {
-                        Image(systemName: isExpanded ? "chevron.up.circle" : "chevron.down.circle")
-                            .font(.system(size: 18))
-                            .foregroundStyle(isExpanded ? accentBlue : .secondary)
+                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 12.5, weight: .semibold))
+                            .foregroundStyle(isExpanded ? accentBlue : mutedText)
+                            .frame(width: 27, height: 27)
+                            .background(chevBg)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
                     .help(isExpanded ? "Collapse" : "More options")
@@ -107,7 +135,7 @@ struct QuickAddSheet: View {
 
                 // Quick-add input
                 TextField("Buy milk *groceries +Home !2 tomorrow", text: $inputText)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
                     .font(.system(size: 15))
                     .focused($fieldFocused)
                     #if os(iOS)
@@ -115,6 +143,11 @@ struct QuickAddSheet: View {
                     .textInputAutocapitalization(.sentences)
                     #endif
                     .onSubmit { submit() }
+                    .padding(.horizontal, 12)
+                    .frame(height: 34)
+                    .background(fieldBg)
+                    .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(fieldBorder))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
 
                 // Live preview chips (collapsed only)
                 if hasPreviewContent && !isExpanded {
@@ -132,8 +165,7 @@ struct QuickAddSheet: View {
                         .foregroundStyle(.red)
                 }
 
-                // Footer
-                hairline.frame(height: 1)
+                // Footer — the band's own tint separates it, no hairline needed.
                 footerRow
             }
             .padding(.horizontal, 20)
@@ -385,14 +417,26 @@ struct QuickAddSheet: View {
 
     private var footerRow: some View {
         HStack(spacing: 0) {
-            Button("Cancel") { dismiss() }
-                .font(.system(size: 16))
-                .foregroundStyle(accentBlue)
-                .padding(.horizontal, 14).padding(.vertical, 9)
-                .buttonStyle(.plain)
-                .keyboardShortcut(.escape, modifiers: [])
+            Button {
+                dismiss(); onDismiss?()
+            } label: {
+                Text("Cancel")
+                    .font(.system(size: 13.5, weight: .medium))
+                    .foregroundStyle(cancelText)
+                    .padding(.horizontal, 16)
+                    .frame(height: 30)
+            }
+            .background(Capsule().fill(cancelBg))
+            .buttonStyle(.plain)
+            .keyboardShortcut(.escape, modifiers: [])
 
+            // Draggable like the header's spacer — the footer is the other band Things-style
+            // panels let you grab, and it's otherwise dead space between the two buttons.
             Spacer()
+                .frame(minHeight: 32)
+                #if os(macOS)
+                .modifier(FloatingPanelDragModifier(isEnabled: isFloatingPanel))
+                #endif
 
             Button {
                 submit()
@@ -402,11 +446,12 @@ struct QuickAddSheet: View {
                         ProgressView().controlSize(.small)
                     } else {
                         Text("Add Task")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 13.5, weight: .semibold))
                             .foregroundStyle(.white)
                     }
                 }
-                .padding(.horizontal, 24).padding(.vertical, 10)
+                .padding(.horizontal, 19)
+                .frame(height: 30)
             }
             .background(
                 Capsule()
@@ -417,6 +462,9 @@ struct QuickAddSheet: View {
             .disabled(parsed.cleanedTitle.isEmpty || isSubmitting)
             .keyboardShortcut(.return, modifiers: [])
         }
+        .padding(.leading, 14).padding(.trailing, 8).padding(.vertical, 7)
+        .background(footerBandBg)
+        .clipShape(RoundedRectangle(cornerRadius: 13))
     }
 
     // MARK: - Chip helpers
@@ -742,7 +790,47 @@ struct QuickAddSheet: View {
             }
 
             dismiss()
+            onDismiss?()
             isSubmitting = false
         }
     }
 }
+
+#if os(macOS)
+/// The floating panel is borderless, so its SwiftUI content covers the entire
+/// window and AppKit never sees exposed "background" for
+/// `isMovableByWindowBackground` to drag by. `WindowDragGesture` would be the
+/// content-side equivalent, but it needs macOS 15 and Veyrn's floor is 14.
+/// Marks a region as draggable by placing an invisible `DragHandleNSView`
+/// behind it — sized to just that region (e.g. the header's title+spacer),
+/// so it never competes with the chevron button's tap. The actual drag is
+/// triggered by `QuickAddPanel.sendEvent` walking the view tree for these
+/// markers and calling `performDrag` itself: this content sits inside a
+/// `ScrollView`, whose NSClipView claims left-mouse-down for its own
+/// hit-testing before a nested subview's own `mouseDown` reliably sees it,
+/// so the marker view's own `mouseDown` below is a fallback, not the
+/// primary path.
+struct FloatingPanelDragModifier: ViewModifier {
+    var isEnabled: Bool
+
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.background(WindowDragHandle())
+        } else {
+            content
+        }
+    }
+}
+
+private struct WindowDragHandle: NSViewRepresentable {
+    func makeNSView(context: Context) -> DragHandleNSView { DragHandleNSView() }
+    func updateNSView(_ nsView: DragHandleNSView, context: Context) {}
+}
+
+/// Marker view `QuickAddPanel.sendEvent` looks for by type — see the note above.
+final class DragHandleNSView: NSView {
+    override func mouseDown(with event: NSEvent) {
+        window?.performDrag(with: event)
+    }
+}
+#endif

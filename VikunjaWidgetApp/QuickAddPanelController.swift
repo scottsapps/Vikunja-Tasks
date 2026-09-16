@@ -10,6 +10,32 @@ import Carbon
 private final class QuickAddPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    // Drag by clicking the header/footer chrome QuickAddSheet marks with a
+    // DragHandleNSView. Intercepting here, at the window's own event dispatch,
+    // is deliberate: the content sits inside a ScrollView, whose NSClipView
+    // claims left-mouse-down for its own hit-testing before a nested
+    // DragHandleNSView's own mouseDown reliably sees it, so relying on that
+    // view's mouseDown alone left dragging unreliable in practice (build
+    // 110-112). Walking the real, already-laid-out AppKit frames instead of
+    // hardcoding pixel offsets keeps this in sync with whatever QuickAddSheet
+    // actually renders.
+    override func sendEvent(_ event: NSEvent) {
+        guard event.type == .leftMouseDown,
+              let contentView,
+              isInsideDragHandle(event.locationInWindow, in: contentView) else {
+            super.sendEvent(event)
+            return
+        }
+        performDrag(with: event)
+    }
+
+    private func isInsideDragHandle(_ point: CGPoint, in view: NSView) -> Bool {
+        if view is DragHandleNSView, view.convert(view.bounds, to: nil).contains(point) {
+            return true
+        }
+        return view.subviews.contains { isInsideDragHandle(point, in: $0) }
+    }
 }
 
 // MARK: - Panel controller
@@ -58,6 +84,10 @@ final class QuickAddPanelController: NSObject {
         p.isReleasedWhenClosed = false
         p.hidesOnDeactivate = false
         p.becomesKeyOnlyIfNeeded = false
+        // Since opening no longer activates Veyrn (see openPanel), the panel must
+        // opt in to showing on whichever Space/full-screen app is currently active —
+        // otherwise it would only appear on whatever Space Veyrn's own windows live on.
+        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         p.center()
         panel = p
     }
@@ -78,6 +108,7 @@ final class QuickAddPanelController: NSObject {
         // Recreate content on each open so @State (inputText, etc.) resets
         let ctrl = NSHostingController(rootView: QuickAddPanelContent(
             store: store,
+            onClose: { [weak panel] in panel?.close() },
             onExpand: { [weak panel] expanded in
                 guard let panel else { return }
                 let targetHeight = expanded ? Self.expandedHeight : Self.collapsedHeight
@@ -100,9 +131,13 @@ final class QuickAddPanelController: NSObject {
         panel.contentViewController = ctrl
         panel.setContentSize(NSSize(width: 500, height: Self.collapsedHeight))
         panel.center()
+        // orderFrontRegardless + makeKey (not NSApp.activate) is deliberate: the
+        // panel's .nonactivatingPanel style mask lets it become key and receive
+        // keystrokes without activating Veyrn itself, so quick add never steals
+        // focus from — or reorders Stage Manager around — whatever app you were
+        // already in.
         panel.orderFrontRegardless()
         panel.makeKey()
-        NSApp.activate(ignoringOtherApps: true)
         // SwiftUI's @FocusState fires asynchronously on .onAppear; nudge AppKit
         // directly on the next run loop pass to guarantee the cursor lands in the field.
         DispatchQueue.main.async { [weak panel] in
@@ -166,12 +201,13 @@ final class QuickAddPanelController: NSObject {
 
 private struct QuickAddPanelContent: View {
     var store: TaskStore
+    var onClose: (() -> Void)?
     var onExpand: ((Bool) -> Void)?
 
     var body: some View {
-        QuickAddSheet(store: store, onExpandToggle: onExpand)
+        QuickAddSheet(store: store, onExpandToggle: onExpand, onDismiss: onClose, isFloatingPanel: true)
             .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }
 

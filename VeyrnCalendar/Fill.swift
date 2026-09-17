@@ -215,6 +215,19 @@ func itemCost(_ item: DayItem, cost: RowCost) -> CGFloat {
 /// instead of guessing by character count, capped at 2 lines to match `titleLineLimit`
 /// (§5.1, §6.3). The title is always bold (`EventRowView`), so this always measures the
 /// bold system font regardless of caller.
+///
+/// The per-line height comes from measuring a real single-line string with the *same*
+/// `boundingRect` call, not from `font.ascender - font.descender + font.leading`. That
+/// formula is a continuous approximation; `boundingRect` quantizes its result (whole
+/// pixels), so a genuine one-line title's height (e.g. 16.0) was consistently ~5% larger
+/// than the hand-computed line height (e.g. 15.31 for bold system 13pt) — `/ lineHeight`
+/// landed just over 1.0, and `.rounded(.up)` turned every single-line title into "2 lines".
+/// Real bug, 2026-09: this made `itemCost` charge `eventRow3` for nearly every row
+/// regardless of actual content, which starved `fill` and cut pages well short of the
+/// widget's real capacity — the opposite failure mode from the clipping bug this function
+/// was written to fix. Measuring the reference line with the identical options keeps
+/// numerator and denominator on the same quantization, so a true one-line title measures
+/// as 1.
 func measuredTitleLines(_ title: String, pointSize: CGFloat, width: CGFloat) -> Int {
     guard width > 0, pointSize > 0 else { return 1 }
     let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -226,13 +239,22 @@ func measuredTitleLines(_ title: String, pointSize: CGFloat, width: CGFloat) -> 
     let font = NSFont.boldSystemFont(ofSize: pointSize)
     #endif
 
+    // Not hoisted into a typed local: the options type is spelled `NSString.DrawingOptions`
+    // on macOS/AppKit but plain `NSStringDrawingOptions` on iOS/UIKit (no `NS_SWIFT_NAME`
+    // there) — no name works as an explicit annotation on both platforms. Repeating the
+    // literal lets each `boundingRect` call infer it from context instead, same as before.
     let bounds = (trimmed as NSString).boundingRect(
         with: CGSize(width: width, height: .greatestFiniteMagnitude),
         options: [.usesLineFragmentOrigin, .usesFontLeading],
         attributes: [.font: font],
         context: nil
     )
-    let lineHeight = font.ascender - font.descender + font.leading
+    let lineHeight = ("M" as NSString).boundingRect(
+        with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude),
+        options: [.usesLineFragmentOrigin, .usesFontLeading],
+        attributes: [.font: font],
+        context: nil
+    ).height
     guard lineHeight > 0 else { return 1 }
     return max(1, min(2, Int((bounds.height / lineHeight).rounded(.up))))
 }

@@ -160,19 +160,40 @@ struct FillTests {
 
     @Test("a capital/punctuation-heavy title measures wide even though it's short (regression, §6.3)")
     func capitalHeavyTitleMeasuresWide() {
-        // Real bug, 2026-09: this 42-character title wrapped to 2 lines on a real macOS
-        // widget, but a naive character-count guess (the old titleCharsPerLine: 47 for
-        // macOS large) judged anything under 47 characters as 1 line — caps, digits, and
-        // punctuation run wider per character than average prose. Real measurement should
-        // catch what character-counting missed.
+        // Real bug, 2026-09: this 42-character title wrapped to 2 lines on a real iOS
+        // widget, but a naive character-count guess (the old titleCharsPerLine) judged
+        // anything under its threshold as 1 line — caps, digits, and punctuation run wider
+        // per character than average prose. Real measurement should catch what
+        // character-counting missed. The title needs ~293pt on one line (bold system 13pt),
+        // so it genuinely wraps at iOS medium's 170pt column but fits at macOS large's
+        // wider 320pt column — this test uses the width where it actually wraps.
         let title = "CRB Phono 5 Standing Call (CO/DSP Counsel)"
         #expect(title.count < 47)
         let lines = measuredTitleLines(
             title,
-            pointSize: RowCost.macOSLarge.titleFontPointSize,
-            width: RowCost.macOSLarge.titleMeasureWidth
+            pointSize: RowCost.iOSMedium.titleFontPointSize,
+            width: RowCost.iOSMedium.titleMeasureWidth
         )
         #expect(lines == 2)
+    }
+
+    @Test("a short title measures one line at its own family's real column width")
+    func shortTitleMeasuresOneLine() {
+        // Regression, 2026-09: `measuredTitleLines`'s line-height reference was computed
+        // from `font.ascender - font.descender + font.leading` (a continuous estimate),
+        // while `boundingRect` quantizes its result to whole pixels — so a genuine one-line
+        // title's measured height was consistently a few percent taller than that estimate,
+        // and `.rounded(.up)` turned *every* single-line title into "2 lines" regardless of
+        // content or length. That silently doubled the cost of nearly every event row and
+        // starved `fill`, leaving pages well short of what the widget could actually hold.
+        for title in ["Lunch", "Phillies @ Mets", "David's Birthday", "A"] {
+            let lines = measuredTitleLines(
+                title,
+                pointSize: RowCost.macOSLarge.titleFontPointSize,
+                width: RowCost.macOSLarge.titleMeasureWidth
+            )
+            #expect(lines == 1, "\"\(title)\" should measure as one line")
+        }
     }
 
     @Test("DST transition day pages without surprises")

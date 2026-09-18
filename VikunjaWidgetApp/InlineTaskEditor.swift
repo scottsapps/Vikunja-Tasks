@@ -70,6 +70,7 @@ struct InlineTaskEditor: View {
     @State private var loadedSubtasks: [VikunjaTask]? = nil
     @State private var newSubtaskTitle = ""
     @State private var isAddingSubtask = false
+    @State private var editingSubtask: VikunjaTask? = nil
 
     init(task: VikunjaTask, onDelete: (() -> Void)? = nil, onDismiss: @escaping () -> Void) {
         self.task = task
@@ -148,16 +149,7 @@ struct InlineTaskEditor: View {
             DiagnosticLog.info("html import: \(html.utf8.count) bytes → \(String(format: "%.2f", importElapsed)) s; img tags \(imgCount) (absolute \(absoluteImgTagCount(html)))")
             DiagnosticLog.breadcrumb("idle")
 
-            DiagnosticLog.breadcrumb("editor.subtaskFetch")
-            let subtaskStart = Date()
-            if task.id > 0, let full = try? await VikunjaAPI.fetchTask(id: task.id) {
-                loadedSubtasks = full.subtasks
-            } else {
-                loadedSubtasks = task.subtasks.isEmpty ? [] : task.subtasks
-            }
-            let subtaskElapsed = Date().timeIntervalSince(subtaskStart)
-            DiagnosticLog.info("subtask fetch task \(task.id) → \(loadedSubtasks?.count ?? 0) subtasks, \(String(format: "%.1f", subtaskElapsed)) s")
-            DiagnosticLog.breadcrumb("idle")
+            await loadSubtasks()
         }
         .animation(.easeInOut(duration: 0.2), value: showDatePicker)
         .animation(.easeInOut(duration: 0.2), value: showReminderPicker)
@@ -167,6 +159,20 @@ struct InlineTaskEditor: View {
         }
         .sheet(isPresented: $showLabelPicker) {
             labelPickerSheet
+        }
+        .sheet(isPresented: Binding(
+            get: { editingSubtask != nil },
+            set: { if !$0 { editingSubtask = nil } }
+        )) {
+            if let sub = editingSubtask {
+                InlineTaskEditor(task: sub, onDismiss: {
+                    editingSubtask = nil
+                    Task { await loadSubtasks() }
+                })
+                #if os(iOS)
+                .presentationDragIndicator(.visible)
+                #endif
+            }
         }
     }
 
@@ -497,8 +503,11 @@ struct InlineTaskEditor: View {
                         .foregroundStyle(sub.done ? Color(red: 103/255, green: 103/255, blue: 110/255) : primaryText)
                         .strikethrough(sub.done, color: Color(red: 103/255, green: 103/255, blue: 110/255))
                         .lineLimit(2)
+                    Spacer(minLength: 0)
                 }
                 .padding(.vertical, 6)
+                .contentShape(Rectangle())
+                .onTapGesture { editingSubtask = sub }
             }
 
             HStack(spacing: 11) {
@@ -659,6 +668,19 @@ struct InlineTaskEditor: View {
     }
 
     // MARK: - Subtask actions
+
+    private func loadSubtasks() async {
+        DiagnosticLog.breadcrumb("editor.subtaskFetch")
+        let subtaskStart = Date()
+        if task.id > 0, let full = try? await VikunjaAPI.fetchTask(id: task.id) {
+            loadedSubtasks = full.subtasks
+        } else {
+            loadedSubtasks = task.subtasks.isEmpty ? [] : task.subtasks
+        }
+        let subtaskElapsed = Date().timeIntervalSince(subtaskStart)
+        DiagnosticLog.info("subtask fetch task \(task.id) → \(loadedSubtasks?.count ?? 0) subtasks, \(String(format: "%.1f", subtaskElapsed)) s")
+        DiagnosticLog.breadcrumb("idle")
+    }
 
     private func completeSubtask(_ subtask: VikunjaTask) {
         if var list = loadedSubtasks, let idx = list.firstIndex(where: { $0.id == subtask.id }) {

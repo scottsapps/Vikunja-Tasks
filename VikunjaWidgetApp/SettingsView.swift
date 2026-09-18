@@ -28,6 +28,7 @@ struct SettingsView: View {
     @AppStorage(TaskSortPreferences.fieldKey) private var sortField: TaskSortField = .alphabetical
     @AppStorage(TaskSortPreferences.projectTieBreakKey) private var projectTieBreak: ProjectTieBreak = .alphabetical
     @AppStorage(TaskSortPreferences.undatedKey) private var undatedPlacement: UndatedPlacement = .bottom
+    @AppStorage(TaskSortPreferences.projectOrderKey) private var projectOrder: ProjectOrder = .server
     @AppStorage("vikunja_telemetry_opt_in") private var telemetryOptIn: Bool = true
 
     #if os(iOS)
@@ -131,10 +132,9 @@ struct SettingsView: View {
                     }
 
                     NavigationLink {
-                        pane("Task Order") { taskOrderSection }
+                        pane("Project & Task Order") { projectAndTaskOrderSection }
                     } label: {
-                        settingsRow("Task Order", systemImage: "arrow.up.arrow.down",
-                                    detail: Text(sortField.title))
+                        settingsRow("Project & Task Order", systemImage: "arrow.up.arrow.down")
                     }
 
                     NavigationLink {
@@ -274,7 +274,7 @@ struct SettingsView: View {
                 // list can run long, so it keeps the menu style.
                 Picker("Project", selection: $launchProjectKey) {
                     Text("Inbox").tag(SidebarItem.inbox.storageKey)
-                    ForEach(store.projectTree(expanded: Set(store.visibleProjects.map(\.id)))) { row in
+                    ForEach(store.projectTree(expanded: Set(store.visibleProjects(order: projectOrder).map(\.id)), order: projectOrder)) { row in
                         Text(String(repeating: "   ", count: min(row.depth, 3)) + row.project.title)
                             .tag(SidebarItem.project(row.project.id).storageKey)
                     }
@@ -307,6 +307,9 @@ struct SettingsView: View {
             // the boxed-section look every native Mac Settings window has —
             // a bare `Form` renders almost flush with the window edge.
             Form {
+                Section("Project Order") {
+                    projectOrderSection
+                }
                 Section("Task Order") {
                     taskOrderSection
                 }
@@ -399,7 +402,36 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Task order
+    // MARK: - Project & task order
+
+    #if os(iOS)
+    private var projectAndTaskOrderSection: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Project Order").font(.headline)
+                projectOrderSection
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Task Order").font(.headline)
+                taskOrderSection
+            }
+        }
+    }
+    #endif
+
+    private var projectOrderSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Picker("Order projects by", selection: $projectOrder) {
+                ForEach(ProjectOrder.allCases) { order in
+                    Text(order.title).tag(order)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            Text("Server Order matches the order shown on the Vikunja web app and other Vikunja clients. Alphabetical always sorts projects by title.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
 
     private var taskOrderSection: some View {
         VStack(alignment: .leading, spacing: 6) {

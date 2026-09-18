@@ -152,6 +152,7 @@ struct AppRoot: View {
     @State private var navPath: [SidebarItem] = []
 
     @AppStorage("vikunja_font_size_offset") private var fontSizeOffset: Int = 0
+    @AppStorage(TaskSortPreferences.projectOrderKey) private var projectOrder: ProjectOrder = .server
     @Environment(\.horizontalSizeClass) private var sizeClass
     #if os(iOS)
     @Environment(\.scenePhase) private var scenePhase
@@ -375,7 +376,7 @@ struct AppRoot: View {
                 }
 
                 Section {
-                    ForEach(store.projectTree(expanded: store.projectExpansion.expanded)) { row in
+                    ForEach(store.projectTree(expanded: store.projectExpansion.expanded, order: projectOrder)) { row in
                         let project = row.project
                         // The chevron is a sibling of the NavigationLink, not
                         // inside its label: a Button nested in a NavigationLink

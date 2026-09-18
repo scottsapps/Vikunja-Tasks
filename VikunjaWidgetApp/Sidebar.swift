@@ -8,6 +8,7 @@ struct Sidebar: View {
     @State private var showNewProject = false
     @State private var newProjectTitle = ""
     @State private var projectToDelete: VikunjaProject?
+    @AppStorage(TaskSortPreferences.projectOrderKey) private var projectOrder: ProjectOrder = .server
 
     var body: some View {
         List(selection: $selection) {
@@ -26,7 +27,7 @@ struct Sidebar: View {
             }
 
             Section {
-                ForEach(store.projectTree(expanded: store.projectExpansion.expanded)) { row in
+                ForEach(store.projectTree(expanded: store.projectExpansion.expanded, order: projectOrder)) { row in
                     let project = row.project
                     let projectColor = Color(vikunjaHex: project.hexColor) ?? Color.accentColor
                     HStack(spacing: 11) {

@@ -37,6 +37,24 @@ enum ProjectTieBreak: String, CaseIterable, Identifiable {
     }
 }
 
+/// How the projects list itself is ordered — separate from `TaskSortField`,
+/// which only orders the tasks inside a project/day, never the projects.
+enum ProjectOrder: String, CaseIterable, Identifiable {
+    /// Whatever order the server returned the projects in — Vikunja's own
+    /// (drag/position) order, matching the web UI and other Vikunja clients.
+    case server
+    case alphabetical
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .server:       return "Server Order"
+        case .alphabetical: return "Alphabetical"
+        }
+    }
+}
+
 /// Which end of a dated list the tasks with no due date hang off.
 enum UndatedPlacement: String, CaseIterable, Identifiable {
     case bottom
@@ -113,4 +131,15 @@ enum TaskSortPreferences {
     static let fieldKey = "vikunja_task_sort_field"
     static let projectTieBreakKey = "vikunja_task_sort_project_tiebreak"
     static let undatedKey = "vikunja_task_sort_undated"
+    static let projectOrderKey = "vikunja_project_sort_order"
+
+    /// Non-reactive read for call sites that aren't SwiftUI views (`TaskStore`
+    /// is `@Observable`, but a plain `UserDefaults` read inside a computed
+    /// property isn't a tracked dependency) — views pass their own
+    /// `@AppStorage(projectOrderKey)` value instead so the list redraws the
+    /// moment the setting changes.
+    static var projectOrder: ProjectOrder {
+        UserDefaults.standard.string(forKey: projectOrderKey)
+            .flatMap(ProjectOrder.init(rawValue:)) ?? .server
+    }
 }

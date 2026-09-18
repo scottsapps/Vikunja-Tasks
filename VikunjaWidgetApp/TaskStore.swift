@@ -100,11 +100,13 @@ final class TaskStore {
 
     /// The projects listed under the "Projects" heading — everything except
     /// the Inbox, which has its own row. Sidebar, iPhone root list and the
-    /// launch-page picker all show this same list.
-    var visibleProjects: [VikunjaProject] {
-        projects
-            .filter { $0.title.lowercased() != "inbox" }
-            .sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
+    /// launch-page picker all show this same list. `order` defaults to the
+    /// non-reactive preference read for internal callers that don't need to
+    /// redraw on change; a view passes its own `@AppStorage`-backed value.
+    func visibleProjects(order: ProjectOrder = TaskSortPreferences.projectOrder) -> [VikunjaProject] {
+        let base = projects.filter { $0.title.lowercased() != "inbox" }
+        guard order == .alphabetical else { return base }
+        return base.sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
     }
 
     func tasks(for project: VikunjaProject) -> [VikunjaTask] {
@@ -138,15 +140,15 @@ final class TaskStore {
     /// `projectTree`, which runs during view evaluation.
     @ObservationIgnored private var loggedProjectCycle = false
 
-    /// `visibleProjects` (already Inbox-less and title-sorted) split into its
-    /// roots and a parent-id → children map. A project whose `parentId` names
-    /// something **not** in `visibleProjects` is a root: a child of the Inbox,
-    /// of a project the token can't read, or of one deleted server-side but
-    /// still in a stale cache would otherwise hang off a parent that never
-    /// renders and vanish from the list entirely. Siblings keep
-    /// `visibleProjects`' order.
-    private func projectHierarchy() -> (roots: [VikunjaProject], children: [Int: [VikunjaProject]]) {
-        let visible = visibleProjects
+    /// `visibleProjects(order:)` (already Inbox-less, ordered per the
+    /// `ProjectOrder` preference) split into its roots and a parent-id →
+    /// children map. A project whose `parentId` names something **not** in
+    /// `visibleProjects` is a root: a child of the Inbox, of a project the
+    /// token can't read, or of one deleted server-side but still in a stale
+    /// cache would otherwise hang off a parent that never renders and vanish
+    /// from the list entirely. Siblings keep `visibleProjects`' order.
+    private func projectHierarchy(order: ProjectOrder = TaskSortPreferences.projectOrder) -> (roots: [VikunjaProject], children: [Int: [VikunjaProject]]) {
+        let visible = visibleProjects(order: order)
         let ids = Set(visible.map(\.id))
         var children: [Int: [VikunjaProject]] = [:]
         var roots: [VikunjaProject] = []
@@ -169,8 +171,8 @@ final class TaskStore {
     /// (A → B → A) is cut by the ancestor set carried down the walk, and a
     /// pure cycle with no external root — whose members no walk ever reaches —
     /// is swept up at the end and shown flat at the top level.
-    func projectTree(expanded: Set<Int>) -> [ProjectTreeRow] {
-        let (roots, children) = projectHierarchy()
+    func projectTree(expanded: Set<Int>, order: ProjectOrder = TaskSortPreferences.projectOrder) -> [ProjectTreeRow] {
+        let (roots, children) = projectHierarchy(order: order)
         var rows: [ProjectTreeRow] = []
         var emitted: Set<Int> = []
 
@@ -205,7 +207,7 @@ final class TaskStore {
 
         // A pure cycle (or a self-parent) has no root, so nothing above ever
         // reached its members. Show them flat rather than let them vanish.
-        for project in visibleProjects where !emitted.contains(project.id) {
+        for project in visibleProjects(order: order) where !emitted.contains(project.id) {
             if !loggedProjectCycle {
                 DiagnosticLog.warn("project tree: unrooted project hoisted to top level")
                 loggedProjectCycle = true

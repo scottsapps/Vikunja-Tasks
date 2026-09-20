@@ -22,6 +22,9 @@ struct TaskGroup {
     /// True for the section that holds today's tasks (overdue folded in).
     /// The pager only appears when one of *these* is off the page.
     var isToday: Bool = false
+    /// True for tomorrow's section. Paging runs until today's and tomorrow's
+    /// tasks have all been reachable, and no further.
+    var isTomorrow: Bool = false
 
     /// The first `limit` tasks across `groups`, keeping the date sections
     /// intact and dropping any section left empty. Used by the provider's
@@ -34,7 +37,7 @@ struct TaskGroup {
             let take = min(remaining, group.tasks.count)
             result.append(TaskGroup(label: group.label,
                                     tasks: Array(group.tasks.prefix(take)),
-                                    isToday: group.isToday))
+                                    isToday: group.isToday, isTomorrow: group.isTomorrow))
             remaining -= take
         }
         return result
@@ -52,7 +55,7 @@ struct TaskGroup {
             }
             result.append(TaskGroup(label: group.label,
                                     tasks: Array(group.tasks.dropFirst(remaining)),
-                                    isToday: group.isToday))
+                                    isToday: group.isToday, isTomorrow: group.isTomorrow))
             remaining = 0
         }
         return result
@@ -68,6 +71,12 @@ struct VikunjaEntry: TimelineEntry {
     let todayCount: Int
     /// How many tasks were skipped to reach this page. 0 is the first page.
     var pageOffset: Int = 0
+    /// Today's and tomorrow's tasks from `pageOffset` onward, counted *before*
+    /// the per-page cap — the pager needs the real remainder, not what survived
+    /// the cap. Forward is enabled while this exceeds what the page shows.
+    var soonRemaining: Int = 0
+    /// The today-only share of `soonRemaining`, for the `+N` count.
+    var todayRemaining: Int = 0
 
     static let placeholder = VikunjaEntry(
         date: Date(),

@@ -19,7 +19,14 @@ struct VikunjaWidgetEntryView: View {
 
     private var contentPadding: EdgeInsets {
         #if os(macOS)
-        return inset(by: 8, 8)
+        // The pager sits in the header, top-trailing. macOS reserves the widget's
+        // extreme corner for its own hover chrome (Edit Widget) and swallows taps
+        // there, so keep the pager at least this far in from both edges — the same
+        // fix the calendar widget carries (`Metrics.chevronHitInset`).
+        let base = inset(by: 8, 8)
+        let floor: CGFloat = 18
+        return EdgeInsets(top: max(base.top, floor), leading: base.leading,
+                          bottom: base.bottom, trailing: max(base.trailing, floor))
         #else
         switch family {
         // Left and right match `.systemLarge` exactly — the wide gutter is what
@@ -192,67 +199,66 @@ struct VikunjaWidgetEntryView: View {
 
     // MARK: - Paging
 
-    /// What the pager should offer for a candidate list of `limit` tasks, or
-    /// `nil` for no pager at all.
+    /// What the pager draws for a candidate list of `limit` tasks, or `nil`
+    /// on the families that have no pager.
     ///
-    /// It earns its place only when a task due **today** got pushed off the
-    /// page — a widget whose whole point is today shouldn't spend a control on
-    /// "there is more next week". The one exception is the way back: once
-    /// you've paged forward, the control stays so you can return.
+    /// Always present on medium and large, chevrons disabled rather than hidden
+    /// when there is nowhere to go — chrome that appears and disappears between
+    /// reloads reads as broken, and it is how the pager came to look lost. Forward
+    /// stays enabled until every task due today *or tomorrow* has been reachable;
+    /// later days never earn a page. The `+N` count speaks only for tasks due
+    /// **today** that got pushed off the page.
     ///
     /// Each fit candidate asks this for its own `limit`, so the pager's height
     /// is part of what `ViewThatFits` measures — a list only "fits" if it fits
     /// *with* the control it would draw.
     private struct Pager {
-        /// Nil when nothing of today's is hidden — then there is only a way back.
+        /// Today's tasks off the page; nil when none are.
         let hiddenToday: Int?
         let canGoBack: Bool
+        let canGoForward: Bool
     }
 
     private func pager(limit: Int) -> Pager? {
         guard family == .systemMedium || family == .systemLarge else { return nil }
-        let todayOnPage = entry.taskGroups.first?.isToday == true
-            ? entry.taskGroups[0].tasks.count : 0
-        let hiddenToday = todayOnPage - limit
-        let canGoBack = entry.pageOffset > 0
-        guard hiddenToday > 0 || canGoBack else { return nil }
-        return Pager(hiddenToday: hiddenToday > 0 ? hiddenToday : nil, canGoBack: canGoBack)
+        let hiddenToday = entry.todayRemaining - limit
+        return Pager(hiddenToday: hiddenToday > 0 ? hiddenToday : nil,
+                     canGoBack: entry.pageOffset > 0,
+                     canGoForward: entry.soonRemaining > limit)
     }
 
     @ViewBuilder
     private func pageButtons(_ pager: Pager, limit: Int) -> some View {
         let familyKey = String(describing: family)
         HStack(spacing: 1) {
-            if pager.canGoBack {
-                Button(intent: ShowPageIntent(familyKey: familyKey, offset: 0, isForward: false)) {
-                    pageGlyph { Image(systemName: "chevron.left") }
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Show the previous tasks")
+            Button(intent: ShowPageIntent(familyKey: familyKey, offset: 0, isForward: false)) {
+                pageGlyph(enabled: pager.canGoBack) { Image(systemName: "chevron.left") }
             }
-            if let hidden = pager.hiddenToday {
-                // Forward moves past exactly what this page shows; where it
-                // came from is recorded by the intent, so back is exact.
-                Button(intent: ShowPageIntent(familyKey: familyKey,
-                                              offset: entry.pageOffset + limit,
-                                              isForward: true)) {
-                    pageGlyph {
-                        Text("+\(hidden)")
-                        Image(systemName: "chevron.right")
-                    }
+            .buttonStyle(.plain)
+            .disabled(!pager.canGoBack)
+            .accessibilityLabel("Show the previous tasks")
+            // Forward moves past exactly what this page shows; where it
+            // came from is recorded by the intent, so back is exact.
+            Button(intent: ShowPageIntent(familyKey: familyKey,
+                                          offset: entry.pageOffset + limit,
+                                          isForward: true)) {
+                pageGlyph(enabled: pager.canGoForward) {
+                    if let hidden = pager.hiddenToday { Text("+\(hidden)") }
+                    Image(systemName: "chevron.right")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Show \(hidden) more of today's tasks")
             }
+            .buttonStyle(.plain)
+            .disabled(!pager.canGoForward)
+            .accessibilityLabel(pager.hiddenToday.map { "Show \($0) more of today's tasks" } ?? "Show more tasks")
         }
     }
 
-    private func pageGlyph<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+    private func pageGlyph<Content: View>(enabled: Bool, @ViewBuilder _ content: () -> Content) -> some View {
         HStack(spacing: 2) {
             content()
         }
         .font(.system(size: 9, weight: .semibold))
-        .foregroundStyle(.secondary)
+        .foregroundStyle(enabled ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
         .padding(.horizontal, 5)
         .padding(.vertical, 3)
         .contentShape(Rectangle())

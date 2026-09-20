@@ -123,7 +123,9 @@ struct VikunjaTimelineProvider: TimelineProvider {
             taskGroups: cap(page, family: family),
             error: nil,
             todayCount: todayCount(allItems),
-            pageOffset: offset
+            pageOffset: offset,
+            soonRemaining: page.filter { $0.isToday || $0.isTomorrow }.reduce(0) { $0 + $1.tasks.count },
+            todayRemaining: page.filter(\.isToday).reduce(0) { $0 + $1.tasks.count }
         )
     }
 
@@ -178,6 +180,7 @@ struct VikunjaTimelineProvider: TimelineProvider {
     private func group(_ tasks: [TaskEntryItem]) -> [TaskGroup] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
+        let tomorrow = cal.date(byAdding: .day, value: 1, to: today)
 
         var buckets: [Date: [TaskEntryItem]] = [:]
         for task in tasks {
@@ -188,7 +191,7 @@ struct VikunjaTimelineProvider: TimelineProvider {
 
         return buckets.keys.sorted().compactMap { day -> TaskGroup? in
             let sorted = buckets[day]!.sorted { $0.title.lowercased() < $1.title.lowercased() }
-            return TaskGroup(label: DayLabel.groupHeader(day), tasks: sorted, isToday: day == today)
+            return TaskGroup(label: DayLabel.groupHeader(day), tasks: sorted, isToday: day == today, isTomorrow: day == tomorrow)
         }
     }
 

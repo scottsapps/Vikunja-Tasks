@@ -8,7 +8,7 @@
 //
 //  Two switches, deliberately separate:
 //
-//      Enable Calendar        ← master. Grants access; powers the widget.
+//      Show Calendar in Veyrn        ← master. Grants access; powers the widget.
 //      └─ Show in Scheduled   ← only the task list. Opt-out, default on.
 //
 //  Wanting the calendar widget is not the same as wanting events interleaved into
@@ -40,7 +40,7 @@ struct CalendarSettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Toggle("Enable Calendar", isOn: $calendarEnabled)
+            Toggle("Show Calendar in Veyrn", isOn: $calendarEnabled)
                 .onChange(of: calendarEnabled) { _, on in
                     // The binding has already written to the App Group, which is what
                     // the widget reads — so this only has to nudge it and reload.
@@ -58,7 +58,7 @@ struct CalendarSettingsView: View {
                 case .fullAccess:
                     grantedControls
                 case .notDetermined:
-                    Button("Grant Calendar Access") {
+                    Button("Continue") {
                         Task { await model.requestAccessAndLoad() }
                     }
                     .buttonStyle(.bordered)

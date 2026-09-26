@@ -51,6 +51,7 @@ struct AccountsPane: View {
                 }
                 .onChange(of: telemetryOptIn) { _, v in
                     UserDefaults.standard.set(v, forKey: "vikunja_telemetry_opt_in")
+                    VeyrnTelemetry.setOptIn(v)
                 }
             }
             #endif
@@ -129,7 +130,7 @@ struct AccountsPane: View {
         .onTapGesture {
             guard !isActive else { return }
             Task {
-                await store.switchAccount(to: account.id)
+                await store.switchAccount(to: account.id, reason: .userSwitch)
                 reload()
                 onChange?()
             }

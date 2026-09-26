@@ -41,8 +41,10 @@ final class CalendarAccessModel {
         let store = store ?? EKEventStore()
         self.store = store
         do {
-            _ = try await store.requestFullAccessToEvents()
+            let granted = try await store.requestFullAccessToEvents()
+            VeyrnTelemetry.signal("Calendar.accessRequested", parameters: ["result": granted ? "granted" : "denied"])
         } catch {
+            VeyrnTelemetry.signal("Calendar.accessRequested", parameters: ["result": "denied"])
             // A denial isn't an error worth showing as one — `authorization` below
             // already says so, and the section renders the denied state.
             DiagnosticLog.info("calendar access request finished without grant")

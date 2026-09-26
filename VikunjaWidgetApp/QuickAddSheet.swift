@@ -20,6 +20,10 @@ struct QuickAddSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var cs
 
+    /// `source` for TaskCreated / SubtaskAdded: the global-hotkey panel is
+    /// `quickAddPanel`, the in-app "+" and ⌘N sheet is `quickAdd`.
+    private var telemetrySource: String { isFloatingPanel ? "quickAddPanel" : "quickAdd" }
+
     @State private var inputText = ""
     @State private var isSubmitting = false
     @State private var errorMessage: String?
@@ -753,7 +757,8 @@ struct QuickAddSheet: View {
                     labels: resolvedLabels,
                     reminders: effectiveReminders,
                     repeatAfter: effectiveRepeatAfter,
-                    repeatMode: effectiveRepeatMode
+                    repeatMode: effectiveRepeatMode,
+                    source: telemetrySource
                 )
             } else {
                 guard store.reachability.isOnline else {
@@ -776,9 +781,9 @@ struct QuickAddSheet: View {
                     for subTitle in pendingSubtasks {
                         let sub = try await VikunjaAPI.createTask(projectId: project.id, title: subTitle)
                         try await VikunjaAPI.addRelation(taskId: created.id, otherTaskId: sub.id, kind: "subtask")
-                        VeyrnTelemetry.signal("SubtaskAdded")
+                        VeyrnTelemetry.signal("SubtaskAdded", parameters: ["source": telemetrySource])
                     }
-                    VeyrnTelemetry.signal("TaskCreated")
+                    VeyrnTelemetry.signal("TaskCreated", parameters: ["source": telemetrySource])
                     // Once for the parent + all its subtasks, not once per subtask.
                     ChangeBeacon.publish(reason: "create task with subtasks")
                     await store.refresh()

@@ -33,6 +33,8 @@ struct CalendarSettingsView: View {
     private var showInScheduled: Bool = true
 
     @State private var model = CalendarAccessModel()
+    /// Once per presentation.
+    @State private var didSignalView = false
 
     private var selectedCount: Int {
         model.calendars.filter { model.selection.includes($0) }.count
@@ -68,7 +70,13 @@ struct CalendarSettingsView: View {
                 }
             }
         }
-        .task { await model.load() }
+        .task {
+            if !didSignalView {
+                didSignalView = true
+                VeyrnTelemetry.signal("Calendar.settingsViewed")
+            }
+            await model.load()
+        }
     }
 
     // MARK: - Access denied

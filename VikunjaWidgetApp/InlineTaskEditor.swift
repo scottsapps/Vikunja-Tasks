@@ -693,7 +693,7 @@ struct InlineTaskEditor: View {
                     try await VikunjaAPI.reopenTask(id: subtask.id)
                 } else {
                     try await VikunjaAPI.completeTask(id: subtask.id)
-                    VeyrnTelemetry.signal("TaskCompleted")
+                    VeyrnTelemetry.signal("TaskCompleted", parameters: ["source": "app"])
                 }
             } catch {
                 // revert the optimistic flip
@@ -715,7 +715,7 @@ struct InlineTaskEditor: View {
             let newTask = try await VikunjaAPI.createTask(projectId: task.projectId, title: t)
             try await VikunjaAPI.addRelation(taskId: task.id, otherTaskId: newTask.id, kind: "subtask")
             loadedSubtasks = (loadedSubtasks ?? []) + [newTask]
-            VeyrnTelemetry.signal("SubtaskAdded")
+            VeyrnTelemetry.signal("SubtaskAdded", parameters: ["source": "app"])
         } catch {
             newSubtaskTitle = t
         }

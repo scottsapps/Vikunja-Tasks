@@ -60,6 +60,7 @@ final class NotificationResponseHandler: NSObject, UNUserNotificationCenterDeleg
                 let succeeded = (try? await VikunjaAPI.completeTask(id: taskId)) != nil
                 DiagnosticLog.info("notification action COMPLETE_TASK task \(taskId) → \(succeeded ? "ok" : "failed")")
                 if succeeded {
+                    VeyrnTelemetry.signal("TaskCompleted", parameters: ["source": "notification"])
                     // The task may carry further reminders, and this one may
                     // have a snoozed copy armed — neither should survive it
                     // being completed.

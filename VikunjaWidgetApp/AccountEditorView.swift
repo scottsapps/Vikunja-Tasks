@@ -35,6 +35,9 @@ struct AccountEditorView: View {
         return nil
     }
 
+    /// `.onAppear` can re-fire within one presentation; signal the open once.
+    @State private var didSignalFormOpen = false
+
     var body: some View {
         NavigationStack {
             fields
@@ -51,7 +54,13 @@ struct AccountEditorView: View {
                         .disabled(!canSave)
                 }
             }
-            .onAppear { loadInitial() }
+            .onAppear {
+                loadInitial()
+                if !isEditMode, !didSignalFormOpen {
+                    didSignalFormOpen = true
+                    VeyrnTelemetry.signInFormOpened(context: "addAccount")
+                }
+            }
             .confirmationDialog(
                 "Delete \"\(editingAccount?.name ?? "")\"?",
                 isPresented: $showDeleteConfirm,
@@ -193,7 +202,7 @@ struct AccountEditorView: View {
             Task {
                 if isActive {
                     if hostChanged {
-                        await store.switchAccount(to: original.id)
+                        await store.switchAccount(to: original.id, reason: .hostEdited)
                     } else {
                         await store.refresh()
                     }
@@ -207,9 +216,11 @@ struct AccountEditorView: View {
                 try VikunjaConfig.addAccount(account, token: trimmedToken)
             } catch VikunjaConfig.AccountError.limitReached {
                 errorMessage = "Maximum of 5 accounts."
+                VeyrnTelemetry.signInFormError(reason: "limitReached")
                 return
             } catch VikunjaConfig.AccountError.duplicateName {
                 errorMessage = "An account is already named \"\(trimmedName)\"."
+                VeyrnTelemetry.signInFormError(reason: "duplicateName")
                 return
             } catch {
                 return
@@ -220,7 +231,7 @@ struct AccountEditorView: View {
             ])
 
             Task {
-                await store.switchAccount(to: account.id)
+                await store.switchAccount(to: account.id, reason: .newAccount)
                 onComplete()
             }
             dismiss()

@@ -36,6 +36,8 @@ struct CompleteTaskIntent: AppIntent {
             // without this the OS still fires it for a task finished from the
             // widget, right up until the app's next refresh reconciles.
             await ReminderStore.cancel(taskId: taskId, reason: "completed in widget")
+            // No TelemetryDeck in the extension: the app flushes this at next launch.
+            TelemetryCounters.increment(event: "TaskCompleted", source: "widget")
         } catch {
             intentLog.error("completeTask(\(taskId, privacy: .public)) failed: \(error.localizedDescription, privacy: .public)")
             DiagnosticLog.warn("CompleteTaskIntent task \(taskId) → \(VeyrnError.logDescription(for: error))")

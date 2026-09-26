@@ -367,9 +367,20 @@ final class TaskStore {
             lastRefreshAt = Date()
             lastReportedFailure = nil
             Task { await VeyrnTelemetry.probeServerInfoIfNeeded() }
+            VeyrnTelemetry.flushExtensionCounters()
+            let (accountCount, projectCount, openCount, outboxDepth) =
+                (VikunjaConfig.accounts.count, projects.count, undoneTasks.count, outbox.ops.count)
+            Task {
+                await VeyrnTelemetry.sendDailySnapshotIfNeeded(
+                    accountCount: accountCount, projectCount: projectCount,
+                    openTaskCount: openCount, outboxDepth: outboxDepth)
+            }
             logRefreshOk(elapsed: DiagnosticLog.elapsed(refreshClock))
         } catch {
             lastRefreshError = error
+            if !VeyrnError.isCancellation(error) && !VeyrnError.isConnectivityOnly(error) {
+                VeyrnTelemetry.syncFailed(op: "refresh", error: error)
+            }
             let tier: String
             if VeyrnError.isCancellation(error) {
                 // Our own doing — quitting, switching accounts, tearing down a
@@ -467,8 +478,13 @@ final class TaskStore {
     /// would otherwise leak across accounts: in-memory task state, the
     /// outbox (per-account keyed), the widget cache, scheduled reminders,
     /// and (iOS) the Watch's config snapshot. Order matters — see plan §2d.
+    /// Why the active account is changing. Only `.userSwitch` is an
+    /// `AccountSwitched` telemetry event — a new account is already covered by
+    /// `SignedIn`, and 117 of 130 senders had one account, i.e. were signing in.
+    enum SwitchReason { case userSwitch, newAccount, hostEdited, accountDeleted }
+
     @MainActor
-    func switchAccount(to id: UUID) async {
+    func switchAccount(to id: UUID, reason: SwitchReason) async {
         let accounts = VikunjaConfig.accounts
         let fromIndex = accounts.firstIndex(where: { $0.id == VikunjaConfig.activeAccountId }).map { $0 + 1 }
         let toIndex = accounts.firstIndex(where: { $0.id == id }).map { $0 + 1 } ?? 0
@@ -484,9 +500,21 @@ final class TaskStore {
         DiagnosticLog.info("watch config synced")
         #endif
         VeyrnTelemetry.resetServerInfoGuard()
-        VeyrnTelemetry.accountSwitched(accountCount: VikunjaConfig.accounts.count)
+        if reason == .userSwitch {
+            VeyrnTelemetry.accountSwitched(accountCount: VikunjaConfig.accounts.count)
+        }
 
         await refreshWithRetry(reason: "switchAccount")
+
+        // `SignedIn` fires when credentials are *saved*, before anything checks
+        // them. This first refresh is the first proof they work.
+        if reason == .newAccount {
+            if let error = lastRefreshError {
+                if !VeyrnError.isCancellation(error) { VeyrnTelemetry.signInFailed(error) }
+            } else if lastRefreshAt != nil {
+                VeyrnTelemetry.signInVerified()
+            }
+        }
     }
 
     /// The last account was deleted — same per-account cleanup as
@@ -510,7 +538,7 @@ final class TaskStore {
     func handleAccountDeleted() async {
         DiagnosticLog.info("handleAccountDeleted")
         if let newActive = VikunjaConfig.activeAccount {
-            await switchAccount(to: newActive.id)
+            await switchAccount(to: newActive.id, reason: .accountDeleted)
         } else {
             await clearForNoAccounts()
         }
@@ -632,7 +660,8 @@ final class TaskStore {
         labels: [VikunjaLabel] = [],
         reminders: [Date] = [],
         repeatAfter: Int? = nil,
-        repeatMode: Int? = nil
+        repeatMode: Int? = nil,
+        source: String = "app"
     ) {
         let clientId = UUID()
         let placeholderId = outbox.nextPlaceholderId()
@@ -655,7 +684,7 @@ final class TaskStore {
         )
         outbox.append(op)
         rebuildMergedTasks()
-        VeyrnTelemetry.signal("TaskCreated")
+        VeyrnTelemetry.signal("TaskCreated", parameters: ["source": source])
         Task { await drainOutbox() }
     }
 
@@ -751,7 +780,7 @@ final class TaskStore {
 
     private func commitCompletion(task: VikunjaTask) async {
         DiagnosticLog.info("commit complete task \(task.id)")
-        VeyrnTelemetry.signal("TaskCompleted")
+        VeyrnTelemetry.signal("TaskCompleted", parameters: ["source": "app"])
         pendingUndo.removeValue(forKey: task.id)
         undoTimers.removeValue(forKey: task.id)
         var completedTask = task
@@ -1059,6 +1088,7 @@ final class TaskStore {
                 // remaining op carries the same credential and would fail the
                 // same way, and one alert beats one per queued op.
                 DiagnosticLog.warn("drain paused: \(opLabel(op)) → \(error.statusCode) (op kept)")
+                VeyrnTelemetry.syncFailed(op: "drain", error: error)
                 blockingFailure = error
                 break
             } catch let error as VikunjaAPI.APIError where error.isGone {
@@ -1079,6 +1109,9 @@ final class TaskStore {
             } catch {
                 // Network/server error — stop draining, retry next time
                 DiagnosticLog.warn("drain paused: \(VeyrnError.logDescription(for: error))")
+                if !VeyrnError.isCancellation(error) && !VeyrnError.isConnectivityOnly(error) {
+                    VeyrnTelemetry.syncFailed(op: "drain", error: error)
+                }
                 break
             }
         }

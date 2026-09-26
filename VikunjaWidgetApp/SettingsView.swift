@@ -45,6 +45,9 @@ struct SettingsView: View {
 
     private var isOnboarding: Bool { accounts.isEmpty }
 
+    /// `.onAppear` can re-fire within one presentation; signal the open once.
+    @State private var didSignalFormOpen = false
+
     var body: some View {
         // Two genuinely different screens. Onboarding stays a single inline form —
         // there is no account yet, so a list of categories would be a menu of things
@@ -92,7 +95,13 @@ struct SettingsView: View {
             .padding(.top, 16)
         }
         .padding(32)
-        .onAppear { reload() }
+        .onAppear {
+            reload()
+            if !didSignalFormOpen {
+                didSignalFormOpen = true
+                VeyrnTelemetry.signInFormOpened(context: "firstRun")
+            }
+        }
         .sheet(isPresented: $showBugReport) { BugReportSheet() }
     }
 
@@ -161,6 +170,7 @@ struct SettingsView: View {
                     }
                     .onChange(of: telemetryOptIn) { _, v in
                         UserDefaults.standard.set(v, forKey: "vikunja_telemetry_opt_in")
+                    VeyrnTelemetry.setOptIn(v)
                     }
                 }
 
@@ -568,6 +578,7 @@ struct SettingsView: View {
             try VikunjaConfig.addAccount(account, token: trimmedToken)
         } catch VikunjaConfig.AccountError.duplicateName {
             errorMessage = "An account is already named \"\(trimmedName)\"."
+            VeyrnTelemetry.signInFormError(reason: "duplicateName")
             return
         } catch {
             return
@@ -579,7 +590,7 @@ struct SettingsView: View {
 
         WidgetCenter.shared.reloadAllTimelines()
         Task {
-            await store.switchAccount(to: account.id)
+            await store.switchAccount(to: account.id, reason: .newAccount)
             reload()
             onSave?()
         }

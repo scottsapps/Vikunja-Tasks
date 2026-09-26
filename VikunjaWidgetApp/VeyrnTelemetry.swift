@@ -187,7 +187,13 @@ enum VeyrnTelemetry {
            Calendar.current.isDateInToday(last) { return }
         UserDefaults.standard.set(Date(), forKey: snapshotDateKey)
 
-        let configs = (try? await WidgetCenter.shared.currentConfigurations()) ?? []
+        // The async `currentConfigurations()` is iOS 18+; the completion form works
+        // on the iOS 17 / macOS 14 deployment targets.
+        let configs: [WidgetInfo] = await withCheckedContinuation { cont in
+            WidgetCenter.shared.getCurrentConfigurations { result in
+                cont.resume(returning: (try? result.get()) ?? [])
+            }
+        }
         func families(of kind: String) -> String {
             let set = Set(configs.filter { $0.kind == kind }.map { String(describing: $0.family) })
             return set.isEmpty ? "none" : set.sorted().joined(separator: "+")

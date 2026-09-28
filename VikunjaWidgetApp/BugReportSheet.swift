@@ -2,8 +2,8 @@ import SwiftUI
 
 /// The actual report-a-bug actions: explanation, log size, and the three
 /// buttons. Shared by `BugReportSheet` (iOS's and onboarding's modal) and the
-/// macOS Settings "Help" tab, which shows this directly — no launcher button
-/// in between — since a tab is already one click from Settings' root.
+/// macOS Settings "Support" tab, which shows this directly — no launcher
+/// button in between — since a tab is already one click from Settings' root.
 ///
 /// Logging is always on and local-only — nothing is transmitted until the
 /// user taps one of the two Send buttons, and View Log exists so the privacy
@@ -83,8 +83,9 @@ struct BugReportBody: View {
 }
 
 /// The iOS (and onboarding) entry point: `BugReportBody` wrapped in navigation
-/// chrome with a Cancel action, presented as a sheet. macOS's Settings "Help"
-/// tab shows `BugReportBody` directly instead — see that type's doc comment.
+/// chrome with a Cancel action, presented as a sheet. macOS's Settings
+/// "Support" tab shows `BugReportBody` directly instead — see that type's
+/// doc comment.
 struct BugReportSheet: View {
     @Environment(\.dismiss) private var dismiss
 

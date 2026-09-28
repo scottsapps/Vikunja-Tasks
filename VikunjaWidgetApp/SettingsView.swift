@@ -9,6 +9,7 @@ struct SettingsView: View {
 
     @State private var accounts: [VeyrnAccount] = []
     @State private var showBugReport = false
+    @State private var showHelp = false
 
     // Onboarding-only state — shown inline when there are no accounts yet,
     // matching the pre-multi-account first-run flow (no navigating two
@@ -103,6 +104,7 @@ struct SettingsView: View {
             }
         }
         .sheet(isPresented: $showBugReport) { BugReportSheet() }
+        .sheet(isPresented: $showHelp) { HelpSheet() }
     }
 
     // MARK: - Configured settings
@@ -174,10 +176,19 @@ struct SettingsView: View {
                     }
                 }
 
-                // A plain row, not a pane: this already is the report-a-bug
-                // screen's one meaningful action, so tapping it goes straight
-                // to the sheet instead of a "Help" landing page in between.
-                Section {
+                Section("Help") {
+                    // Pushed directly, not through `pane(_:)` — that wraps
+                    // content in a `ScrollView`, which collapses a WKWebView
+                    // to zero height.
+                    NavigationLink {
+                        HelpView()
+                    } label: {
+                        settingsRow("Help", systemImage: "questionmark.circle")
+                    }
+
+                    // A plain row, not a pane: this already is the report-a-bug
+                    // screen's one meaningful action, so tapping it goes straight
+                    // to the sheet instead of a landing page in between.
                     Button {
                         showBugReport = true
                     } label: {
@@ -339,17 +350,22 @@ struct SettingsView: View {
             .formStyle(.grouped)
             .tabItem { Label("Calendar", systemImage: "calendar") }
 
+            // The hosted Help page, same WebView as iOS's pushed "Help" row.
+            HelpView()
+                .tabItem { Label("Help", systemImage: "questionmark.circle") }
+
             // The tab *is* the report-a-bug screen — no launcher button in
             // between, since clicking the tab is already the one step.
             BugReportBody()
                 .padding(24)
-                .tabItem { Label("Help", systemImage: "ladybug") }
+                .tabItem { Label("Support", systemImage: "ladybug") }
         }
         // No padding on the `TabView` itself — that would also pad the tab
         // bar inward, away from the window edge, which no native Mac
         // Settings window does. `.formStyle(.grouped)` gives the Form tabs
-        // their own inset; the Help tab gets an explicit one instead, since
-        // `BugReportBody` is a plain `VStack`, not a `Form`.
+        // their own inset; the Support tab gets an explicit one instead,
+        // since `BugReportBody` is a plain `VStack`, not a `Form`. The Help
+        // tab needs neither — a WKWebView fills its tab pane on its own.
         .frame(width: 520, height: 480)
         .onAppear { reload() }
     }
@@ -397,6 +413,15 @@ struct SettingsView: View {
 
     private var helpSection: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // Stuck on where to get the API token below? This is the one
+            // piece of Help content onboarding actually needs.
+            Button {
+                showHelp = true
+            } label: {
+                Label("Help", systemImage: "questionmark.circle")
+            }
+            .buttonStyle(.bordered)
+
             Button {
                 showBugReport = true
             } label: {

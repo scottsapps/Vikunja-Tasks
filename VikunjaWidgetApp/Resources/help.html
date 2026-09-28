@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Help — Veyrn</title>
+  <meta name="description" content="How to get the most out of Veyrn, a native Vikunja client for iPhone, iPad, Mac, and Apple Watch." />
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/veyrn-favicon-32.png" />
+  <link rel="apple-touch-icon" href="/assets/veyrn-favicon-180.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="site.css" />
+  <script src="site.js"></script>
+
+  <style>
+    /* ---- Help page layout overrides (shared shape with help.html) ---- */
+    .help-wrapper {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 0 40px 80px;
+      display: grid;
+      grid-template-columns: 216px 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+
+    .help-header {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 64px 40px 40px;
+    }
+    .help-header h1 {
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -1.2px;
+      line-height: 1.08;
+      margin-bottom: 10px;
+    }
+    .help-header p {
+      font-size: 16px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    /* ---- Sidebar TOC ---- */
+    .help-toc {
+      position: sticky;
+      top: 76px;
+      padding-top: 4px;
+    }
+    .help-toc .toc-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0 0 8px 10px;
+    }
+    .help-toc ol {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .help-toc a {
+      display: block;
+      padding: 7px 10px;
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+      transition: color 0.1s, background 0.1s;
+    }
+    .help-toc a:hover {
+      color: var(--text);
+      background: var(--surface);
+      text-decoration: none;
+    }
+
+    .help-toc-mobile { display: none; }
+
+    /* ---- Main content ---- */
+    .help-content {
+      min-width: 0;
+    }
+
+    .help-section {
+      margin-bottom: 48px;
+      scroll-margin-top: 76px;
+    }
+    .help-section:last-child { margin-bottom: 0; }
+
+    .help-section > h2 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin: 0 0 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .help-section h3 {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.1px;
+      color: var(--text);
+      margin: 20px 0 6px;
+    }
+
+    .help-section p {
+      font-size: 15px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      line-height: 1.65;
+    }
+    .help-section p:last-child { margin-bottom: 0; }
+    .help-section strong { color: var(--text); font-weight: 600; }
+
+    .help-note {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin: 14px 0;
+    }
+    .help-note p { font-size: 14px; color: var(--muted); margin-bottom: 0; }
+
+    ol.help-steps,
+    ul.help-list {
+      padding-left: 1.3em;
+      margin: 8px 0 12px;
+    }
+    ol.help-steps li,
+    ul.help-list li {
+      font-size: 15px;
+      color: var(--muted);
+      margin-bottom: 7px;
+      line-height: 1.6;
+    }
+
+    /* Quick Add token table */
+    .help-table-wrap {
+      overflow-x: auto;
+      margin: 12px 0 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    table.help-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    table.help-table th,
+    table.help-table td {
+      text-align: left;
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    table.help-table tr:last-child td { border-bottom: none; }
+    table.help-table th {
+      background: var(--surface);
+      font-weight: 600;
+      color: var(--text);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    table.help-table td:first-child { color: var(--text); white-space: nowrap; }
+    table.help-table td:first-child code { white-space: nowrap; }
+    table.help-table td:last-child { color: var(--muted); }
+    table.help-table code {
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-size: 13px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+
+    .help-section code {
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-size: 13.5px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+
+    pre.help-code {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      margin: 10px 0 14px;
+    }
+    pre.help-code code {
+      background: none;
+      padding: 0;
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--text);
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+
+    .text-muted { color: var(--muted); font-size: 14px; }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 860px) {
+      .help-wrapper {
+        grid-template-columns: 1fr;
+        gap: 0;
+        padding: 0 22px 60px;
+      }
+      .help-header { padding: 40px 22px 24px; }
+      .help-header h1 { font-size: 32px; }
+      .help-toc { display: none; }
+
+      .help-section { scroll-margin-top: 116px; }
+
+      .help-toc-mobile {
+        display: block;
+        position: sticky;
+        top: 57px;
+        z-index: 50;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+        margin: 0 -22px 24px;
+        padding: 0 22px;
+      }
+      .help-toc-mobile summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 13px 0;
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .help-toc-mobile summary::-webkit-details-marker { display: none; }
+      .help-toc-mobile summary::after {
+        content: "⌄";
+        margin-left: auto;
+        color: var(--muted);
+        transition: transform 0.15s ease;
+        display: inline-block;
+      }
+      .help-toc-mobile[open] summary::after { transform: rotate(180deg); }
+      .help-toc-mobile ol {
+        list-style: none;
+        margin: 0;
+        padding: 0 0 10px;
+      }
+      .help-toc-mobile a {
+        display: block;
+        padding: 9px 8px;
+        border-radius: 8px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .help-toc-mobile a:hover { background: var(--surface); color: var(--text); text-decoration: none; }
+    }
+
+    @media (max-width: 640px) {
+      .site-nav ul { display: none; }
+    }
+  </style>
+
+  <!-- GoatCounter analytics -->
+  <script data-goatcounter="https://scottsapps.goatcounter.com/count"
+          async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+  <button class="theme-toggle" aria-label="Toggle theme" type="button">
+    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"></circle>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+    </svg>
+    <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  </button>
+
+  <nav class="site-nav">
+    <a class="brand" href="index.html">
+      <img src="assets/icon-scotuswatch-ios.png" alt="" />
+      <span>SCOTUSWatch</span>
+    </a>
+    <ul>
+      <li><a href="veyrn.html">Veyrn</a></li>
+      <li><a href="veyrn-help.html" aria-current="page">Veyrn Help</a></li>
+      <li><a href="index.html#other-apps">Other Apps</a></li>
+      <li><a href="help.html">SCOTUSWatch Help</a></li>
+      <li><a href="support.html">Support</a></li>
+      <li><a href="privacy.html">Privacy</a></li>
+      <li><a href="TOS.html">Terms</a></li>
+      <li><a href="https://ko-fi.com/scott63157" target="_blank" rel="noopener noreferrer" class="tip-link">☕ Tip Jar</a></li>
+    </ul>
+  </nav>
+
+  <div class="help-header">
+    <div class="eyebrow">Veyrn</div>
+    <h1>Help</h1>
+    <p>How to get the most out of Veyrn on iPhone, iPad, Mac, and Apple Watch.</p>
+  </div>
+
+  <div class="help-wrapper">
+
+    <!-- Desktop sidebar -->
+    <nav class="help-toc" aria-label="Contents">
+      <p class="toc-label">Contents</p>
+      <ol>
+        <li><a href="#getting-started">Getting Started</a></li>
+        <li><a href="#adding-tasks">Adding Tasks</a></li>
+        <li><a href="#organizing-tasks">Organizing Tasks</a></li>
+        <li><a href="#task-editor">The Task Editor</a></li>
+        <li><a href="#reminders-notifications">Reminders &amp; Notifications</a></li>
+        <li><a href="#calendar">Calendar</a></li>
+        <li><a href="#widgets">Widgets</a></li>
+        <li><a href="#apple-watch">Apple Watch</a></li>
+        <li><a href="#working-offline">Working Offline</a></li>
+        <li><a href="#multiple-accounts">Multiple Accounts</a></li>
+        <li><a href="#settings">Settings</a></li>
+        <li><a href="#search">Search</a></li>
+        <li><a href="#reporting-a-problem">Reporting a Problem</a></li>
+      </ol>
+    </nav>
+
+    <main class="help-content">
+
+      <!-- Mobile TOC -->
+      <details class="help-toc-mobile">
+        <summary>Contents</summary>
+        <ol>
+          <li><a href="#getting-started">Getting Started</a></li>
+          <li><a href="#adding-tasks">Adding Tasks</a></li>
+          <li><a href="#organizing-tasks">Organizing Tasks</a></li>
+          <li><a href="#task-editor">The Task Editor</a></li>
+          <li><a href="#reminders-notifications">Reminders &amp; Notifications</a></li>
+          <li><a href="#calendar">Calendar</a></li>
+          <li><a href="#widgets">Widgets</a></li>
+          <li><a href="#apple-watch">Apple Watch</a></li>
+          <li><a href="#working-offline">Working Offline</a></li>
+          <li><a href="#multiple-accounts">Multiple Accounts</a></li>
+          <li><a href="#settings">Settings</a></li>
+          <li><a href="#search">Search</a></li>
+          <li><a href="#reporting-a-problem">Reporting a Problem</a></li>
+        </ol>
+      </details>
+
+      <!-- Getting Started -->
+      <section id="getting-started" class="help-section">
+        <h2>Getting Started</h2>
+        <p>Veyrn is a native app for <strong>Vikunja</strong>, the open-source, self-hosted task manager. To use Veyrn you need a Vikunja server: either one you host yourself, or an account on <a href="https://vikunja.cloud" target="_blank" rel="noopener noreferrer">Vikunja Cloud</a>.</p>
+        <p>To connect to your Vikunja server:</p>
+        <ol class="help-steps">
+          <li>In Vikunja's web interface, go to <strong>Settings → API Tokens</strong> and create a new token (Veyrn needs at least read and write access to tasks, projects, and labels, but full access is recommended).</li>
+          <li>Set your expiration date (remember that the token — and Veyrn — will stop working as of that date).</li>
+          <li>Once you have the API token, enter your server's address and token in Veyrn.</li>
+          <li>Give the account a short name (useful once you have more than one).</li>
+        </ol>
+        <p>Veyrn talks directly to your Vikunja server — there's no developer-run backend in between, and nothing about your tasks passes through anything ScottsApps operates.</p>
+      </section>
+
+      <!-- Adding Tasks -->
+      <section id="adding-tasks" class="help-section">
+        <h2>Adding Tasks</h2>
+
+        <h3>Quick Add</h3>
+        <p>Quick Add is the fastest way to get a task in — type it the way you'd say it, and Veyrn picks the due date, project, labels, priority, and repeat out of the sentence as you type, showing a live preview of what it parsed.</p>
+        <ul class="help-list">
+          <li><strong>On iPhone/iPad</strong>: tap + from any list, or the Quick Add row.</li>
+          <li><strong>On Mac</strong>: press ⌃Space (customizable in Settings) from anywhere on your Mac, or ⌘N from inside Veyrn. The global shortcut opens a small floating panel without switching away from whatever app you were using.</li>
+        </ul>
+
+        <p><strong>What Quick Add understands, typed anywhere in the text:</strong></p>
+        <div class="help-table-wrap">
+          <table class="help-table">
+            <thead>
+              <tr><th>Type this</th><th>To set</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>*label</code></td><td>A label (matches an existing label by prefix, or creates a new one)</td></tr>
+              <tr><td><code>+project</code></td><td>The destination project (matches an existing project by prefix)</td></tr>
+              <tr><td><code>!1</code> – <code>!5</code></td><td>Priority, 1 (lowest) to 5 (highest, "DO NOW")</td></tr>
+              <tr><td><code>today</code>, <code>tomorrow</code>/<code>tom</code>, <code>tonight</code></td><td>A due date</td></tr>
+              <tr><td><code>monday</code>, <code>tue</code>, <code>next friday</code>, etc.</td><td>The next occurrence of that weekday</td></tr>
+              <tr><td><code>apr 30</code>, <code>30 april</code>, <code>apr 30 2027</code></td><td>A specific date</td></tr>
+              <tr><td><code>2026-09-15</code>, <code>9/15</code>, <code>15.9.26</code></td><td>A specific date (numeric)</td></tr>
+              <tr><td><code>in 3 days</code>, <code>in two weeks</code>, <code>in 1 month</code></td><td>A relative date</td></tr>
+              <tr><td><code>next week</code>, <code>next month</code>, <code>end of month</code></td><td>A relative date</td></tr>
+              <tr><td><code>every day</code>, <code>daily</code>, <code>every 2 weeks</code>, <code>every monday</code></td><td>A repeat interval</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>For example, typing <code>Renew passport +Errands *urgent !4 in 3 weeks</code> creates a task titled "Renew passport" in the Errands project, tagged <em>urgent</em>, priority 4, due in three weeks — none of that text stays in the title.</p>
+        <p>Tap the chevron to expand Quick Add into full chips-and-cards mode, where you can also add a reminder, a repeat rule, or subtasks before saving (subtasks require being online, since each one needs to be created on the server).</p>
+
+        <h3>Bulk Import</h3>
+        <p>To add a batch of tasks at once — from Settings, or the toolbar's import option — prepare a plain text file shaped like this:</p>
+        <pre class="help-code"><code>Project Name
+label one, label two
+2026-10-01 First task title
+2026-10-03 Second task title
+2026-10-15 Third task title</code></pre>
+        <ul class="help-list">
+          <li><strong>Line 1</strong> is the project the tasks go into (created if it doesn't exist).</li>
+          <li><strong>Line 2</strong> is a comma-separated list of labels applied to every imported task (leave it blank if you don't want any).</li>
+          <li><strong>Every line after that</strong> is one task: a date in <code>yyyy-mm-dd</code> format, a space, then the title.</li>
+        </ul>
+        <p>Lines that don't match that shape are skipped and reported back to you rather than silently dropped.</p>
+      </section>
+
+      <!-- Organizing Tasks -->
+      <section id="organizing-tasks" class="help-section">
+        <h2>Organizing Tasks</h2>
+        <ul class="help-list">
+          <li><strong>Inbox</strong> — tasks with no project, the default landing spot.</li>
+          <li><strong>Scheduled</strong> — every task with a due date, grouped by day (overdue tasks fold into "Today"). If you've turned on the calendar feature, your calendar events for the day appear here too, above your tasks.</li>
+          <li><strong>Logbook</strong> — your completed tasks, searchable.</li>
+          <li><strong>Projects</strong> — your own projects, which can be nested inside one another. Tap the disclosure chevron next to a project to expand or collapse its children; a collapsed project's badge rolls up the task count from everything inside it.</li>
+        </ul>
+        <p>Labels and priority are visible at a glance on every task row, along with a subtask progress badge (e.g. "2/5") and a bell icon when a reminder is set.</p>
+        <p>You can choose how tasks are sorted (alphabetical, priority, or by project) and how projects themselves are ordered, in Settings.</p>
+      </section>
+
+      <!-- The Task Editor -->
+      <section id="task-editor" class="help-section">
+        <h2>The Task Editor</h2>
+        <p>Tap any task to open its editor. From there you can change:</p>
+        <ul class="help-list">
+          <li><strong>Notes</strong> — a rich-text field (bold, italic, underline, strikethrough, headings, lists, links, code) — tap the "Aa" button to reveal formatting controls.</li>
+          <li><strong>Subtasks</strong> — break a task into steps; tapping a subtask row opens its own editor. Progress shows on the parent task's row.</li>
+          <li><strong>Due date, reminder, and repeat</strong> — set independently; the reminder and due-date pickers are separate so you can be reminded ahead of, not just at, the due date.</li>
+          <li><strong>Priority and labels</strong> — as chips you can add or remove.</li>
+          <li><strong>Project</strong> — move the task to a different project.</li>
+        </ul>
+        <p>Changes save automatically as you edit; press ⌘↩ on Mac to save and close, or Esc to cancel.</p>
+      </section>
+
+      <!-- Reminders & Notifications -->
+      <section id="reminders-notifications" class="help-section">
+        <h2>Reminders &amp; Notifications</h2>
+        <p>Set a reminder on any task and Veyrn schedules a local notification for it. From the notification itself you can tap <strong>Complete</strong> to finish the task or <strong>Snooze</strong> to push it back an hour, without opening the app.</p>
+        <p>Completing a task from Veyrn on any of your devices cancels its reminder everywhere — you won't get a notification on your phone for something you already finished on your Mac (a brief internet round-trip may be involved, so this can take a few seconds).</p>
+      </section>
+
+      <!-- Calendar -->
+      <section id="calendar" class="help-section">
+        <h2>Calendar</h2>
+        <p>Veyrn can optionally show your device's calendar events alongside your tasks — read-only, nothing is created or modified. Turn it on in <strong>Settings → Calendar</strong>, then choose which calendars to include.</p>
+        <p>Once enabled, that day's events appear above your tasks in the Scheduled list (you can turn this off separately from the feature itself, if you just want the calendar widget without cluttering Scheduled). A calendar prompt for access to your calendars only appears after you flip the switch on — never before.</p>
+      </section>
+
+      <!-- Widgets -->
+      <section id="widgets" class="help-section">
+        <h2>Widgets</h2>
+        <p>Veyrn ships two widgets:</p>
+        <ul class="help-list">
+          <li><strong>Veyrn Tasks</strong> — your upcoming tasks, grouped by day. Available as a Home Screen widget (medium and large) on iPhone/iPad, Lock Screen and StandBy accessories on iPhone, and a large widget on Mac. Tap a task's circle right on the widget to check it off — no need to open the app.</li>
+          <li><strong>Veyrn Calendar</strong> — your day's events and tasks together, in the same sizes.</li>
+        </ul>
+        <p>Widgets refresh periodically on their own; if you've just made a change and want the widget to catch up immediately, use <strong>Refresh Widget</strong> (the icon with two curved arrows) rather than a plain pull-to-refresh, which updates the app but doesn't force the widget to redraw right away.</p>
+      </section>
+
+      <!-- Apple Watch -->
+      <section id="apple-watch" class="help-section">
+        <h2>Apple Watch</h2>
+        <p>Veyrn's Watch app mirrors whichever account is active on your phone — there's no separate sign-in. It has two views, Scheduled and Inbox, both pull-to-refresh, and a + button to add a task by dictation or Scribble (typed the same natural-language way as Quick Add on the phone).</p>
+        <p>Add a Smart Stack complication for an at-a-glance count of today's tasks that updates without opening the Watch app; tapping it jumps straight to the Scheduled list.</p>
+      </section>
+
+      <!-- Working Offline -->
+      <section id="working-offline" class="help-section">
+        <h2>Working Offline</h2>
+        <p>Veyrn keeps working when you lose your connection. Changes you make offline — completing a task, editing a note, creating a new one — are queued and sent automatically once you're back online.</p>
+        <p>A pill near the top of the app shows your status: <strong>Offline</strong>, <strong>Reconnecting…</strong>, or <strong>N pending</strong> when changes are queued. Tap the pending pill to see exactly what's waiting to sync, and to discard any change you no longer want sent (for example, if you changed your mind about a task you created offline).</p>
+      </section>
+
+      <!-- Multiple Accounts -->
+      <section id="multiple-accounts" class="help-section">
+        <h2>Multiple Accounts</h2>
+        <p>Veyrn supports up to five Vikunja accounts — handy if you have both a personal and a work server, or multiple Vikunja Cloud accounts. Add and switch between them from <strong>Settings → Accounts</strong>. Switching accounts is a full swap: tasks, projects, and the offline queue are all account-specific, and nothing from one account leaks into another.</p>
+      </section>
+
+      <!-- Settings -->
+      <section id="settings" class="help-section">
+        <h2>Settings</h2>
+        <ul class="help-list">
+          <li><strong>Accounts</strong> — add, edit, remove, and switch accounts.</li>
+          <li><strong>Tasks</strong> — task sort order, project order, font size, and (Mac) the Quick Add keyboard shortcut.</li>
+          <li><strong>Calendar</strong> — the calendar feature switch, which calendars to show, and whether events also appear in Scheduled.</li>
+          <li><strong>Opening Page</strong> (iPhone only) — which screen Veyrn shows when you return to it: Main, Scheduled, Last Used, or a specific project.</li>
+          <li><strong>Privacy</strong> — an optional, anonymous usage-analytics toggle (off doesn't affect anything else about the app).</li>
+        </ul>
+      </section>
+
+      <!-- Search -->
+      <section id="search" class="help-section">
+        <h2>Search</h2>
+        <p>Search from any list — the Logbook's search runs on the server when your Vikunja version supports it, so you can find completed tasks from any time, not just what's cached locally.</p>
+      </section>
+
+      <!-- Reporting a Problem -->
+      <section id="reporting-a-problem" class="help-section">
+        <h2>Reporting a Problem</h2>
+        <p>If something looks wrong, use <strong>Report a Bug</strong> in Settings. It attaches a privacy-scrubbed diagnostic log (no server address, token, or task content — just what happened and when) that makes tracking down the issue much faster. You can view the log yourself before sending, or send without it.</p>
+      </section>
+
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-links">
+      <a href="veyrn.html">Veyrn</a>
+      <a href="veyrn-help.html">Veyrn Help</a>
+      <a href="support.html">Support</a>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="TOS.html">Terms of Service</a>
+      <a href="https://ko-fi.com/scott63157" target="_blank" rel="noopener noreferrer" class="tip-link">☕ Tip Jar</a>
+    </div>
+    <div>© 2026 Scott's Apps</div>
+  </footer>
+
+  <script>
+    // Same takeover as help.html: close the mobile disclosure before scrolling
+    // so the collapse doesn't race the anchor jump.
+    document.querySelectorAll('.help-toc-mobile a').forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        var id = link.getAttribute('href');
+        if (!id || id.charAt(0) !== '#') return;
+        var target = document.querySelector(id);
+        if (!target) return;
+        e.preventDefault();
+        var details = link.closest('details.help-toc-mobile');
+        if (details) details.removeAttribute('open');
+        requestAnimationFrame(function () {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+    });
+  </script>
+</body>
+</html>

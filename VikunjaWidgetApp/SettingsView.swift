@@ -176,7 +176,7 @@ struct SettingsView: View {
                     }
                 }
 
-                Section("Help") {
+                Section {
                     // Pushed directly, not through `pane(_:)` — that wraps
                     // content in a `ScrollView`, which collapses a WKWebView
                     // to zero height.
@@ -194,6 +194,8 @@ struct SettingsView: View {
                     } label: {
                         Label("Report a Bug", systemImage: "ladybug")
                     }
+                } header: {
+                    Text("Help")
                 } footer: {
                     Text("Sends a report to \(BugReportMail.supportAddress). You choose whether to attach the diagnostic log, and you can read it first.")
                 }

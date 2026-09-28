@@ -152,6 +152,7 @@
     }
     table.help-table {
       width: 100%;
+      table-layout: fixed;
       border-collapse: collapse;
       font-size: 14px;
     }
@@ -161,7 +162,15 @@
       padding: 9px 14px;
       border-bottom: 1px solid var(--border);
       vertical-align: top;
+      /* Long code phrases like "next week, next month, end of month" must
+         wrap within the column, not force it wide — a `nowrap` first column
+         once forced column two off-screen in a narrow embedded WebView
+         (Veyrn's in-app Help), where there's no obvious horizontal-scroll
+         affordance to discover. */
+      overflow-wrap: break-word;
     }
+    table.help-table th:first-child, table.help-table td:first-child { width: 42%; }
+    table.help-table th:last-child, table.help-table td:last-child { width: 58%; }
     table.help-table tr:last-child td { border-bottom: none; }
     table.help-table th {
       background: var(--surface);
@@ -171,8 +180,7 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    table.help-table td:first-child { color: var(--text); white-space: nowrap; }
-    table.help-table td:first-child code { white-space: nowrap; }
+    table.help-table td:first-child { color: var(--text); }
     table.help-table td:last-child { color: var(--muted); }
     table.help-table code {
       background: color-mix(in srgb, var(--accent) 10%, transparent);
@@ -180,6 +188,29 @@
       padding: 1px 6px;
       font-size: 13px;
       font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+
+    /* Both in-app hosts (a phone-width iOS push, a 520px-wide macOS Settings
+       tab) fall under this — the two-column layout above is for a real,
+       wide browser only. Below it, drop the grid entirely and stack each
+       row as its own block, no header labels needed since "code, then its
+       meaning" is self-evident once stacked. */
+    @media (max-width: 560px) {
+      table.help-table, table.help-table tbody, table.help-table tr,
+      table.help-table th, table.help-table td {
+        display: block;
+        width: auto;
+      }
+      table.help-table thead { display: none; }
+      table.help-table tr {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+      }
+      table.help-table tr:last-child { border-bottom: none; }
+      table.help-table td {
+        padding: 2px 0;
+        border-bottom: none;
+      }
     }
 
     .help-section code {
@@ -289,12 +320,12 @@
   </button>
 
   <nav class="site-nav">
-    <a class="brand" href="index.html">
-      <img src="assets/icon-scotuswatch-ios.png" alt="" />
-      <span>SCOTUSWatch</span>
+    <a class="brand" href="veyrn.html">
+      <img src="assets/veyrn-favicon-180.png" alt="" />
+      <span>Veyrn</span>
     </a>
     <ul>
-      <li><a href="veyrn.html">Veyrn</a></li>
+      <li><a href="index.html">SCOTUSWatch</a></li>
       <li><a href="veyrn-help.html" aria-current="page">Veyrn Help</a></li>
       <li><a href="index.html#other-apps">Other Apps</a></li>
       <li><a href="help.html">SCOTUSWatch Help</a></li>

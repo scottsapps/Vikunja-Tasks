@@ -90,13 +90,28 @@ struct VikunjaProject: Codable, Identifiable, Equatable {
     /// it shows a project rather than hiding one. Never test this directly;
     /// use `isArchivedProject`.
     let isArchived: Bool?
+    /// Raw `max_permission` off the wire: the most the token's user may do in
+    /// this project (0 = read, 1 = read/write, 2 = admin). Only sent when the
+    /// list was fetched with `expand=permissions`, so it is absent from older
+    /// caches and `null` when the server didn't compute it. **Optional for the
+    /// same reason as `parentProjectId`.** Absent ⇒ writable, which keeps
+    /// today's behavior; a write the server refuses is still caught by the
+    /// outbox's 403 handling. Never test this directly; use `isReadOnly`.
+    let maxPermission: Int?
 
     enum CodingKeys: String, CodingKey {
         case id, title
         case hexColor = "hex_color"
         case parentProjectId = "parent_project_id"
         case isArchived = "is_archived"
+        case maxPermission = "max_permission"
     }
+
+    /// Shared with the token's user as read-only — tasks can be viewed but not
+    /// created, edited, completed or deleted. Since Vikunja 2.7 this includes
+    /// a read-only share on a child of a project the user can write to, which
+    /// older servers wrongly let through.
+    var isReadOnly: Bool { maxPermission == 0 }
 
     /// Vikunja archives a project to mean "done with this, get it out of the
     /// way": it stays readable but goes read-only. Veyrn has no archive UI, so
@@ -125,9 +140,24 @@ struct VikunjaReminder: Codable {
     }
 }
 
-/// Response of GET /api/v1/info. Only the fields Veyrn uses are decoded.
+/// Response of `GET /info` (v2 first, v1 fallback — see
+/// `VikunjaAPI.fetchServerInfo()`). Only the fields Veyrn uses are decoded.
 struct VikunjaServerInfo: Codable {
     let version: String
+    /// The server's `service.maxitemsperpage` — the most items any paginated
+    /// endpoint returns per page, whatever `per_page` asks for. Optional so a
+    /// server that leaves it out still decodes.
+    let maxItemsPerPage: Int?
+    /// True when the answer came from `/api/v2/info`. Not on the wire: set by
+    /// `fetchServerInfo()`. A server that answers on v2 has the v2 API, which
+    /// matters once the version string alone can't say so (a dev build like
+    /// "unstable" parses as unknown).
+    var servedByV2 = false
+
+    enum CodingKeys: String, CodingKey {
+        case version
+        case maxItemsPerPage = "max_items_per_page"
+    }
 }
 
 struct VikunjaUser: Codable {

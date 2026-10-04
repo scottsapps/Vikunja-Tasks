@@ -6,6 +6,9 @@ struct TaskRow: View {
     var onTap: (() -> Void)? = nil
     let onComplete: () -> Void
     var suppressUpcomingDueDate: Bool = false
+    /// The task's project is shared read-only: the checkbox is shown dimmed
+    /// and can't be ticked. Tapping the row still opens the (read-only) editor.
+    var isReadOnly: Bool = false
 
     @Environment(\.fontSizeOffset) private var fs
     @State private var isCompleting = false
@@ -54,6 +57,9 @@ struct TaskRow: View {
         .buttonStyle(.plain)
         .frame(width: 24, height: 24)
         .animation(.easeInOut(duration: 0.15), value: isCompleting)
+        .disabled(isReadOnly)
+        .opacity(isReadOnly ? 0.4 : 1)
+        .help(isReadOnly ? Text("Read-only project") : Text(verbatim: ""))
     }
 
     // MARK: - Task details

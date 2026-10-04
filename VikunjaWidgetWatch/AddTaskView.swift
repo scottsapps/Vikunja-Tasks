@@ -27,7 +27,7 @@ struct AddTaskView: View {
     private func parse() {
         let normalized = DictationNormalizer.normalize(text)
         parsed = QuickAddParser.parse(normalized,
-                                      knownProjects: store.projects,
+                                      knownProjects: store.projects.filter { !$0.isReadOnly },
                                       knownLabels: store.labels)
     }
 }

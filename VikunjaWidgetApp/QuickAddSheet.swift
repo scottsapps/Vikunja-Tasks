@@ -55,7 +55,7 @@ struct QuickAddSheet: View {
     @State private var showLabelPicker = false
 
     private var parsed: QuickAddResult {
-        QuickAddParser.parse(inputText, knownProjects: store.projects, knownLabels: store.labels)
+        QuickAddParser.parse(inputText, knownProjects: store.writableProjects, knownLabels: store.labels)
     }
 
     /// True when the parsed input would actually render at least one preview chip.
@@ -73,7 +73,7 @@ struct QuickAddSheet: View {
     /// The project this sheet was opened from, if it still exists.
     private var defaultProject: VikunjaProject? {
         guard let id = defaultProjectId else { return nil }
-        return store.projects.first { $0.id == id }
+        return store.writableProjects.first { $0.id == id }
     }
 
     // MARK: - Design tokens
@@ -204,7 +204,7 @@ struct QuickAddSheet: View {
             expandedDueDate = p.dueDate
             expandedPriority = p.priority ?? 0
             if let name = p.projectName {
-                expandedProjectId = store.projects.first {
+                expandedProjectId = store.writableProjects.first {
                     $0.title.lowercased().hasPrefix(name.lowercased())
                 }?.id ?? store.inboxProject?.id
             } else {
@@ -339,13 +339,13 @@ struct QuickAddSheet: View {
     }
 
     private var expandedProjectChip: some View {
-        let project = store.projects.first { $0.id == expandedProjectId }
+        let project = store.writableProjects.first { $0.id == expandedProjectId }
         let base = Color(vikunjaHex: project?.hexColor) ?? Color(red: 107/255, green: 78/255, blue: 230/255)
         let bg = cs == .dark ? base.opacity(0.20) : base.opacity(0.12)
         let fg = cs == .dark ? base.opacity(0.90) : base
 
         return Menu {
-            ForEach(store.projects) { proj in
+            ForEach(store.writableProjects) { proj in
                 Button { expandedProjectId = proj.id } label: {
                     Label(proj.title, systemImage: expandedProjectId == proj.id ? "checkmark" : "folder")
                 }
@@ -702,9 +702,9 @@ struct QuickAddSheet: View {
             defer { DiagnosticLog.endBreadcrumb("quickAdd.submit") }
             let targetProject: VikunjaProject?
             if isExpanded, let pid = expandedProjectId {
-                targetProject = store.projects.first { $0.id == pid } ?? store.inboxProject
+                targetProject = store.writableProjects.first { $0.id == pid } ?? store.inboxProject
             } else if let name = p.projectName {
-                targetProject = store.projects.first {
+                targetProject = store.writableProjects.first {
                     $0.title.lowercased().hasPrefix(name.lowercased())
                 } ?? store.inboxProject
             } else if let defaultProject {
@@ -713,7 +713,7 @@ struct QuickAddSheet: View {
                 targetProject = store.inboxProject
             }
 
-            guard let project = targetProject ?? store.projects.first else {
+            guard let project = targetProject ?? store.writableProjects.first else {
                 errorMessage = "No project found to add task to."
                 isSubmitting = false
                 return

@@ -113,14 +113,23 @@ struct InlineTaskEditor: View {
     private var addBorder: Color { cs == .dark ? Color(red: 74/255, green: 74/255, blue: 78/255) : Color(red: 205/255, green: 205/255, blue: 211/255) }
     private var addFg: Color    { cs == .dark ? Color(red: 134/255, green: 134/255, blue: 140/255) : Color(red: 154/255, green: 154/255, blue: 160/255) }
 
+    /// The task's project is shared read-only: show everything, change
+    /// nothing. `TaskStore` refuses the change anyway; this keeps the editor
+    /// from offering one.
+    private var isReadOnly: Bool { store.isReadOnly(task) }
+
     // MARK: - Body
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                if isReadOnly {
+                    readOnlyBanner.padding(.bottom, 14)
+                }
                 titleRow
                 notesBlock.padding(.top, 16)
                 chipsSection.padding(.top, 14)
+                    .disabled(isReadOnly)
                 if let subtasks = loadedSubtasks {
                     subtasksCard(subtasks).padding(.top, 16)
                 }
@@ -176,6 +185,21 @@ struct InlineTaskEditor: View {
         }
     }
 
+    private var readOnlyBanner: some View {
+        Label {
+            Text("This project is shared with you as read-only. You can view this task but not change it.")
+                .font(.system(size: 13))
+                .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: "lock.fill")
+        }
+        .foregroundStyle(mutedText)
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(insetBg)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
     // MARK: - Title row
 
     private var titleRow: some View {
@@ -197,18 +221,21 @@ struct InlineTaskEditor: View {
             }
             .buttonStyle(.plain)
             .padding(.top, 5)
+            .disabled(isReadOnly)
 
             VStack(alignment: .leading, spacing: 10) {
                 #if os(macOS)
                 // NSViewRepresentable so we can set selectsAllOnBeginEditing = false,
                 // preventing macOS from highlighting all text when the sheet opens.
                 MacTitleTextField(text: $title)
+                    .disabled(isReadOnly)
                 #else
                 TextField("Task title", text: $title, axis: .vertical)
                     .font(.system(size: 23, weight: .bold))
                     .foregroundStyle(primaryText)
                     .lineLimit(1...5)
                     .tracking(-0.5)
+                    .disabled(isReadOnly)
                 #endif
 
                 projectPill
@@ -222,8 +249,10 @@ struct InlineTaskEditor: View {
         let bg = cs == .dark ? base.opacity(0.20) : base.opacity(0.12)
         let fg = cs == .dark ? base.opacity(0.90) : base
 
+        // The label shows the task's actual project, which may be read-only;
+        // the menu only offers projects the task could be moved into.
         return Menu {
-            ForEach(store.projects) { proj in
+            ForEach(store.writableProjects) { proj in
                 Button {
                     selectedProjectId = proj.id
                 } label: {
@@ -241,6 +270,7 @@ struct InlineTaskEditor: View {
             .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+        .disabled(isReadOnly)
     }
 
     // MARK: - Notes block
@@ -252,7 +282,7 @@ struct InlineTaskEditor: View {
                     .padding(.bottom, 8)
             }
             RichTextEditor(attributedText: $notesAttrStr, richContext: richContext,
-                           onUserEdit: { notesEdited = true })
+                           onUserEdit: { notesEdited = true }, isEditable: !isReadOnly)
                 .frame(minHeight: 60, idealHeight: 90, maxHeight: 180)
                 .padding(.trailing, 42)
         }
@@ -273,6 +303,9 @@ struct InlineTaskEditor: View {
             }
             .buttonStyle(.plain)
             .padding(11)
+            .opacity(isReadOnly ? 0 : 1)
+            .accessibilityHidden(isReadOnly)
+            .disabled(isReadOnly)
         }
         .background(insetBg)
         .clipShape(RoundedRectangle(cornerRadius: 18))
@@ -497,6 +530,7 @@ struct InlineTaskEditor: View {
                         .contentShape(Circle())
                     }
                     .buttonStyle(.plain)
+                    .disabled(isReadOnly)
 
                     Text(sub.title)
                         .font(.system(size: 15))
@@ -510,20 +544,22 @@ struct InlineTaskEditor: View {
                 .onTapGesture { editingSubtask = sub }
             }
 
-            HStack(spacing: 11) {
-                ZStack {
-                    Circle().stroke(mutedText, lineWidth: 1.5).frame(width: 21, height: 21)
-                    Image(systemName: "plus").font(.system(size: 10, weight: .bold)).foregroundStyle(mutedText)
+            if !isReadOnly {
+                HStack(spacing: 11) {
+                    ZStack {
+                        Circle().stroke(mutedText, lineWidth: 1.5).frame(width: 21, height: 21)
+                        Image(systemName: "plus").font(.system(size: 10, weight: .bold)).foregroundStyle(mutedText)
+                    }
+                    TextField("Add subtask…", text: $newSubtaskTitle)
+                        .font(.system(size: 15))
+                        .foregroundStyle(mutedText)
+                        .onSubmit { Task { await addSubtask() } }
+                    if isAddingSubtask {
+                        ProgressView().controlSize(.mini)
+                    }
                 }
-                TextField("Add subtask…", text: $newSubtaskTitle)
-                    .font(.system(size: 15))
-                    .foregroundStyle(mutedText)
-                    .onSubmit { Task { await addSubtask() } }
-                if isAddingSubtask {
-                    ProgressView().controlSize(.mini)
-                }
+                .padding(.top, 6)
             }
-            .padding(.top, 6)
         }
         .padding(.horizontal, 16).padding(.vertical, 14)
         .background(insetBg)
@@ -534,7 +570,7 @@ struct InlineTaskEditor: View {
 
     private var footerRow: some View {
         HStack(spacing: 0) {
-            if let onDelete {
+            if let onDelete, !isReadOnly {
                 Button {
                     onDelete()
                 } label: {
@@ -550,9 +586,13 @@ struct InlineTaskEditor: View {
 
             Spacer()
 
-            Button("Cancel") {
+            Button {
                 DiagnosticLog.info("editor dismissed (cancelled)")
                 onDismiss()
+            } label: {
+                // Two literals rather than a ternary, so both reach the
+                // string catalog.
+                if isReadOnly { Text("Close") } else { Text("Cancel") }
             }
                 .font(.system(size: 16))
                 .foregroundStyle(accentBlue)
@@ -580,6 +620,9 @@ struct InlineTaskEditor: View {
             .buttonStyle(.plain)
             .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || isSaving)
             .keyboardShortcut(.return, modifiers: .command)
+            .opacity(isReadOnly ? 0 : 1)
+            .accessibilityHidden(isReadOnly)
+            .disabled(isReadOnly)
         }
     }
 

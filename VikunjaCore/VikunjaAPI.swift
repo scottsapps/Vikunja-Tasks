@@ -83,10 +83,13 @@ enum VikunjaAPI {
         _ = try await send(request)
     }
 
+    /// `expand=permissions` adds each project's `max_permission`, which is how
+    /// the app knows a project is read-only before a write bounces off it.
+    /// Both flavors accept it; a server that doesn't just leaves the field out.
     static func fetchAllProjects() async throws -> [VikunjaProject] {
         if supportsAPIv2 {
             do {
-                return droppingArchived(try await getV2Paged("/projects", perPage: 100))
+                return droppingArchived(try await getV2Paged("/projects?expand=permissions", perPage: 100))
             } catch {
                 if v1FallbackIsPointless(error) { throw error }
                 DiagnosticLog.warn("v2 fetchAllProjects failed (\(VeyrnError.logDescription(for: error))) — falling back to v1")
@@ -94,10 +97,11 @@ enum VikunjaAPI {
         }
         var all: [VikunjaProject] = []
         var page = 1
+        let size = pageSize(50)
         while true {
-            let batch = try await get("/projects?per_page=100&page=\(page)", as: [VikunjaProject].self)
+            let batch = try await get("/projects?expand=permissions&per_page=\(size)&page=\(page)", as: [VikunjaProject].self)
             all.append(contentsOf: batch)
-            if batch.count < 100 { break }
+            if batch.count < size { break }
             page += 1
         }
         return droppingArchived(all)
@@ -279,8 +283,23 @@ enum VikunjaAPI {
 
     /// Fetches server metadata. Unauthenticated on the server side, but goes
     /// through the normal request path (the bearer header is harmless here).
+    ///
+    /// **v2 first, ungated, then v1.** This is the call that decides whether
+    /// the rest of the app uses v2, so it can't be gated by that decision —
+    /// it just asks. Vikunja deprecates v1 in 3.0 and removes it in 4.0; a
+    /// v1-only probe would then fail, leave the v2 flag false, and send every
+    /// request to an API that no longer exists. A server that answers
+    /// `/api/v2/info` has v2 by definition (`servedByV2`). Older servers 404
+    /// there and get the v1 probe they always had.
     static func fetchServerInfo() async throws -> VikunjaServerInfo {
-        try await get("/info", as: VikunjaServerInfo.self)
+        do {
+            var info = try await getV2("/info", as: VikunjaServerInfo.self)
+            info.servedByV2 = true
+            return info
+        } catch {
+            if v1FallbackIsPointless(error) { throw error }
+        }
+        return try await get("/info", as: VikunjaServerInfo.self)
     }
 
     // MARK: - Mutations
@@ -498,13 +517,14 @@ enum VikunjaAPI {
         }
         var all: [VikunjaLabel] = []
         var page = 1
+        let size = pageSize(50)
         while true {
             let path = search.isEmpty
-                ? "/labels?per_page=50&page=\(page)"
-                : "/labels?s=\(encoded)&per_page=50&page=\(page)"
+                ? "/labels?per_page=\(size)&page=\(page)"
+                : "/labels?s=\(encoded)&per_page=\(size)&page=\(page)"
             let batch = try await get(path, as: [VikunjaLabel].self)
             all += batch
-            if batch.count < 50 { break }
+            if batch.count < size { break }
             page += 1
         }
         return all
@@ -844,11 +864,12 @@ enum VikunjaAPI {
         let filter = done ? "done+%3D+true" : "done+%3D+false"
         var all: [VikunjaTask] = []
         var currentPage = page
+        let size = pageSize(50)
         while true {
-            let path = "/projects/\(projectId)/tasks?filter=\(filter)&per_page=50&page=\(currentPage)"
+            let path = "/projects/\(projectId)/tasks?filter=\(filter)&per_page=\(size)&page=\(currentPage)"
             let batch = try await get(path, as: [VikunjaTask].self)
             all.append(contentsOf: batch)
-            if batch.count < 50 { break }
+            if batch.count < size { break }
             currentPage += 1
         }
         return all
@@ -959,24 +980,66 @@ enum VikunjaAPI {
         return data
     }
 
-    /// Loops `page`/`total_pages` until the server reports no more pages (or
-    /// returns an empty page early). `pathWithoutPage` may already carry its
-    /// own query (e.g. a `q=` search term) — `per_page`/`page` are appended
-    /// with the right separator either way.
-    private static func getV2Paged<T: Decodable>(_ pathWithoutPage: String, perPage: Int) async throws -> [T] {
-        var all: [T] = []
-        var page = 1
+    /// Page requests in flight at once once page 1 has said how many there
+    /// are. Small on purpose: Vikunja rate-limits per user, and the widget's
+    /// fetch shares its 10 s budget with whatever else the server is doing.
+    private static let maxConcurrentPageFetches = 4
+
+    /// Fetches every page of a v2 list. Page 1 goes alone, since only its
+    /// `total_pages` says how many more there are; the rest go
+    /// `maxConcurrentPageFetches` at a time and are reassembled in page order.
+    /// `pathWithoutPage` may already carry its own query (e.g. a `q=` search
+    /// term) — `per_page`/`page` are appended with the right separator either
+    /// way.
+    ///
+    /// `total_pages` is trusted because the server computes it from the page
+    /// size it actually served: since Vikunja 2.7, v2 caps `per_page` at
+    /// `service.maxitemsperpage` (default 50) without saying so, and checked
+    /// against the 2.7 source, the cap is applied before `total_pages` is
+    /// worked out. An empty page 1 ends the walk early, as before.
+    private static func getV2Paged<T: Decodable & Sendable>(_ pathWithoutPage: String, perPage: Int) async throws -> [T] {
         let separator = pathWithoutPage.contains("?") ? "&" : "?"
-        while true {
-            let path = "\(pathWithoutPage)\(separator)per_page=\(perPage)&page=\(page)"
-            let decoded: V2Page<T> = try await getV2(path, as: V2Page<T>.self)
-            let items = decoded.items ?? []
-            all.append(contentsOf: items)
-            let totalPages = decoded.totalPages ?? 1
-            if page >= max(1, totalPages) || items.isEmpty { break }
-            page += 1
+        let size = pageSize(perPage)
+        func path(page: Int) -> String {
+            "\(pathWithoutPage)\(separator)per_page=\(size)&page=\(page)"
         }
-        return all
+
+        let first: V2Page<T> = try await getV2(path(page: 1), as: V2Page<T>.self)
+        let firstItems = first.items ?? []
+        let totalPages = first.totalPages ?? 1
+        guard totalPages > 1, !firstItems.isEmpty else { return firstItems }
+
+        var pages: [Int: [T]] = [1: firstItems]
+        try await withThrowingTaskGroup(of: (Int, [T]).self) { group in
+            var next = 2
+            func addNext() {
+                guard next <= totalPages else { return }
+                let page = next
+                let pagePath = path(page: page)
+                next += 1
+                group.addTask {
+                    let decoded: V2Page<T> = try await getV2(pagePath, as: V2Page<T>.self)
+                    return (page, decoded.items ?? [])
+                }
+            }
+            for _ in 0..<maxConcurrentPageFetches { addNext() }
+            while let fetched = try await group.next() {
+                pages[fetched.0] = fetched.1
+                addNext()
+            }
+        }
+        return (1...totalPages).flatMap { pages[$0] ?? [] }
+    }
+
+    /// The page size to ask for: what the caller wants, capped at the
+    /// server's `service.maxitemsperpage` once the `/info` probe has reported
+    /// it. Asking for more is harmless on v2 (the server caps silently and
+    /// `total_pages` follows), but the v1 loops stop at the first short page,
+    /// so a request larger than the cap would end them after page 1.
+    static func pageSize(_ wanted: Int) -> Int {
+        let cap = UserDefaults(suiteName: VikunjaConfig.appGroupSuite)?
+            .integer(forKey: DiagnosticLog.serverMaxItemsPerPageDefaultsKey) ?? 0
+        return cap > 0 ? min(wanted, cap) : wanted
     }
 
     private static func postV2<T: Decodable>(_ path: String, body: Data, as type: T.Type) async throws -> T {
@@ -1010,11 +1073,12 @@ enum VikunjaAPI {
     }
 
     private static func fetchAllUndoneTasksV2(knownProjectIds: Set<Int>) async throws -> [VikunjaTask] {
-        // 200, not 50: at 50 a 165-task account took four round trips, which
-        // undercut the whole point of leaving the fan-out behind. Verified the
-        // server honours it (per_page=200 returned all 166 in one response);
-        // a server that caps lower just yields more pages, since the loop
-        // follows `total_pages`.
+        // Asks for 200, which servers before 2.7 honoured: at 50 a 165-task
+        // account took four round trips, undercutting the point of leaving the
+        // fan-out behind. Since 2.7 the server caps it at
+        // `service.maxitemsperpage` (default 50), and `pageSize` asks for the
+        // cap outright once `/info` has reported it. Pages 2+ then go out in
+        // parallel (`getV2Paged`), so the extra pages cost little extra time.
         let all: [VikunjaTask] = try await getV2Paged("/tasks?filter=done+%3D+false", perPage: 200)
         // v2 is a global endpoint, so constrain it to the same universe the v1
         // fan-out would have covered. Without this, a task in a project the app
@@ -1114,6 +1178,15 @@ enum VikunjaAPI {
         var retried = false
         var useDirectSession = false
 
+        // Honour an earlier 429's `Retry-After` without touching the network:
+        // another request inside the window would only be refused again and
+        // could stretch the server's penalty. Per process — the app, each
+        // widget and the Watch keep their own window.
+        if let remaining = rateLimitRemaining() {
+            DiagnosticLog.info("✗ rate limited \(method) \(path) — \(Int(remaining.rounded(.up))) s of Retry-After left, not sent")
+            throw APIError.rateLimited(retryAfter: remaining)
+        }
+
         while true {
             let stopwatch = DiagnosticLog.Stopwatch()
             // Per-request delegate purely to collect metrics; see `phaseSummary`.
@@ -1167,7 +1240,20 @@ enum VikunjaAPI {
             let noChange = acceptingNotModified && http.statusCode == 304
             guard (200...299).contains(http.statusCode) || noChange else {
                 DiagnosticLog.warn("← \(http.statusCode) \(method) \(path) (\(elapsed)) \(metrics.phaseSummary())")
-                throw APIError.badStatus(http.statusCode)
+                switch http.statusCode {
+                case 403 where isJSON(http):
+                    // Vikunja's errors are JSON (`application/json` on v1,
+                    // `application/problem+json` on v2); a CDN or proxy 403 is
+                    // an HTML page. Only Vikunja's own 403 means "no right to
+                    // this item" — see `APIError.isForbidden`.
+                    throw APIError.forbidden
+                case 429:
+                    let retryAfter = retryAfterSeconds(http)
+                    if let retryAfter { startRateLimitWindow(seconds: retryAfter) }
+                    throw APIError.rateLimited(retryAfter: retryAfter)
+                default:
+                    throw APIError.badStatus(http.statusCode)
+                }
             }
 
             if method == "GET" {
@@ -1177,6 +1263,52 @@ enum VikunjaAPI {
             }
             return (data, http)
         }
+    }
+
+    private static func isJSON(_ response: HTTPURLResponse) -> Bool {
+        let type = response.value(forHTTPHeaderField: "Content-Type")?.lowercased() ?? ""
+        return type.contains("json")
+    }
+
+    // MARK: - Rate limiting (Retry-After)
+
+    /// Longest `Retry-After` Veyrn will sit out. Vikunja's limiter works in
+    /// windows of about a minute; the cap stops a misconfigured server or proxy
+    /// from silencing the app for hours with one header.
+    private static let maxRetryAfter: TimeInterval = 300
+
+    private static let rateLimitLock = NSLock()
+    private static var rateLimitedUntil: Date?
+
+    /// `Retry-After` as whole seconds — the only form Vikunja sends. The
+    /// HTTP-date form is ignored, which just means no window is started.
+    private static func retryAfterSeconds(_ response: HTTPURLResponse) -> TimeInterval? {
+        guard let raw = response.value(forHTTPHeaderField: "Retry-After")?
+            .trimmingCharacters(in: .whitespaces),
+              let seconds = Int(raw), seconds > 0 else { return nil }
+        return min(TimeInterval(seconds), maxRetryAfter)
+    }
+
+    /// `Date()`, not a monotonic clock, on purpose: the window is the server's
+    /// wall-clock window, so time spent asleep counts towards it.
+    private static func startRateLimitWindow(seconds: TimeInterval) {
+        rateLimitLock.lock()
+        rateLimitedUntil = Date().addingTimeInterval(seconds)
+        rateLimitLock.unlock()
+    }
+
+    /// Seconds left in the current `Retry-After` window, or nil when requests
+    /// may go out.
+    static func rateLimitRemaining() -> TimeInterval? {
+        rateLimitLock.lock()
+        defer { rateLimitLock.unlock() }
+        guard let until = rateLimitedUntil else { return nil }
+        let remaining = until.timeIntervalSinceNow
+        if remaining <= 0 {
+            rateLimitedUntil = nil
+            return nil
+        }
+        return remaining
     }
 
     // MARK: - Request batch counters (for TaskStore.refresh()'s summary line)
@@ -1207,10 +1339,22 @@ enum VikunjaAPI {
 
     enum APIError: Error, LocalizedError {
         case badStatus(Int)
+        /// A 403 carrying Vikunja's own JSON error body: the user has no
+        /// right to *this* project or task. Distinct from `.badStatus(403)`,
+        /// which is a 403 from something in front of Vikunja (a CDN or proxy
+        /// error page) and says nothing about the item.
+        case forbidden
+        /// A 429, with the server's `Retry-After` in seconds when it sent one
+        /// (Vikunja 2.7+ does). Also thrown without a request while an earlier
+        /// `Retry-After` is still running — see `send(_:)`.
+        case rateLimited(retryAfter: TimeInterval?)
 
         var statusCode: Int {
-            if case .badStatus(let code) = self { return code }
-            return -1
+            switch self {
+            case .badStatus(let code): return code
+            case .forbidden: return 403
+            case .rateLimited: return 429
+            }
         }
 
         var isClient4xx: Bool {
@@ -1219,12 +1363,24 @@ enum VikunjaAPI {
 
         /// The credential was refused. **Vikunja answers 401 for an
         /// under-scoped API token, not 403** — a token missing "Tasks →
-        /// Update" reads tasks fine and 401s every write — so these two are
-        /// one case, never distinguishable as "bad token" vs "bad
-        /// permissions". A queued write that hits this is still perfectly
-        /// good and must be kept: it lands once the token is fixed.
+        /// Update" reads tasks fine and 401s every write. A queued write that
+        /// hits this is still perfectly good and must be kept: it lands once
+        /// the token is fixed. A 403 only counts here when it didn't come from
+        /// Vikunja (`.badStatus(403)`): with no way to tell what refused it,
+        /// keeping the write is the safe side. Vikunja's own 403 is
+        /// `isForbidden`, which is about the item, not the token.
         var isAuthFailure: Bool {
-            statusCode == 401 || statusCode == 403
+            if case .badStatus(let code) = self { return code == 401 || code == 403 }
+            return false
+        }
+
+        /// Vikunja itself refused this write because the user may only read
+        /// the project (or task) it touches — a read-only share. Fixing the
+        /// token can't help, so a queued write that hits this is dropped on
+        /// its own instead of holding up every write behind it.
+        var isForbidden: Bool {
+            if case .forbidden = self { return true }
+            return false
         }
 
         /// The task really is gone server-side — the only 4xx where silently
@@ -1240,9 +1396,7 @@ enum VikunjaAPI {
         }
 
         var errorDescription: String? {
-            switch self {
-            case .badStatus(let code): return "Server returned HTTP \(code)"
-            }
+            "Server returned HTTP \(statusCode)"
         }
     }
 }

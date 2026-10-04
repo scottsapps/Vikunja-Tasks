@@ -38,12 +38,17 @@ final class TaskStore {
     var isLoading = false
     var error: String?
 
-    /// A reassuring, non-blocking heads-up — nothing failed. Presented as its
-    /// own gently-titled alert, separate from `error`, and only set when
-    /// `error` is clear so the two can't fight over the screen. Currently the
-    /// one user: an import that fell back off the bulk endpoint because the
-    /// API token predates it.
-    var advisory: String?
+    /// A non-blocking heads-up — nothing is broken. Presented as its own
+    /// alert, separate from `error`, and only set when `error` is clear so the
+    /// two can't fight over the screen. Two users: an import that fell back
+    /// off the bulk endpoint because the API token predates it, and a change
+    /// refused because its project is shared read-only.
+    var advisory: Advisory?
+
+    struct Advisory: Equatable {
+        let title: String
+        let message: String
+    }
 
     /// True while the most recent refresh failed for a transient network
     /// reason (timeout, host unreachable, radio not up yet). Drives the
@@ -107,6 +112,72 @@ final class TaskStore {
         let base = projects.filter { $0.title.lowercased() != "inbox" }
         guard order == .alphabetical else { return base }
         return base.sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
+    }
+
+    /// Projects a new or moved task may go into — every project except those
+    /// shared read-only (`VikunjaProject.isReadOnly`). Every project picker
+    /// and project-name matcher uses this, so a read-only project can never be
+    /// chosen as a destination. Lists of tasks keep using `projects`: a
+    /// read-only project's tasks are still shown.
+    var writableProjects: [VikunjaProject] {
+        projects.filter { !$0.isReadOnly }
+    }
+
+    /// True when `projectId` names a project the user may only read. Unknown
+    /// ids count as writable — the server's 403 is the backstop there.
+    func isReadOnly(projectId: Int) -> Bool {
+        projects.first { $0.id == projectId }?.isReadOnly ?? false
+    }
+
+    /// True when `task` sits in a read-only project, so the UI can show it
+    /// without offering to change it.
+    func isReadOnly(_ task: VikunjaTask) -> Bool {
+        isReadOnly(projectId: task.projectId)
+    }
+
+    /// Refuses a change aimed at a read-only project before it's queued, with
+    /// a note saying why. Returns true when the change must not go ahead. The
+    /// pickers already leave read-only projects out; this catches whatever
+    /// reaches the store another way — a keyboard shortcut, a notification
+    /// action, a project list fetched before the share was changed.
+    private func refuseIfReadOnly(projectId: Int, action: String) -> Bool {
+        guard let project = projects.first(where: { $0.id == projectId }), project.isReadOnly else {
+            return false
+        }
+        DiagnosticLog.info("\(action) refused: project \(projectId) is read-only")
+        showReadOnlyNote(projectTitle: project.title)
+        return true
+    }
+
+    /// `refusedCount` > 0 means the changes were already made locally and the
+    /// server turned them down, so the note also says they were undone; 0
+    /// means the change was stopped before it was made.
+    private func showReadOnlyNote(projectTitle: String?, refusedCount: Int = 0) {
+        // An error alert already on screen wins; this note is not worth
+        // stacking a second alert for.
+        guard error == nil else { return }
+        let title = String(localized: "Read-Only Project", comment: "Alert title: the user tried to change a task in a project shared with them as read-only")
+        let message: String
+        switch (projectTitle, refusedCount > 0) {
+        case (let name?, false):
+            message = String(
+                localized: "“\(name)” is shared with you as read-only, so Veyrn can't change its tasks. Ask the project's owner for write access in Vikunja.",
+                comment: "Shown when the user tries to change a task in a project they can only read"
+            )
+        // `AttributedString(localized:)`, not `String(localized:)`: only the
+        // former applies `inflect`, so the count's noun agrees in any language.
+        case (let name?, true):
+            message = String(AttributedString(
+                localized: "Vikunja turned down ^[\(refusedCount) change](inflect: true) because “\(name)” is shared with you as read-only, and Veyrn has put things back as they were. Ask the project's owner for write access in Vikunja.",
+                comment: "Shown after queued changes were refused by the server because their project is read-only"
+            ).characters)
+        case (nil, _):
+            message = String(AttributedString(
+                localized: "Vikunja turned down ^[\(refusedCount) change](inflect: true) because the project is shared with you as read-only, and Veyrn has put things back as they were. Ask the project's owner for write access in Vikunja.",
+                comment: "Shown after queued changes were refused by the server because their project is read-only; project name unknown"
+            ).characters)
+        }
+        advisory = Advisory(title: title, message: message)
     }
 
     func tasks(for project: VikunjaProject) -> [VikunjaTask] {
@@ -399,6 +470,12 @@ final class TaskStore {
                 // there, someone is waiting on an answer.
                 transientRefreshFailure = true
                 tier = "transient"
+            } else if background, let api = error as? VikunjaAPI.APIError, api.isRateLimited {
+                // The server said when to come back (`Retry-After`), and
+                // `send(_:)` holds every request until then. A poll has nobody
+                // waiting on it, so this is the pill, not an alert.
+                transientRefreshFailure = true
+                tier = "rate limited"
             } else if deferAlert && VeyrnError.isRetryable(error) {
                 // Launch path: a name-resolution/connection failure while
                 // Wi-Fi or a VPN is still coming up. Stay quiet; the caller
@@ -663,6 +740,7 @@ final class TaskStore {
         repeatMode: Int? = nil,
         source: String = "app"
     ) {
+        guard !refuseIfReadOnly(projectId: projectId, action: "create") else { return }
         let clientId = UUID()
         let placeholderId = outbox.nextPlaceholderId()
         let payload = CreatePayload(
@@ -718,6 +796,7 @@ final class TaskStore {
     // MARK: - Delete task
 
     func deleteTask(task: VikunjaTask) async {
+        guard !refuseIfReadOnly(projectId: task.projectId, action: "delete") else { return }
         DiagnosticLog.info("delete task \(task.id)\(task.id < 0 ? " (placeholder)" : "")")
         undoneTasks.removeAll { $0.id == task.id }
         lastServerUndone.removeAll { $0.id == task.id }
@@ -734,6 +813,15 @@ final class TaskStore {
     // MARK: - Update task (enqueues to outbox)
 
     func update(taskId: Int, with update: TaskUpdate) async {
+        // Both ends of a move count: the task's own project and, if it's
+        // moving, the one it's moving into.
+        if let current = undoneTasks.first(where: { $0.id == taskId }) ?? doneTasks.first(where: { $0.id == taskId }),
+           refuseIfReadOnly(projectId: current.projectId, action: "update") {
+            return
+        }
+        if let target = update.projectId, refuseIfReadOnly(projectId: target, action: "move") {
+            return
+        }
         let ref = ref(for: taskId)
         let op = PendingOp(
             id: UUID(),
@@ -753,6 +841,7 @@ final class TaskStore {
     let undoWindow: TimeInterval = 4
 
     func complete(task: VikunjaTask) async {
+        guard !refuseIfReadOnly(projectId: task.projectId, action: "complete") else { return }
         DiagnosticLog.info("complete task \(task.id) (undo window open)")
         undoneTasks.removeAll { $0.id == task.id }
         pendingUndo[task.id] = task
@@ -801,6 +890,7 @@ final class TaskStore {
     }
 
     func reopen(task: VikunjaTask) async {
+        guard !refuseIfReadOnly(projectId: task.projectId, action: "reopen") else { return }
         ReminderStore.clearTombstone(taskId: task.id)
         doneTasks.removeAll { $0.id == task.id }
         saveDoneCache()
@@ -866,6 +956,8 @@ final class TaskStore {
         var totalDropped = 0
         var blockingFailure: Error?
         var staleTokenSuspected = false
+        var refusedCount = 0
+        var refusedProjectId: Int?
         var passes = 0
 
         while true {
@@ -879,6 +971,8 @@ final class TaskStore {
             totalOk += pass.okCount
             totalDropped += pass.droppedCount
             staleTokenSuspected = staleTokenSuspected || pass.staleTokenSuspected
+            refusedCount += pass.refusedCount
+            refusedProjectId = refusedProjectId ?? pass.refusedProjectId
 
             // A blocking failure means every remaining op carries the same bad
             // credential; another pass would fail identically and alert twice.
@@ -944,6 +1038,15 @@ final class TaskStore {
         if staleTokenSuspected, okCount > 0, blockingFailure == nil {
             adviseStaleTokenOnce()
         }
+
+        // After the refresh for the same reason as the alert above, and after
+        // it so the refreshed project list (now carrying `max_permission`) is
+        // what the title is read from. One note per drain, however many
+        // changes bounced; `showReadOnlyNote` stands aside for an error alert.
+        if refusedCount > 0 {
+            let title = refusedProjectId.flatMap { id in projects.first { $0.id == id }?.title }
+            showReadOnlyNote(projectTitle: title, refusedCount: refusedCount)
+        }
     }
 
     private struct DrainPass {
@@ -951,6 +1054,8 @@ final class TaskStore {
         var droppedCount = 0
         var blockingFailure: Error?
         var staleTokenSuspected = false
+        var refusedCount = 0
+        var refusedProjectId: Int?
     }
 
     /// One walk of the queue as it stands right now, split out of
@@ -985,6 +1090,10 @@ final class TaskStore {
         // show a one-time, reassuring "make a fresh token" note after the
         // drain; the import itself has already gone through.
         var staleTokenSuspected = false
+        // Changes the server refused because their project is read-only —
+        // reported once, after the drain, naming the first project.
+        var refusedCount = 0
+        var refusedProjectId: Int?
         while index < snapshot.count {
             let op = snapshot[index]
 
@@ -1076,6 +1185,27 @@ final class TaskStore {
                 }
                 outbox.remove(id: op.id)
                 okCount += 1
+            } catch let error as VikunjaAPI.APIError where error.isForbidden {
+                // Vikunja's own 403: the user may only read the project this
+                // change touches (a read-only share — and since 2.7, a
+                // read-only share on a child of a project they can write to,
+                // which older servers wrongly let through). The token is fine
+                // and nothing the user can do in Veyrn will make this change
+                // land, so treating it like `isAuthFailure` would hold every
+                // later change behind one that can never go — and tell the
+                // user to check a token that isn't the problem. Undo this one
+                // change (plus anything queued behind an offline create it
+                // refused) and keep draining.
+                let doomed = opsRemovedTogether(with: op)
+                if refusedProjectId == nil { refusedProjectId = projectId(for: op) }
+                refusedCount += 1
+                VeyrnTelemetry.syncFailed(op: "drain", error: error)
+                await applyDiscard(
+                    of: doomed,
+                    logHead: "op \(opLabel(op)) → refused (403, read-only), undone",
+                    cascadeExtra: doomed.count - 1
+                )
+                droppedCount += doomed.count
             } catch let error as VikunjaAPI.APIError where error.isAuthFailure || error.isRateLimited {
                 // Nothing is wrong with the edit — the credential is. Keeping
                 // the op means it lands by itself once the token is fixed;
@@ -1121,7 +1251,9 @@ final class TaskStore {
             okCount: okCount,
             droppedCount: droppedCount,
             blockingFailure: blockingFailure,
-            staleTokenSuspected: staleTokenSuspected
+            staleTokenSuspected: staleTokenSuspected,
+            refusedCount: refusedCount,
+            refusedProjectId: refusedProjectId
         )
     }
 
@@ -1138,13 +1270,16 @@ final class TaskStore {
         // try again next time rather than losing the note.
         guard error == nil else { return }
         UserDefaults.standard.set(true, forKey: key)
-        advisory = """
-        All your tasks were imported. One note: this API token was created \
-        before your Vikunja server could create tasks in batches, so Veyrn \
-        added them one at a time. Everything works as-is — but if you make a \
-        fresh API token in Vikunja (Settings → API Tokens) and paste it into \
-        Veyrn's Settings, large imports will be faster.
-        """
+        advisory = Advisory(
+            title: String(localized: "Tasks Imported", comment: "Alert title: a bulk import finished on the one-at-a-time fallback"),
+            message: """
+            All your tasks were imported. One note: this API token was created \
+            before your Vikunja server could create tasks in batches, so Veyrn \
+            added them one at a time. Everything works as-is — but if you make a \
+            fresh API token in Vikunja (Settings → API Tokens) and paste it into \
+            Veyrn's Settings, large imports will be faster.
+            """
+        )
     }
 
     // MARK: - Pending Changes sheet
@@ -1261,13 +1396,22 @@ final class TaskStore {
             return
         }
 
-        // Cascade: discarding an offline create must also discard every op that
-        // targets the same not-yet-created task. `drainOutbox` skips any op
-        // whose `.client` ref can't resolve to a server id (`serverId(for:)
-        // == nil` → `continue`), so a stranded `.update`/`.complete`/
-        // `.relation` would sit in the queue forever — never sent, never
-        // failed, never removed — leaving a permanent "N pending" that no
-        // retry and no discard could clear.
+        let discarded = opsRemovedTogether(with: op)
+        await applyDiscard(of: discarded, logHead: "discard op \(opLabel(op))", cascadeExtra: discarded.count - 1)
+    }
+
+    /// `op` plus every queued op that can't survive without it, in queue
+    /// order. Used by the Pending Changes sheet's discard and by the drain
+    /// when the server refuses a change outright (a read-only project).
+    ///
+    /// Cascade: removing an offline create must also remove every op that
+    /// targets the same not-yet-created task. `drainOutbox` skips any op
+    /// whose `.client` ref can't resolve to a server id (`serverId(for:)
+    /// == nil` → `continue`), so a stranded `.update`/`.complete`/
+    /// `.relation` would sit in the queue forever — never sent, never
+    /// failed, never removed — leaving a permanent "N pending" that no
+    /// retry and no discard could clear.
+    private func opsRemovedTogether(with op: PendingOp) -> [PendingOp] {
         var doomed: Set<UUID> = [op.id]
         if case .create = op.kind, case .client(let uuid) = op.ref {
             for other in outbox.ops where other.id != op.id {
@@ -1281,9 +1425,21 @@ final class TaskStore {
                 }
             }
         }
+        return outbox.ops.filter { doomed.contains($0.id) }
+    }
 
-        let discarded = outbox.ops.filter { doomed.contains($0.id) }
-        await applyDiscard(of: discarded, logHead: "discard op \(opLabel(op))", cascadeExtra: doomed.count - 1)
+    /// The project a queued op writes into, for the read-only note. A create
+    /// carries it; anything else is looked up from the task it targets, which
+    /// can miss (the task may be mid-transition) — then the note is generic.
+    private func projectId(for op: PendingOp) -> Int? {
+        if case .create(let payload, _) = op.kind { return payload.projectId }
+        let ref: TaskRef
+        if case .relation(let parentRef, _, _, _) = op.kind { ref = parentRef } else { ref = op.ref }
+        guard let id = localId(for: ref) else { return nil }
+        let task = undoneTasks.first(where: { $0.id == id })
+            ?? doneTasks.first(where: { $0.id == id })
+            ?? pendingUndo[id]
+        return task?.projectId
     }
 
     /// Removes every queued change at once, undoing each one's local side

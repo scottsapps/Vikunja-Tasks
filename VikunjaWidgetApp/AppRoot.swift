@@ -272,13 +272,13 @@ struct AppRoot: View {
         } message: {
             Text(store.error ?? "")
         }
-        .alert("Tasks Imported", isPresented: Binding(
+        .alert(Text(verbatim: store.advisory?.title ?? ""), isPresented: Binding(
             get: { store.advisory != nil },
             set: { if !$0 { store.advisory = nil } }
         )) {
             Button("OK", role: .cancel) { store.advisory = nil }
         } message: {
-            Text(store.advisory ?? "")
+            Text(verbatim: store.advisory?.message ?? "")
         }
         .sheet(isPresented: $showSettings) {
             SettingsView(store: store, onSave: { Task { await store.refresh(reason: "settings") } })

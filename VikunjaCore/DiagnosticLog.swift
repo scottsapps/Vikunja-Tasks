@@ -520,12 +520,16 @@ enum DiagnosticLog {
             + " · default due time: \(VikunjaAPI.describeDefaultDueTime(dueTime))"
     }
 
-    /// Shared with `VeyrnTelemetry`, which writes the first four keys whenever
+    /// Shared with `VeyrnTelemetry`, which writes the first five keys whenever
     /// `/info` succeeds so the header can read them without a network call.
     static let serverVersionDefaultsKey = "diag.serverVersion"
     static let serverSupportsV2DefaultsKey = "diag.serverSupportsV2"
     static let serverSupportsBulkCreateDefaultsKey = "diag.serverSupportsBulkCreate"
     static let serverSupportsDefaultDueTimeDefaultsKey = "diag.serverSupportsDefaultDueTime"
+    /// The server's `service.maxitemsperpage` from `/info`, written by the same
+    /// probe. Absent until it lands; `VikunjaAPI.pageSize(_:)` falls back to
+    /// what each call asks for.
+    static let serverMaxItemsPerPageDefaultsKey = "diag.serverMaxItemsPerPage"
     /// Written by `VikunjaAPI.refreshDefaultDueTimeIfSupported()`, not the
     /// `/info` probe — it is the setting's *value* (`"HH:MM"`), not a
     /// capability flag. Absent means "fall back to Veyrn's own 8 PM".

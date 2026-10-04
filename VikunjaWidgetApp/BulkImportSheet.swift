@@ -214,9 +214,7 @@ struct BulkImportSheet: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(resolvedProject(for: spec) == nil)
-                .help(resolvedProject(for: spec) == nil
-                      ? "Project '\(spec.projectName)' not found in your Vikunja account."
-                      : "")
+                .help(importBlockedReason(for: spec))
             }
 
             if phase == .importing {
@@ -316,9 +314,24 @@ struct BulkImportSheet: View {
 
     // MARK: - Import
 
+    /// The project the import goes into. Only writable projects match, so a
+    /// project shared read-only blocks the import up front instead of every
+    /// task bouncing off the server.
     private func resolvedProject(for spec: BulkImportSpec) -> VikunjaProject? {
-        store.projects.first { $0.title.lowercased() == spec.projectName.lowercased() }
-            ?? store.projects.first { $0.title.lowercased().hasPrefix(spec.projectName.lowercased()) }
+        matchingProject(in: store.writableProjects, for: spec)
+    }
+
+    private func matchingProject(in projects: [VikunjaProject], for spec: BulkImportSpec) -> VikunjaProject? {
+        projects.first { $0.title.lowercased() == spec.projectName.lowercased() }
+            ?? projects.first { $0.title.lowercased().hasPrefix(spec.projectName.lowercased()) }
+    }
+
+    private func importBlockedReason(for spec: BulkImportSpec) -> Text {
+        if resolvedProject(for: spec) != nil { return Text(verbatim: "") }
+        if matchingProject(in: store.projects, for: spec) != nil {
+            return Text("Project '\(spec.projectName)' is shared with you as read-only, so tasks can't be imported into it.")
+        }
+        return Text("Project '\(spec.projectName)' not found in your Vikunja account.")
     }
 
     private func importTasks(_ spec: BulkImportSpec) async {

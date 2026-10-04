@@ -205,13 +205,16 @@ struct TaskListView: View {
             projectName: store.projectMap[task.projectId] ?? "",
             onTap: { editingTask = task },
             onComplete: { Task { await store.complete(task: task) } },
-            suppressUpcomingDueDate: suppressUpcomingDueDate
+            suppressUpcomingDueDate: suppressUpcomingDueDate,
+            isReadOnly: store.isReadOnly(task)
         )
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) {
-                taskToDelete = task
-            } label: {
-                Label("Delete", systemImage: "trash")
+            if !store.isReadOnly(task) {
+                Button(role: .destructive) {
+                    taskToDelete = task
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
             }
         }
     }

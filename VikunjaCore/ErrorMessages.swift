@@ -12,6 +12,15 @@ enum VeyrnError {
 
     static func message(for error: Error) -> String {
         if let apiError = error as? VikunjaAPI.APIError {
+            // Vikunja's own 403 is about the project, not the token — sending
+            // the user to their token settings would be the wrong fix.
+            if apiError.isForbidden {
+                return """
+                Your Vikunja account doesn't have permission to do that. The \
+                project is probably shared with you as read-only — ask its \
+                owner for write access in Vikunja.
+                """
+            }
             return message(forStatus: apiError.statusCode)
         }
         if error is DecodingError {
@@ -202,7 +211,12 @@ enum VeyrnError {
     /// can embed the request's hostname.
     static func logDescription(for error: Error) -> String {
         if let apiError = error as? VikunjaAPI.APIError {
-            return "APIError.badStatus(\(apiError.statusCode))"
+            switch apiError {
+            case .badStatus(let code): return "APIError.badStatus(\(code))"
+            case .forbidden: return "APIError.forbidden(403)"
+            case .rateLimited(let retryAfter):
+                return "APIError.rateLimited(429, retry after \(retryAfter.map { "\(Int($0.rounded(.up))) s" } ?? "unknown"))"
+            }
         }
         if let decodingError = error as? DecodingError {
             return logDescription(forDecodingError: decodingError)

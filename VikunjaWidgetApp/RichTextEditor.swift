@@ -10,6 +10,10 @@ struct RichTextEditor: NSViewRepresentable {
     /// for this: automatic link detection fires it once on load, before anyone has
     /// touched the note.
     var onUserEdit: (() -> Void)? = nil
+    /// False shows the note selectable but not editable — a task in a project
+    /// shared read-only. SwiftUI's `.disabled` doesn't reach into the AppKit
+    /// view, so it needs its own flag.
+    var isEditable: Bool = true
 
     func makeCoordinator() -> Coordinator {
         let c = Coordinator(binding: $attributedText)
@@ -39,6 +43,7 @@ struct RichTextEditor: NSViewRepresentable {
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticTextReplacementEnabled = false
         textView.delegate = context.coordinator
+        textView.isEditable = isEditable
         context.coordinator.textView = textView
 
         if attributedText.length > 0 {
@@ -54,6 +59,7 @@ struct RichTextEditor: NSViewRepresentable {
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        (scrollView.documentView as? NSTextView)?.isEditable = isEditable
         guard !context.coordinator.isEditing,
               let textView = scrollView.documentView as? NSTextView,
               !textView.attributedString().isEqual(to: attributedText) else { return }
@@ -286,6 +292,8 @@ struct RichTextEditor: UIViewRepresentable {
     var richContext: RichTextContext
     /// Fires only for edits the user actually made — see the macOS note above.
     var onUserEdit: (() -> Void)? = nil
+    /// See the macOS note above.
+    var isEditable: Bool = true
 
     func makeCoordinator() -> Coordinator {
         let c = Coordinator(binding: $attributedText)
@@ -302,6 +310,7 @@ struct RichTextEditor: UIViewRepresentable {
         tv.textContainerInset = .zero
         tv.textContainer.lineFragmentPadding = 0
         tv.delegate = context.coordinator
+        tv.isEditable = isEditable
         context.coordinator.textView = tv
         if attributedText.length > 0 {
             context.coordinator.withProgrammaticUpdate { tv.attributedText = attributedText }
@@ -312,6 +321,7 @@ struct RichTextEditor: UIViewRepresentable {
     }
 
     func updateUIView(_ tv: UITextView, context: Context) {
+        tv.isEditable = isEditable
         guard !context.coordinator.isEditing,
               !tv.attributedText.isEqual(to: attributedText) else { return }
         context.coordinator.withProgrammaticUpdate {

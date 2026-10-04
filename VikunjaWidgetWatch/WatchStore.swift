@@ -111,11 +111,14 @@ final class WatchStore {
         }
     }
 
+    /// Projects shared read-only are skipped, matching the phone's pickers —
+    /// a task aimed at one would only bounce off the server.
     private func resolveProjectId(_ name: String?) -> Int {
-        if let name, let p = projects.first(where: { $0.title.lowercased().hasPrefix(name.lowercased()) }) {
+        let writable = projects.filter { !$0.isReadOnly }
+        if let name, let p = writable.first(where: { $0.title.lowercased().hasPrefix(name.lowercased()) }) {
             return p.id
         }
-        return inboxProject?.id ?? projects.first?.id ?? 1
+        return inboxProject?.id ?? writable.first?.id ?? 1
     }
 
     private func resolveLabelIds(_ titles: [String]) async throws -> [Int] {

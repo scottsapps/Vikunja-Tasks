@@ -29,6 +29,13 @@ import WidgetKit
 @MainActor
 final class TaskStore {
 
+    /// The one store. The app's UI and the Siri "Add Task" intent
+    /// (`AddTaskIntent`, which can run with no UI in a background launch) must
+    /// share it: two `TaskStore`s mean two `Outbox`es over the same
+    /// UserDefaults key, and each one's `persist()` would overwrite the other's
+    /// queued changes.
+    static let shared = TaskStore()
+
     // MARK: - Published state
 
     var undoneTasks: [VikunjaTask] = []
@@ -433,6 +440,9 @@ final class TaskStore {
             saveCache()
             #if os(iOS)
             WatchSessionProvider.shared.pushSnapshot(tasks: undoneTasks, projects: projects)
+            // Siri's "Add a task to <project> in Veyrn" phrase lists the
+            // project names; this re-reads them from the store.
+            VeyrnShortcuts.updateAppShortcutParameters()
             #endif
             await ReminderScheduler.sync(tasks: undoneTasks)
             lastRefreshAt = Date()
@@ -728,6 +738,9 @@ final class TaskStore {
 
     // MARK: - Create task (enqueues to outbox)
 
+    /// Returns the queued op's id (so a caller can wait for it to leave the
+    /// outbox), or nil when the project is read-only and nothing was queued.
+    @discardableResult
     func createTask(
         projectId: Int,
         title: String,
@@ -739,8 +752,8 @@ final class TaskStore {
         repeatAfter: Int? = nil,
         repeatMode: Int? = nil,
         source: String = "app"
-    ) {
-        guard !refuseIfReadOnly(projectId: projectId, action: "create") else { return }
+    ) -> UUID? {
+        guard !refuseIfReadOnly(projectId: projectId, action: "create") else { return nil }
         let clientId = UUID()
         let placeholderId = outbox.nextPlaceholderId()
         let payload = CreatePayload(
@@ -764,6 +777,7 @@ final class TaskStore {
         rebuildMergedTasks()
         VeyrnTelemetry.signal("TaskCreated", parameters: ["source": source])
         Task { await drainOutbox() }
+        return op.id
     }
 
     // MARK: - Project management

@@ -35,6 +35,19 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>INAlternativeAppNames</key>
+	<array>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Vern</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Veyrn Tasks</string>
+			<key>INAlternativeAppNamePronunciationHint</key>
+			<string>vern tasks</string>
+		</dict>
+	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSCalendarsFullAccessUsageDescription</key>

@@ -128,7 +128,7 @@ struct VikunjaWidgetAppEntry: App {
     #if os(macOS)
     @NSApplicationDelegateAdaptor(MacAppDelegate.self) var appDelegate
     #endif
-    @State private var store = TaskStore()
+    @State private var store = TaskStore.shared
     #if os(macOS)
     @State private var panelController = QuickAddPanelController()
     #endif

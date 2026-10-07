@@ -81,10 +81,12 @@ struct AddTaskIntent: AppIntent {
             tagTitles.append(name)
         }
 
-        try await requestConfirmation(
-            result: .result(dialog: Self.readBack(title: title, project: target.title, due: due, tags: tagTitles, priority: priorityValue)),
-            confirmationActionName: .add
-        )
+        let readBack = Self.readBack(title: title, project: target.title, due: due, tags: tagTitles, priority: priorityValue)
+        if #available(iOS 18.0, *) {
+            try await requestConfirmation(actionName: .add, dialog: readBack)
+        } else {
+            try await (self as LegacyConfirmation).legacyConfirm(readBack)
+        }
 
         // Same rule as Quick Add: a known tag is reused, an unknown one is
         // created when online and dropped when not.
@@ -153,6 +155,23 @@ struct AddTaskIntent: AppIntent {
             try? await Task.sleep(nanoseconds: 250_000_000)
         }
         return !store.outbox.ops.contains(where: { $0.id == opId })
+    }
+}
+
+/// iOS 17 fallback for the read-back. Apple deprecated the old
+/// `requestConfirmation(result:…)` outright (not "from iOS 18"), so a direct
+/// call warns even behind `#available`, while its replacement needs iOS 18.
+/// A deprecated declaration may use deprecated API silently, and calling it
+/// through this non-deprecated protocol requirement keeps the call site
+/// quiet too. Drop this when the deployment target reaches iOS 18.
+private protocol LegacyConfirmation {
+    func legacyConfirm(_ dialog: IntentDialog) async throws
+}
+
+extension AddTaskIntent: LegacyConfirmation {
+    @available(*, deprecated, message: "iOS 17 only — see LegacyConfirmation")
+    func legacyConfirm(_ dialog: IntentDialog) async throws {
+        try await requestConfirmation(result: .result(dialog: dialog), confirmationActionName: .add)
     }
 }
 

@@ -287,6 +287,11 @@ enum VeyrnPriority: Int, AppEnum {
 
 // MARK: - Siri phrases
 
+/// **Every phrase puts the app name right against "task".** Generic
+/// phrasings ("add a task in Veyrn", "remind me in Veyrn", "add to Veyrn")
+/// collide with Siri's built-in Reminders and Notes intents: in testing Siri
+/// asked "Veyrn or Notes?" or offered Reminders instead. Don't add them back.
+///
 /// Phrases work with no setup. Each must name the app; `.applicationName`
 /// also matches the spoken alternatives in `InfoIOS.plist`
 /// (`INAlternativeAppNames`), since "Veyrn" is easy to mishear. A phrase can
@@ -298,13 +303,12 @@ struct VeyrnShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: AddTaskIntent(),
             phrases: [
-                "Add a task in \(.applicationName)",
-                "Add a task to \(.applicationName)",
-                "Add to \(.applicationName)",
                 "New \(.applicationName) task",
-                "Have \(.applicationName) add a task",
-                "Remind me in \(.applicationName)",
-                "Add a task to \(\.$project) in \(.applicationName)",
+                "\(.applicationName) task",
+                "\(.applicationName) new task",
+                "Add a \(.applicationName) task",
+                "Create a \(.applicationName) task",
+                "New \(.applicationName) task in \(\.$project)",
             ],
             shortTitle: "Add Task",
             systemImageName: "plus.circle"

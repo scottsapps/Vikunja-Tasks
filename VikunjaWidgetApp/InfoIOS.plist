@@ -43,6 +43,18 @@
 		</dict>
 		<dict>
 			<key>INAlternativeAppName</key>
+			<string>Veryn</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Verin</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Vairn</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
 			<string>Veyrn Tasks</string>
 			<key>INAlternativeAppNamePronunciationHint</key>
 			<string>vern tasks</string>

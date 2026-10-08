@@ -39,19 +39,21 @@
 	<array>
 		<dict>
 			<key>INAlternativeAppName</key>
+			<string>Veyrn</string>
+			<key>INAlternativeAppNamePronunciationHint</key>
+			<string>vern</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
 			<string>Vern</string>
 		</dict>
 		<dict>
 			<key>INAlternativeAppName</key>
-			<string>Veryn</string>
+			<string>Verne</string>
 		</dict>
 		<dict>
 			<key>INAlternativeAppName</key>
-			<string>Verin</string>
-		</dict>
-		<dict>
-			<key>INAlternativeAppName</key>
-			<string>Vairn</string>
+			<string>Vurn</string>
 		</dict>
 		<dict>
 			<key>INAlternativeAppName</key>

@@ -34,6 +34,7 @@ Beta Builds Available on [TestFlight](https://testflight.apple.com/join/q8GhTkFz
 - **iPhone opening page** — open the app on Main, Scheduled, a chosen project, or wherever you last were (Settings)
 - **macOS global hotkey** — system-wide Quick Add panel
 - **iOS Home Screen Quick Actions** — jump straight to New Task or Scheduled
+- **Siri (iPhone)** — say "New Veyrn task", then the task in plain words and in any order ("file the pleading tomorrow in project Litigation, tag it court, high priority"); Siri reads it back and waits for a yes before saving. Also available as an **Add Task** action in the Shortcuts app
 - **Reminders** — synced to the system notification center
 - **Apple Watch app** — Scheduled (7-day window) and Inbox views, tap to complete, dictation/Scribble Quick Add with confirm-chips screen; credentials pushed from the phone over WatchConnectivity
 - **Apple Watch Smart Stack widget** — complications and Smart Stack widget showing upcoming tasks
@@ -138,7 +139,7 @@ grep -rn "net\.angstreich" --include="*.swift" --include="*.plist" . project.yml
 
 The bold rows are the ones that bite silently. The App Group, Keychain access group, and iCloud container id are all written by the **Makefile**, not by `project.yml`, so changing the bundle prefix alone leaves them pointing at this project. Get the App Group or Keychain group wrong and the app builds, launches, and then can't share credentials or cached tasks with its own widgets; get the iCloud container wrong and signing fails at build time.
 
-**Cosmetic**, safe to leave: dispatch queue labels (`DiagnosticLog.swift`, `HangWatchdog.swift`), `Notification.Name` strings (`ShortcutRouter.swift`, `HotkeyRecorderView.swift`), the `Logger` subsystem in `CompleteTaskIntent.swift`, and the `vikunja://` / `veyrn://` URL schemes in the plists (only worth changing if you'd otherwise clash with an installed copy of Veyrn).
+**Cosmetic**, safe to leave: dispatch queue labels (`DiagnosticLog.swift`, `HangWatchdog.swift`), `Notification.Name` strings (`ShortcutRouter.swift`, `HotkeyRecorderView.swift`), the `Logger` subsystem in `CompleteTaskIntent.swift`, and the `vikunja://` / `veyrn://` URL schemes in the plists (only worth changing if you'd otherwise clash with an installed copy of Veyrn). If you rename the app, also update `INAlternativeAppNames` in `InfoIOS.plist` — the alternate names Siri accepts for "Veyrn".
 
 ## Project Structure
 
@@ -166,6 +167,7 @@ The Watch targets compile only a **subset** of `VikunjaCore`, listed explicitly 
 | `VikunjaCore/VikunjaConfig.swift` | Multi-account model; host in the App Group, tokens in the Keychain |
 | `VikunjaCore/TokenStore.swift` | Keychain wrapper, keyed by account id |
 | `VikunjaCore/QuickAddParser.swift` | Natural-language task parser |
+| `VikunjaCore/SpokenTaskParser.swift` | Spoken-sentence front end for the parser — pulls project, tags, and priority out of plain words ("in project X", "tag it Y", "high priority") in any order |
 | `VikunjaCore/Outbox.swift` | Persistent offline operation queue (per account) |
 | `VikunjaCore/TaskMerger.swift` | Reconciles server state with pending outbox ops |
 | `VikunjaCore/DiagnosticLog.swift` | Rolling on-device log; App Group storage, one file per process kind |
@@ -173,6 +175,7 @@ The Watch targets compile only a **subset** of `VikunjaCore`, listed explicitly 
 | `VikunjaWidgetApp/AppRoot.swift` | Root view; NavigationSplitView (Mac/iPad) or NavigationStack (iPhone) |
 | `VikunjaWidgetApp/BugReportMail.swift` | Report-a-Bug mail composition (MessageUI on iOS, NSSharingService on macOS) |
 | `VikunjaWidgetApp/HangWatchdog.swift` | Detects an unresponsive main thread; ignores process suspension |
+| `VikunjaWidgetApp/AddTaskIntent.swift` | Siri / Shortcuts "Add Task" App Intent, its project and tag entities, and the Siri phrases (iOS only) |
 | `VikunjaWidgetApp/ChangeBeacon.swift` | CloudKit change beacon — nudges the user's other devices to refresh after an edit (app targets only; never in `VikunjaCore/`) |
 | `VeyrnCalendar/Fill.swift` | Pagination — slices grouped calendar days to fit the widget's vertical budget, and decides what carries to the next page |
 | `VikunjaWidgetExtension/Calendar/AgendaProvider.swift` | Calendar widget's `TimelineProvider` — fetches events via EventKit, groups by day, and builds each page |
@@ -229,6 +232,8 @@ xcodebuild test -project VikunjaWidget.xcodeproj -scheme VikunjaWidgetApp \
 - Every `SecItem` query must set `kSecUseDataProtectionKeychain`. Without it, macOS writes to the legacy file-based keychain where the access-group entitlement doesn't apply, and the widget silently reads stale data instead of erroring.
 - `Form` on macOS promotes each field's placeholder into a leading label column — use a plain `VStack` for cross-platform field layouts.
 - macOS has no `swipeActions`; any row action that matters there needs a visible control.
+- There is exactly one `TaskStore` (`TaskStore.shared`). The Siri intent can run in a background launch with no UI, and a second store would mean a second outbox over the same storage, each overwriting the other's queued changes.
+- Siri phrases must keep the app name right next to "task" ("New Veyrn task"). Generic phrasings like "add a task in Veyrn" or "remind me in Veyrn" collide with Siri's built-in Reminders and Notes, and Siri asks which app you meant or offers Reminders instead.
 
 ## Deployment Targets
 

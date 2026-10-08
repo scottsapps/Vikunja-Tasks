@@ -51,16 +51,6 @@
 			<key>INAlternativeAppName</key>
 			<string>Verne</string>
 		</dict>
-		<dict>
-			<key>INAlternativeAppName</key>
-			<string>Vurn</string>
-		</dict>
-		<dict>
-			<key>INAlternativeAppName</key>
-			<string>Veyrn Tasks</string>
-			<key>INAlternativeAppNamePronunciationHint</key>
-			<string>vern tasks</string>
-		</dict>
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>

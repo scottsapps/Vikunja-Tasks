@@ -139,7 +139,7 @@ grep -rn "net\.angstreich" --include="*.swift" --include="*.plist" . project.yml
 
 The bold rows are the ones that bite silently. The App Group, Keychain access group, and iCloud container id are all written by the **Makefile**, not by `project.yml`, so changing the bundle prefix alone leaves them pointing at this project. Get the App Group or Keychain group wrong and the app builds, launches, and then can't share credentials or cached tasks with its own widgets; get the iCloud container wrong and signing fails at build time.
 
-**Cosmetic**, safe to leave: dispatch queue labels (`DiagnosticLog.swift`, `HangWatchdog.swift`), `Notification.Name` strings (`ShortcutRouter.swift`, `HotkeyRecorderView.swift`), the `Logger` subsystem in `CompleteTaskIntent.swift`, and the `vikunja://` / `veyrn://` URL schemes in the plists (only worth changing if you'd otherwise clash with an installed copy of Veyrn). If you rename the app, also update `INAlternativeAppNames` in `InfoIOS.plist` — the alternate names Siri accepts for "Veyrn".
+**Cosmetic**, safe to leave: dispatch queue labels (`DiagnosticLog.swift`, `HangWatchdog.swift`), `Notification.Name` strings (`ShortcutRouter.swift`, `HotkeyRecorderView.swift`), the `Logger` subsystem in `CompleteTaskIntent.swift`, and the `vikunja://` / `veyrn://` URL schemes in the plists (only worth changing if you'd otherwise clash with an installed copy of Veyrn). If you rename the app, also update `INAlternativeAppNames` in `InfoIOS.plist` — the alternate names Siri accepts for "Veyrn" (App Store Connect rejects more than 3 per language).
 
 ## Project Structure
 

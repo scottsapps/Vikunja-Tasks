@@ -1162,11 +1162,19 @@ enum VikunjaAPI {
         //    relaunches — a fresh `URLSession` alone doesn't clear it, so the
         //    retry uses `directSession` to skip the wait instead.
         //
+        // 4. **A connected request that goes silent** (build 125). Awake, the
+        //    connection and TLS completed, then no response ever started —
+        //    seen on both Mac and iPhone on 2026-10-23 while Cloudflare could
+        //    not reach the origin (the Mac's same-minute requests came back
+        //    522 after 19.6 s; the origin's own log showed nothing arriving
+        //    and every request that did arrive answered in under 25 ms). The
+        //    first GET attempt therefore gets a short `stallTimeout`, and a
+        //    timeout against it retries once on a fresh connection — the
+        //    iPhone's own retry went through in 1.4 s once it happened.
+        //
         // Deliberately **not** retried: any other awake timeout, where the
-        // network genuinely was tried and didn't answer. That one already
-        // spent the entire resource budget establishing that the network
-        // isn't answering, and a second pass just makes the user wait 50 s
-        // for the same answer instead of 25.
+        // network genuinely was tried and didn't answer for the full
+        // `timeoutInterval` — a second pass just doubles the wait.
         //
         // **GETs only.** A mutation that failed may perfectly well have landed
         // on the server; replaying it could double-create or double-toggle.
@@ -1177,6 +1185,9 @@ enum VikunjaAPI {
         let retryAllowed = (method == "GET")
         var retried = false
         var useDirectSession = false
+        // Only the first GET attempt is short; the retry gets the request's
+        // normal 20 s, so the worst case is `stallTimeout` + 20 s.
+        let stallTimeout: TimeInterval = 10
 
         // Honour an earlier 429's `Retry-After` without touching the network:
         // another request inside the window would only be refused again and
@@ -1192,11 +1203,14 @@ enum VikunjaAPI {
             // Per-request delegate purely to collect metrics; see `phaseSummary`.
             let metrics = MetricsCollector()
             let activeSession = useDirectSession ? directSession : session
+            let shortFirstAttempt = retryAllowed && !retried
+            var attempt = request
+            if shortFirstAttempt { attempt.timeoutInterval = min(request.timeoutInterval, stallTimeout) }
 
             let data: Data
             let response: URLResponse
             do {
-                (data, response) = try await activeSession.data(for: request, delegate: metrics)
+                (data, response) = try await activeSession.data(for: attempt, delegate: metrics)
             } catch {
                 let elapsed = DiagnosticLog.elapsed(stopwatch)
                 // The freeze check is what narrows case 1 from "any
@@ -1208,7 +1222,12 @@ enum VikunjaAPI {
                 let stuckWaitingForConnectivity = VeyrnError.isConnectivityOnly(error)
                     && !frozenThroughIt
                     && metrics.hadNoConnectionAttempt()
-                let willRetry = (frozenThroughIt || VeyrnError.isConnectionLost(error) || stuckWaitingForConnectivity)
+                // Case 4: our own short first-attempt timeout fired while awake.
+                let wentSilent = shortFirstAttempt
+                    && (error as NSError).domain == NSURLErrorDomain
+                    && (error as NSError).code == NSURLErrorTimedOut
+                    && !frozenThroughIt && !stuckWaitingForConnectivity
+                let willRetry = (frozenThroughIt || VeyrnError.isConnectionLost(error) || stuckWaitingForConnectivity || wentSilent)
                     && retryAllowed && !retried
 
                 let line = "✗ \(VeyrnError.logDescription(for: error)) \(method) \(path) (\(elapsed)) \(metrics.phaseSummary())"
@@ -1226,7 +1245,7 @@ enum VikunjaAPI {
 
                 if willRetry {
                     retried = true
-                    useDirectSession = stuckWaitingForConnectivity
+                    useDirectSession = stuckWaitingForConnectivity || wentSilent
                     continue
                 }
                 throw error

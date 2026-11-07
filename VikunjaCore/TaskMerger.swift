@@ -56,6 +56,25 @@ enum TaskMerger {
                 relations[kind] = kindList.isEmpty ? nil : kindList
                 parent.relatedTasks = relations.isEmpty ? nil : relations
                 byId[parentId] = parent
+
+                // Mirror the link onto the child so a queued subtask stays out
+                // of top-level lists (isSubtask) until the next refresh. Done
+                // after the parent so the copy in its subtask list stays clean.
+                if kind == "subtask" {
+                    var child = child
+                    var back = child.relatedTasks ?? [:]
+                    var parents = back["parenttask"] ?? []
+                    if add {
+                        if !parents.contains(where: { $0.id == parentId }) {
+                            parents.append(byId[parentId] ?? parent)
+                        }
+                    } else {
+                        parents.removeAll { $0.id == parentId }
+                    }
+                    back["parenttask"] = parents.isEmpty ? nil : parents
+                    child.relatedTasks = back.isEmpty ? nil : back
+                    byId[childId] = child
+                }
             }
         }
 

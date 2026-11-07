@@ -14,7 +14,7 @@ struct PendingOp: Codable, Identifiable {
     let id: UUID
     let timestamp: Date
     var ref: TaskRef
-    let kind: Kind
+    var kind: Kind
 
     enum Kind: Codable {
         case create(payload: CreatePayload, placeholderId: Int)
@@ -106,6 +106,16 @@ final class Outbox {
         for index in ops.indices {
             if case .client(let opUUID) = ops[index].ref, opUUID == uuid {
                 ops[index].ref = .server(id)
+            }
+            // A relation carries its targets in parentRef/childRef, not `ref`.
+            // Without this rewrite the drain never resolves them: a permanent
+            // "pending" op that neither sends nor fails.
+            if case .relation(let parent, let child, let kind, let add) = ops[index].kind {
+                func mapped(_ r: TaskRef) -> TaskRef {
+                    if case .client(let u) = r, u == uuid { return .server(id) }
+                    return r
+                }
+                ops[index].kind = .relation(parentRef: mapped(parent), childRef: mapped(child), kind: kind, add: add)
             }
         }
         persist()

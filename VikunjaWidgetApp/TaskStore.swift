@@ -754,8 +754,6 @@ final class TaskStore {
         source: String = "app"
     ) -> UUID? {
         guard !refuseIfReadOnly(projectId: projectId, action: "create") else { return nil }
-        let clientId = UUID()
-        let placeholderId = outbox.nextPlaceholderId()
         let payload = CreatePayload(
             title: title,
             projectId: projectId,
@@ -767,6 +765,18 @@ final class TaskStore {
             repeatAfter: repeatAfter,
             repeatMode: repeatMode
         )
+        let (opId, _) = enqueueCreate(payload: payload)
+        rebuildMergedTasks()
+        VeyrnTelemetry.signal("TaskCreated", parameters: ["source": source])
+        Task { await drainOutbox() }
+        return opId
+    }
+
+    /// Appends a create op without rebuilding, signalling, or draining, so a
+    /// caller can queue several ops synchronously before one drain.
+    private func enqueueCreate(payload: CreatePayload) -> (opId: UUID, ref: TaskRef) {
+        let clientId = UUID()
+        let placeholderId = outbox.nextPlaceholderId()
         let op = PendingOp(
             id: UUID(),
             timestamp: Date(),
@@ -774,10 +784,69 @@ final class TaskStore {
             kind: .create(payload: payload, placeholderId: placeholderId)
         )
         outbox.append(op)
+        return (op.id, .client(clientId))
+    }
+
+    /// Queues a task plus subtasks entirely through the outbox, so it works
+    /// offline. Creates first, then relations: bulk create only coalesces
+    /// consecutive same-project creates. Returns the parent's op id, or nil
+    /// when the project is read-only.
+    @discardableResult
+    func createTaskWithSubtasks(
+        projectId: Int,
+        title: String,
+        description: String? = nil,
+        dueDate: Date? = nil,
+        priority: Int? = nil,
+        labels: [VikunjaLabel] = [],
+        reminders: [Date] = [],
+        repeatAfter: Int? = nil,
+        repeatMode: Int? = nil,
+        subtaskTitles: [String],
+        source: String = "app"
+    ) -> UUID? {
+        guard !refuseIfReadOnly(projectId: projectId, action: "create") else { return nil }
+        let parent = enqueueCreate(payload: CreatePayload(
+            title: title,
+            projectId: projectId,
+            description: description,
+            dueDate: dueDate,
+            priority: priority,
+            labels: labels,
+            reminders: reminders,
+            repeatAfter: repeatAfter,
+            repeatMode: repeatMode
+        ))
+        var childRefs: [TaskRef] = []
+        for subTitle in subtaskTitles {
+            let child = enqueueCreate(payload: CreatePayload(
+                title: subTitle,
+                projectId: projectId,
+                description: nil,
+                dueDate: nil,
+                priority: nil,
+                labels: [],
+                reminders: [],
+                repeatAfter: nil,
+                repeatMode: nil
+            ))
+            childRefs.append(child.ref)
+        }
+        for childRef in childRefs {
+            outbox.append(PendingOp(
+                id: UUID(),
+                timestamp: Date(),
+                ref: parent.ref,
+                kind: .relation(parentRef: parent.ref, childRef: childRef, kind: "subtask", add: true)
+            ))
+        }
         rebuildMergedTasks()
         VeyrnTelemetry.signal("TaskCreated", parameters: ["source": source])
+        for _ in childRefs {
+            VeyrnTelemetry.signal("SubtaskAdded", parameters: ["source": source])
+        }
         Task { await drainOutbox() }
-        return op.id
+        return parent.opId
     }
 
     // MARK: - Project management

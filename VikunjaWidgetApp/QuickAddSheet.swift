@@ -761,37 +761,19 @@ struct QuickAddSheet: View {
                     source: telemetrySource
                 )
             } else {
-                guard store.reachability.isOnline else {
-                    errorMessage = "Go online to add subtasks."
-                    isSubmitting = false
-                    return
-                }
-                do {
-                    let created = try await VikunjaAPI.createTask(
-                        projectId: project.id,
-                        title: p.cleanedTitle,
-                        description: notes,
-                        dueDate: effectiveDueDate,
-                        priority: effectivePriority,
-                        labelIds: resolvedLabels.map(\.id),
-                        reminders: effectiveReminders,
-                        repeatAfter: effectiveRepeatAfter,
-                        repeatMode: effectiveRepeatMode
-                    )
-                    for subTitle in pendingSubtasks {
-                        let sub = try await VikunjaAPI.createTask(projectId: project.id, title: subTitle)
-                        try await VikunjaAPI.addRelation(taskId: created.id, otherTaskId: sub.id, kind: "subtask")
-                        VeyrnTelemetry.signal("SubtaskAdded", parameters: ["source": telemetrySource])
-                    }
-                    VeyrnTelemetry.signal("TaskCreated", parameters: ["source": telemetrySource])
-                    // Once for the parent + all its subtasks, not once per subtask.
-                    ChangeBeacon.publish(reason: "create task with subtasks")
-                    await store.refresh()
-                } catch {
-                    errorMessage = VeyrnError.message(for: error)
-                    isSubmitting = false
-                    return
-                }
+                store.createTaskWithSubtasks(
+                    projectId: project.id,
+                    title: p.cleanedTitle,
+                    description: notes,
+                    dueDate: effectiveDueDate,
+                    priority: effectivePriority,
+                    labels: resolvedLabels,
+                    reminders: effectiveReminders,
+                    repeatAfter: effectiveRepeatAfter,
+                    repeatMode: effectiveRepeatMode,
+                    subtaskTitles: pendingSubtasks,
+                    source: telemetrySource
+                )
             }
 
             dismiss()
